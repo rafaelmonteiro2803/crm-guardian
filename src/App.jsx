@@ -302,6 +302,7 @@ function App() {
   const [formOportunidade, setFormOportunidade] = useState({
     titulo: "",
     cliente_id: "",
+    produto_id: "",
     valor: "",
     estagio: "prospecção",
     data_inicio: new Date().toISOString().split("T")[0],
@@ -461,10 +462,14 @@ function App() {
   // CRUD Oportunidades
   const salvarOportunidade = async () => {
     if (!formOportunidade.titulo.trim()) return alert("Título é obrigatório!");
+    const payload = {
+      ...formOportunidade,
+      produto_id: formOportunidade.produto_id || null,
+    };
     if (editandoOportunidade) {
       const { data } = await supabase
         .from("oportunidades")
-        .update(formOportunidade)
+        .update(payload)
         .eq("id", editandoOportunidade.id)
         .select();
       if (data)
@@ -476,7 +481,7 @@ function App() {
     } else {
       const { data } = await supabase
         .from("oportunidades")
-        .insert([{ ...formOportunidade, user_id: session.user.id }])
+        .insert([{ ...payload, user_id: session.user.id }])
         .select();
       if (data) setOportunidades([data[0], ...oportunidades]);
     }
@@ -659,6 +664,7 @@ function App() {
       setFormOportunidade({
         titulo: oportunidade.titulo,
         cliente_id: oportunidade.cliente_id,
+        produto_id: oportunidade.produto_id || "",
         valor: oportunidade.valor.toString(),
         estagio: oportunidade.estagio,
         data_inicio: oportunidade.data_inicio,
@@ -673,6 +679,7 @@ function App() {
     setFormOportunidade({
       titulo: "",
       cliente_id: "",
+      produto_id: "",
       valor: "",
       estagio: "prospecção",
       data_inicio: new Date().toISOString().split("T")[0],
@@ -771,6 +778,9 @@ function App() {
 
   const getClienteNome = (id) =>
     clientes.find((c) => c.id === id)?.nome || "N/A";
+
+  const getProdutoNome = (id) =>
+    produtos.find((p) => p.id === id)?.nome || null;
 
   // Indicadores Dashboard
   const calcularIndicadores = () => {
@@ -1322,10 +1332,16 @@ function App() {
                                 </button>
                               </div>
                             </div>
-                            <p className="text-sm text-gray-600 mb-2">
+                            <p className="text-sm text-gray-600 mb-1">
                               <Icons.User className="w-3 h-3 inline mr-1" />
                               {getClienteNome(op.cliente_id)}
                             </p>
+                            {getProdutoNome(op.produto_id) && (
+                              <p className="text-sm text-purple-600 mb-2">
+                                <Icons.ShoppingCart className="w-3 h-3 inline mr-1" />
+                                {getProdutoNome(op.produto_id)}
+                              </p>
+                            )}
                             <p className="text-lg font-bold text-green-600 mb-3">
                               R${" "}
                               {parseFloat(op.valor || 0).toLocaleString(
@@ -1908,6 +1924,31 @@ function App() {
                   {clientes.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.nome}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Produto
+                </label>
+                <select
+                  value={formOportunidade.produto_id}
+                  onChange={(e) => {
+                    const produtoId = e.target.value;
+                    const produtoSelecionado = produtos.find((p) => p.id === produtoId);
+                    setFormOportunidade({
+                      ...formOportunidade,
+                      produto_id: produtoId,
+                      valor: produtoSelecionado ? produtoSelecionado.preco_base.toString() : formOportunidade.valor,
+                    });
+                  }}
+                  className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 outline-none"
+                >
+                  <option value="">Nenhum</option>
+                  {produtos.filter((p) => p.ativo !== false).map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.nome} — R$ {parseFloat(p.preco_base || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                     </option>
                   ))}
                 </select>
