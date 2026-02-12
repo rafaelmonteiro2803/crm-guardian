@@ -545,7 +545,24 @@ function App() {
         .from("vendas")
         .insert([{ ...payload, user_id: session.user.id }])
         .select();
-      if (data) setVendas([data[0], ...vendas]);
+      if (data) {
+        setVendas([data[0], ...vendas]);
+        // Gerar título pendente vinculado à venda
+        const novoTitulo = {
+          venda_id: data[0].id,
+          descricao: data[0].descricao,
+          valor: data[0].valor,
+          data_emissao: new Date().toISOString().split("T")[0],
+          data_vencimento: data[0].data_venda || new Date().toISOString().split("T")[0],
+          status: "pendente",
+          user_id: session.user.id,
+        };
+        const { data: tituloData } = await supabase
+          .from("titulos")
+          .insert([novoTitulo])
+          .select();
+        if (tituloData) setTitulos([...titulos, tituloData[0]]);
+      }
     }
     fecharModalVenda();
   };
@@ -862,6 +879,26 @@ function App() {
     };
   };
 
+  const calcularVendasPorMes = () => {
+    const meses = {};
+    const nomesMeses = [
+      "Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
+      "Jul", "Ago", "Set", "Out", "Nov", "Dez",
+    ];
+    vendas.forEach((v) => {
+      const d = new Date(v.data_venda);
+      const chave = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      const label = `${nomesMeses[d.getMonth()]}/${d.getFullYear()}`;
+      if (!meses[chave]) meses[chave] = { label, total: 0, count: 0 };
+      meses[chave].total += parseFloat(v.valor || 0);
+      meses[chave].count += 1;
+    });
+    return Object.entries(meses)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-12)
+      .map(([, v]) => v);
+  };
+
   if (loading)
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -1113,6 +1150,64 @@ function App() {
                   {indicadores.numVencidos} títulos vencidos
                 </p>
               </div>
+            </div>
+
+            {/* Gráfico de Vendas por Mês */}
+            <div className="bg-white rounded-lg shadow p-6 mt-8">
+              <div className="flex items-center mb-4">
+                <Icons.BarChart className="w-6 h-6 text-green-600 mr-2" />
+                <h3 className="text-lg font-semibold text-gray-800">
+                  Vendas Consolidadas por Mês
+                </h3>
+              </div>
+              {(() => {
+                const dadosMensais = calcularVendasPorMes();
+                if (dadosMensais.length === 0) {
+                  return (
+                    <p className="text-gray-500 text-center py-8">
+                      Nenhuma venda registrada ainda.
+                    </p>
+                  );
+                }
+                const maxValor = Math.max(...dadosMensais.map((d) => d.total));
+                return (
+                  <div>
+                    <div className="flex items-end gap-2" style={{ height: "260px" }}>
+                      {dadosMensais.map((mes, i) => {
+                        const altura = maxValor > 0 ? (mes.total / maxValor) * 100 : 0;
+                        return (
+                          <div
+                            key={i}
+                            className="flex-1 flex flex-col items-center justify-end h-full"
+                          >
+                            <span className="text-xs font-semibold text-gray-700 mb-1">
+                              R${" "}
+                              {mes.total.toLocaleString("pt-BR", {
+                                minimumFractionDigits: 0,
+                                maximumFractionDigits: 0,
+                              })}
+                            </span>
+                            <div
+                              className="w-full bg-green-500 rounded-t-md hover:bg-green-600 transition-colors"
+                              style={{
+                                height: `${Math.max(altura, 2)}%`,
+                                minHeight: "4px",
+                              }}
+                              title={`${mes.label}: R$ ${mes.total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })} (${mes.count} venda${mes.count !== 1 ? "s" : ""})`}
+                            />
+                            <span className="text-xs text-gray-500 mt-2 whitespace-nowrap">
+                              {mes.label}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="mt-4 text-sm text-gray-500 text-center">
+                      Últimos {dadosMensais.length} meses com vendas registradas
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         )}
