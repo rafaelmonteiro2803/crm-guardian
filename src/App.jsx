@@ -314,6 +314,8 @@ function App() {
     data_venda: new Date().toISOString().split("T")[0],
     forma_pagamento: "à vista",
     observacoes: "",
+    desconto: "",
+    itens: [],
   });
   const [formTitulo, setFormTitulo] = useState({
     venda_id: "",
@@ -341,6 +343,7 @@ function App() {
     "proposta",
     "negociação",
     "fechado",
+    "cancelado",
   ];
 
   useEffect(() => {
@@ -505,12 +508,34 @@ function App() {
   };
 
   // CRUD Vendas
+  const calcularTotalVenda = (itens, desconto) => {
+    const subtotal = itens.reduce(
+      (s, item) => s + parseFloat(item.valor_unitario || 0) * parseFloat(item.quantidade || 1),
+      0,
+    );
+    const desc = parseFloat(desconto || 0);
+    return Math.max(subtotal - desc, 0);
+  };
+
   const salvarVenda = async () => {
     if (!formVenda.descricao.trim()) return alert("Descrição é obrigatória!");
+    const valorTotal = formVenda.itens.length > 0
+      ? calcularTotalVenda(formVenda.itens, formVenda.desconto)
+      : parseFloat(formVenda.valor || 0);
+    const payload = {
+      cliente_id: formVenda.cliente_id,
+      descricao: formVenda.descricao,
+      valor: valorTotal,
+      data_venda: formVenda.data_venda,
+      forma_pagamento: formVenda.forma_pagamento,
+      observacoes: formVenda.observacoes,
+      desconto: formVenda.desconto === "" ? 0 : parseFloat(formVenda.desconto),
+      itens: formVenda.itens,
+    };
     if (editandoVenda) {
       const { data } = await supabase
         .from("vendas")
-        .update(formVenda)
+        .update(payload)
         .eq("id", editandoVenda.id)
         .select();
       if (data)
@@ -518,7 +543,7 @@ function App() {
     } else {
       const { data } = await supabase
         .from("vendas")
-        .insert([{ ...formVenda, user_id: session.user.id }])
+        .insert([{ ...payload, user_id: session.user.id }])
         .select();
       if (data) setVendas([data[0], ...vendas]);
     }
@@ -696,6 +721,8 @@ function App() {
         data_venda: venda.data_venda,
         forma_pagamento: venda.forma_pagamento,
         observacoes: venda.observacoes || "",
+        desconto: (venda.desconto ?? 0).toString(),
+        itens: venda.itens || [],
       });
     }
     setModalVenda(true);
@@ -711,6 +738,8 @@ function App() {
       data_venda: new Date().toISOString().split("T")[0],
       forma_pagamento: "à vista",
       observacoes: "",
+      desconto: "",
+      itens: [],
     });
   };
 
@@ -1300,8 +1329,8 @@ function App() {
                   );
                   return (
                     <div key={estagio} className="flex-shrink-0 w-80">
-                      <div className="bg-gray-100 rounded-lg p-4 mb-3">
-                        <h3 className="font-bold capitalize">{estagio}</h3>
+                      <div className={`rounded-lg p-4 mb-3 ${estagio === "cancelado" ? "bg-red-100" : "bg-gray-100"}`}>
+                        <h3 className={`font-bold capitalize ${estagio === "cancelado" ? "text-red-700" : ""}`}>{estagio}</h3>
                         <p className="text-sm text-gray-600">
                           {ops.length} • R${" "}
                           {total.toLocaleString("pt-BR", {
@@ -1407,6 +1436,8 @@ function App() {
                         "Data",
                         "Cliente",
                         "Descrição",
+                        "Produtos",
+                        "Desconto",
                         "Forma Pgto",
                         "Valor",
                         "Ações",
@@ -1430,6 +1461,32 @@ function App() {
                           {getClienteNome(v.cliente_id)}
                         </td>
                         <td className="px-6 py-4 text-sm">{v.descricao}</td>
+                        <td className="px-6 py-4 text-sm">
+                          {v.itens && v.itens.length > 0 ? (
+                            <div className="space-y-1">
+                              {v.itens.map((item, idx) => (
+                                <div key={idx} className="text-xs">
+                                  <span className="font-medium">{item.nome}</span>
+                                  <span className="text-gray-500"> x{item.quantidade}</span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-sm">
+                          {parseFloat(v.desconto || 0) > 0 ? (
+                            <span className="text-red-600">
+                              - R${" "}
+                              {parseFloat(v.desconto).toLocaleString("pt-BR", {
+                                minimumFractionDigits: 2,
+                              })}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </td>
                         <td className="px-6 py-4 text-sm capitalize">
                           {v.forma_pagamento}
                         </td>
@@ -2028,7 +2085,7 @@ function App() {
 
       {modalVenda && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
             <h3 className="text-xl font-bold mb-4">
               {editandoVenda ? "Editar Venda" : "Nova Venda"}
             </h3>
@@ -2065,20 +2122,167 @@ function App() {
                   className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 outline-none"
                 />
               </div>
+
+              {/* Produtos da Venda */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Produtos</label>
+                <div className="flex gap-2 mb-2">
+                  <select
+                    id="venda-produto-select"
+                    className="flex-1 border rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 outline-none text-sm"
+                    defaultValue=""
+                  >
+                    <option value="">Selecione um produto</option>
+                    {produtos.filter((p) => p.ativo !== false).map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.nome} — R$ {parseFloat(p.preco_base || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const sel = document.getElementById("venda-produto-select");
+                      const produtoId = sel.value;
+                      if (!produtoId) return;
+                      const prod = produtos.find((p) => p.id === produtoId);
+                      if (!prod) return;
+                      const novoItem = {
+                        produto_id: prod.id,
+                        nome: prod.nome,
+                        quantidade: 1,
+                        valor_unitario: parseFloat(prod.preco_base || 0),
+                      };
+                      setFormVenda({
+                        ...formVenda,
+                        itens: [...formVenda.itens, novoItem],
+                      });
+                      sel.value = "";
+                    }}
+                    className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm flex items-center gap-1"
+                  >
+                    <Icons.Plus className="w-4 h-4" />
+                    Adicionar
+                  </button>
+                </div>
+
+                {formVenda.itens.length > 0 && (
+                  <div className="border rounded-lg overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50 border-b">
+                        <tr>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Produto</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 w-20">Qtd</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 w-28">Valor Unit.</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 w-28">Subtotal</th>
+                          <th className="px-3 py-2 w-10"></th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        {formVenda.itens.map((item, idx) => (
+                          <tr key={idx}>
+                            <td className="px-3 py-2">{item.nome}</td>
+                            <td className="px-3 py-2">
+                              <input
+                                type="number"
+                                min="1"
+                                value={item.quantidade}
+                                onChange={(e) => {
+                                  const novosItens = [...formVenda.itens];
+                                  novosItens[idx] = { ...novosItens[idx], quantidade: parseInt(e.target.value) || 1 };
+                                  setFormVenda({ ...formVenda, itens: novosItens });
+                                }}
+                                className="w-16 border rounded px-2 py-1 text-center"
+                              />
+                            </td>
+                            <td className="px-3 py-2">
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={item.valor_unitario}
+                                onChange={(e) => {
+                                  const novosItens = [...formVenda.itens];
+                                  novosItens[idx] = { ...novosItens[idx], valor_unitario: parseFloat(e.target.value) || 0 };
+                                  setFormVenda({ ...formVenda, itens: novosItens });
+                                }}
+                                className="w-24 border rounded px-2 py-1"
+                              />
+                            </td>
+                            <td className="px-3 py-2 font-medium text-green-600">
+                              R$ {(parseFloat(item.valor_unitario || 0) * parseFloat(item.quantidade || 1)).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                            </td>
+                            <td className="px-3 py-2">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const novosItens = formVenda.itens.filter((_, i) => i !== idx);
+                                  setFormVenda({ ...formVenda, itens: novosItens });
+                                }}
+                                className="text-red-600 hover:bg-red-50 p-1 rounded"
+                              >
+                                <Icons.Trash className="w-3 h-3" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* Desconto */}
               <div>
                 <label className="block text-sm font-medium mb-1">
-                  Valor (R$) *
+                  Desconto (R$)
                 </label>
                 <input
                   type="number"
                   step="0.01"
-                  value={formVenda.valor}
+                  value={formVenda.desconto}
                   onChange={(e) =>
-                    setFormVenda({ ...formVenda, valor: e.target.value })
+                    setFormVenda({ ...formVenda, desconto: e.target.value })
                   }
                   className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 outline-none"
+                  placeholder="0,00"
                 />
               </div>
+
+              {/* Valor Total */}
+              {formVenda.itens.length > 0 ? (
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <div className="flex justify-between text-sm text-gray-600 mb-1">
+                    <span>Subtotal:</span>
+                    <span>R$ {formVenda.itens.reduce((s, item) => s + parseFloat(item.valor_unitario || 0) * parseFloat(item.quantidade || 1), 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  {parseFloat(formVenda.desconto || 0) > 0 && (
+                    <div className="flex justify-between text-sm text-red-600 mb-1">
+                      <span>Desconto:</span>
+                      <span>- R$ {parseFloat(formVenda.desconto || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between font-bold text-lg text-green-700 border-t pt-2 mt-2">
+                    <span>Total:</span>
+                    <span>R$ {calcularTotalVenda(formVenda.itens, formVenda.desconto).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Valor (R$) *
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={formVenda.valor}
+                    onChange={(e) =>
+                      setFormVenda({ ...formVenda, valor: e.target.value })
+                    }
+                    className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 outline-none"
+                  />
+                </div>
+              )}
+
               <div>
                 <label className="block text-sm font-medium mb-1">
                   Data da Venda
