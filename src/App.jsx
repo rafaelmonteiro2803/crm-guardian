@@ -584,6 +584,7 @@ function App() {
           ? new Date().toISOString().split("T")[0]
           : null,
     };
+    let novosTitulos = [...titulos];
     if (editandoTitulo) {
       const { data } = await supabase
         .from("titulos")
@@ -591,16 +592,52 @@ function App() {
         .eq("id", editandoTitulo.id)
         .select();
       if (data)
-        setTitulos(
-          titulos.map((t) => (t.id === editandoTitulo.id ? data[0] : t)),
+        novosTitulos = novosTitulos.map((t) =>
+          t.id === editandoTitulo.id ? data[0] : t,
         );
     } else {
       const { data } = await supabase
         .from("titulos")
         .insert([dadosTitulo])
         .select();
-      if (data) setTitulos([...titulos, data[0]]);
+      if (data) novosTitulos = [...novosTitulos, data[0]];
     }
+
+    // Se título pago e vinculado a uma venda, verificar saldo
+    if (formTitulo.status === "pago" && formTitulo.venda_id) {
+      const vendaRelacionada = vendas.find(
+        (v) => v.id === formTitulo.venda_id,
+      );
+      if (vendaRelacionada) {
+        const totalPago = novosTitulos
+          .filter(
+            (t) =>
+              t.venda_id === vendaRelacionada.id && t.status === "pago",
+          )
+          .reduce((acc, t) => acc + Number(t.valor), 0);
+        const saldo = Number(vendaRelacionada.valor) - totalPago;
+        if (saldo > 0.01) {
+          const tituloSaldo = {
+            venda_id: vendaRelacionada.id,
+            descricao: `${vendaRelacionada.descricao} (saldo)`,
+            valor: saldo.toFixed(2),
+            data_emissao: new Date().toISOString().split("T")[0],
+            data_vencimento:
+              formTitulo.data_vencimento ||
+              new Date().toISOString().split("T")[0],
+            status: "pendente",
+            user_id: session.user.id,
+          };
+          const { data: saldoData } = await supabase
+            .from("titulos")
+            .insert([tituloSaldo])
+            .select();
+          if (saldoData) novosTitulos = [...novosTitulos, saldoData[0]];
+        }
+      }
+    }
+
+    setTitulos(novosTitulos);
     fecharModalTitulo();
   };
 
@@ -619,7 +656,44 @@ function App() {
       })
       .eq("id", id)
       .select();
-    if (data) setTitulos(titulos.map((t) => (t.id === id ? data[0] : t)));
+    if (data) {
+      let novosTitulos = titulos.map((t) => (t.id === id ? data[0] : t));
+      const tituloPago = data[0];
+      // Se vinculado a uma venda, verificar saldo e gerar título pendente
+      if (tituloPago.venda_id) {
+        const vendaRelacionada = vendas.find(
+          (v) => v.id === tituloPago.venda_id,
+        );
+        if (vendaRelacionada) {
+          const totalPago = novosTitulos
+            .filter(
+              (t) =>
+                t.venda_id === vendaRelacionada.id && t.status === "pago",
+            )
+            .reduce((acc, t) => acc + Number(t.valor), 0);
+          const saldo = Number(vendaRelacionada.valor) - totalPago;
+          if (saldo > 0.01) {
+            const tituloSaldo = {
+              venda_id: vendaRelacionada.id,
+              descricao: `${vendaRelacionada.descricao} (saldo)`,
+              valor: saldo.toFixed(2),
+              data_emissao: new Date().toISOString().split("T")[0],
+              data_vencimento:
+                tituloPago.data_vencimento ||
+                new Date().toISOString().split("T")[0],
+              status: "pendente",
+              user_id: session.user.id,
+            };
+            const { data: saldoData } = await supabase
+              .from("titulos")
+              .insert([tituloSaldo])
+              .select();
+            if (saldoData) novosTitulos = [...novosTitulos, saldoData[0]];
+          }
+        }
+      }
+      setTitulos(novosTitulos);
+    }
   };
 
   // CRUD Produtos
@@ -2446,13 +2520,43 @@ function App() {
         </div>
       )}
 
-      {modalTitulo && (
+      {modalTitulo && (() => {
+        const vendaRelacionada = formTitulo.venda_id
+          ? vendas.find((v) => v.id === formTitulo.venda_id)
+          : null;
+        const saldoVenda = vendaRelacionada
+          ? vendaRelacionada.valor -
+            titulos
+              .filter(
+                (t) =>
+                  t.venda_id === vendaRelacionada.id &&
+                  t.status === "pago" &&
+                  (!editandoTitulo || t.id !== editandoTitulo.id)
+              )
+              .reduce((acc, t) => acc + Number(t.valor), 0)
+          : null;
+        return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
             <h3 className="text-xl font-bold mb-4">
               {editandoTitulo ? "Editar Título" : "Novo Título"}
             </h3>
             <div className="space-y-4">
+              {vendaRelacionada && (
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 space-y-2">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Venda Relacionada</p>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-700">{vendaRelacionada.descricao}</span>
+                    <span className="text-sm font-medium text-gray-900">R$ {Number(vendaRelacionada.valor).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between items-center border-t border-gray-200 pt-2">
+                    <span className="text-sm font-medium text-gray-700">Saldo restante</span>
+                    <span className={`text-sm font-bold ${saldoVenda > 0 ? "text-yellow-600" : "text-green-600"}`}>
+                      R$ {saldoVenda.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium mb-1">
                   Descrição *
@@ -2542,7 +2646,8 @@ function App() {
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
