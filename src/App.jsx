@@ -71,6 +71,8 @@ function DataGrid({ columns, data, actions, emptyMessage, rowClassName }) {
 function App() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [tenantId, setTenantId] = useState(null);
+  const [tenantNome, setTenantNome] = useState("");
   const [clientes, setClientes] = useState([]);
   const [oportunidades, setOportunidades] = useState([]);
   const [vendas, setVendas] = useState([]);
@@ -99,7 +101,30 @@ function App() {
   const estagios = ["prospecção", "qualificação", "proposta", "negociação", "fechado", "cancelado"];
 
   useEffect(() => { supabase.auth.getSession().then(({ data: { session } }) => { setSession(session); setLoading(false); }); const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setSession(session)); return () => subscription.unsubscribe(); }, []);
-  useEffect(() => { if (session) carregarTodosDados(); }, [session]);
+
+  useEffect(() => {
+    if (session) {
+      carregarTenant();
+    } else {
+      setTenantId(null);
+      setTenantNome("");
+    }
+  }, [session]);
+
+  const carregarTenant = async () => {
+    const { data } = await supabase
+      .from("tenant_members")
+      .select("tenant_id, tenants(id, nome)")
+      .eq("user_id", session.user.id)
+      .limit(1)
+      .single();
+    if (data) {
+      setTenantId(data.tenant_id);
+      setTenantNome(data.tenants?.nome || "");
+    }
+  };
+
+  useEffect(() => { if (session && tenantId) carregarTodosDados(); }, [session, tenantId]);
 
   const carregarTodosDados = async () => { await Promise.all([carregarClientes(), carregarOportunidades(), carregarVendas(), carregarTitulos(), carregarProdutos()]); };
   const carregarClientes = async () => { const { data } = await supabase.from("clientes").select("*").order("data_cadastro", { ascending: false }); if (data) setClientes(data); };
@@ -110,12 +135,12 @@ function App() {
 
   const handleSignUp = async (e) => { e.preventDefault(); setAuthMessage(""); const { error } = await supabase.auth.signUp({ email, password }); setAuthMessage(error ? "Erro: " + error.message : "Conta criada! Verifique seu email."); };
   const handleSignIn = async (e) => { e.preventDefault(); setAuthMessage(""); const { error } = await supabase.auth.signInWithPassword({ email, password }); if (error) setAuthMessage("Erro: " + error.message); };
-  const handleSignOut = async () => { await supabase.auth.signOut(); setClientes([]); setOportunidades([]); setVendas([]); setTitulos([]); setProdutos([]); };
+  const handleSignOut = async () => { await supabase.auth.signOut(); setClientes([]); setOportunidades([]); setVendas([]); setTitulos([]); setProdutos([]); setTenantId(null); setTenantNome(""); };
 
   const salvarCliente = async () => {
     if (!formCliente.nome.trim()) return alert("Nome é obrigatório!");
     if (editandoCliente) { const { data } = await supabase.from("clientes").update(formCliente).eq("id", editandoCliente.id).select(); if (data) setClientes(clientes.map((c) => (c.id === editandoCliente.id ? data[0] : c))); }
-    else { const { data } = await supabase.from("clientes").insert([{ ...formCliente, user_id: session.user.id }]).select(); if (data) setClientes([data[0], ...clientes]); }
+    else { const { data } = await supabase.from("clientes").insert([{ ...formCliente, user_id: session.user.id, tenant_id: tenantId }]).select(); if (data) setClientes([data[0], ...clientes]); }
     fecharModalCliente();
   };
   const excluirCliente = async (id) => { if (!confirm("Excluir cliente?")) return; await supabase.from("clientes").delete().eq("id", id); setClientes(clientes.filter((c) => c.id !== id)); };
@@ -124,7 +149,7 @@ function App() {
     if (!formOportunidade.titulo.trim()) return alert("Título é obrigatório!");
     const payload = { ...formOportunidade, produto_id: formOportunidade.produto_id || null };
     if (editandoOportunidade) { const { data } = await supabase.from("oportunidades").update(payload).eq("id", editandoOportunidade.id).select(); if (data) setOportunidades(oportunidades.map((o) => (o.id === editandoOportunidade.id ? data[0] : o))); }
-    else { const { data } = await supabase.from("oportunidades").insert([{ ...payload, user_id: session.user.id }]).select(); if (data) setOportunidades([data[0], ...oportunidades]); }
+    else { const { data } = await supabase.from("oportunidades").insert([{ ...payload, user_id: session.user.id, tenant_id: tenantId }]).select(); if (data) setOportunidades([data[0], ...oportunidades]); }
     fecharModalOportunidade();
   };
   const excluirOportunidade = async (id) => { if (!confirm("Excluir oportunidade?")) return; await supabase.from("oportunidades").delete().eq("id", id); setOportunidades(oportunidades.filter((o) => o.id !== id)); };
@@ -138,8 +163,8 @@ function App() {
     const payload = { cliente_id: formVenda.cliente_id, descricao: formVenda.descricao, valor: valorTotal, data_venda: formVenda.data_venda, forma_pagamento: formVenda.forma_pagamento, observacoes: formVenda.observacoes, desconto: formVenda.desconto === "" ? 0 : parseFloat(formVenda.desconto), itens: formVenda.itens };
     if (editandoVenda) { const { data } = await supabase.from("vendas").update(payload).eq("id", editandoVenda.id).select(); if (data) setVendas(vendas.map((v) => (v.id === editandoVenda.id ? data[0] : v))); }
     else {
-      const { data } = await supabase.from("vendas").insert([{ ...payload, user_id: session.user.id }]).select();
-      if (data) { setVendas([data[0], ...vendas]); const novoTitulo = { venda_id: data[0].id, descricao: data[0].descricao, valor: data[0].valor, data_emissao: new Date().toISOString().split("T")[0], data_vencimento: data[0].data_venda || new Date().toISOString().split("T")[0], status: "pendente", user_id: session.user.id }; const { data: tituloData } = await supabase.from("titulos").insert([novoTitulo]).select(); if (tituloData) setTitulos([...titulos, tituloData[0]]); }
+      const { data } = await supabase.from("vendas").insert([{ ...payload, user_id: session.user.id, tenant_id: tenantId }]).select();
+      if (data) { setVendas([data[0], ...vendas]); const novoTitulo = { venda_id: data[0].id, descricao: data[0].descricao, valor: data[0].valor, data_emissao: new Date().toISOString().split("T")[0], data_vencimento: data[0].data_venda || new Date().toISOString().split("T")[0], status: "pendente", user_id: session.user.id, tenant_id: tenantId }; const { data: tituloData } = await supabase.from("titulos").insert([novoTitulo]).select(); if (tituloData) setTitulos([...titulos, tituloData[0]]); }
     }
     fecharModalVenda();
   };
@@ -147,14 +172,14 @@ function App() {
 
   const salvarTitulo = async () => {
     if (!formTitulo.descricao.trim()) return alert("Descrição é obrigatória!");
-    const dadosTitulo = { ...formTitulo, user_id: session.user.id, data_pagamento: formTitulo.status === "pago" ? new Date().toISOString().split("T")[0] : null };
+    const dadosTitulo = { ...formTitulo, user_id: session.user.id, tenant_id: tenantId, data_pagamento: formTitulo.status === "pago" ? new Date().toISOString().split("T")[0] : null };
     let novosTitulos = [...titulos];
     if (editandoTitulo) { const { data } = await supabase.from("titulos").update(dadosTitulo).eq("id", editandoTitulo.id).select(); if (data) novosTitulos = novosTitulos.map((t) => (t.id === editandoTitulo.id ? data[0] : t)); }
     else { const { data } = await supabase.from("titulos").insert([dadosTitulo]).select(); if (data) novosTitulos = [...novosTitulos, data[0]]; }
     if (formTitulo.status === "pago" && formTitulo.venda_id) {
       const vendaRel = vendas.find((v) => v.id === formTitulo.venda_id);
       if (vendaRel) { const totalPago = novosTitulos.filter((t) => t.venda_id === vendaRel.id && t.status === "pago").reduce((a, t) => a + Number(t.valor), 0); const saldo = Number(vendaRel.valor) - totalPago;
-        if (saldo > 0.01) { const ts = { venda_id: vendaRel.id, descricao: `${vendaRel.descricao} (saldo)`, valor: saldo.toFixed(2), data_emissao: new Date().toISOString().split("T")[0], data_vencimento: formTitulo.data_vencimento || new Date().toISOString().split("T")[0], status: "pendente", user_id: session.user.id }; const { data: sd } = await supabase.from("titulos").insert([ts]).select(); if (sd) novosTitulos = [...novosTitulos, sd[0]]; } }
+        if (saldo > 0.01) { const ts = { venda_id: vendaRel.id, descricao: `${vendaRel.descricao} (saldo)`, valor: saldo.toFixed(2), data_emissao: new Date().toISOString().split("T")[0], data_vencimento: formTitulo.data_vencimento || new Date().toISOString().split("T")[0], status: "pendente", user_id: session.user.id, tenant_id: tenantId }; const { data: sd } = await supabase.from("titulos").insert([ts]).select(); if (sd) novosTitulos = [...novosTitulos, sd[0]]; } }
     }
     setTitulos(novosTitulos); fecharModalTitulo();
   };
@@ -166,14 +191,14 @@ function App() {
       let nt = titulos.map((t) => (t.id === id ? data[0] : t)); const tp = data[0];
       if (tp.venda_id) { const vr = vendas.find((v) => v.id === tp.venda_id);
         if (vr) { const totalP = nt.filter((t) => t.venda_id === vr.id && t.status === "pago").reduce((a, t) => a + Number(t.valor), 0); const saldo = Number(vr.valor) - totalP;
-          if (saldo > 0.01) { const ts = { venda_id: vr.id, descricao: `${vr.descricao} (saldo)`, valor: saldo.toFixed(2), data_emissao: new Date().toISOString().split("T")[0], data_vencimento: tp.data_vencimento || new Date().toISOString().split("T")[0], status: "pendente", user_id: session.user.id }; const { data: sd } = await supabase.from("titulos").insert([ts]).select(); if (sd) nt = [...nt, sd[0]]; } } }
+          if (saldo > 0.01) { const ts = { venda_id: vr.id, descricao: `${vr.descricao} (saldo)`, valor: saldo.toFixed(2), data_emissao: new Date().toISOString().split("T")[0], data_vencimento: tp.data_vencimento || new Date().toISOString().split("T")[0], status: "pendente", user_id: session.user.id, tenant_id: tenantId }; const { data: sd } = await supabase.from("titulos").insert([ts]).select(); if (sd) nt = [...nt, sd[0]]; } } }
       setTitulos(nt);
     }
   };
 
   const salvarProduto = async () => {
     if (!formProduto.nome.trim()) return alert("Nome é obrigatório!");
-    const payload = { ...formProduto, preco_base: formProduto.preco_base === "" ? 0 : parseFloat(formProduto.preco_base), custo: formProduto.custo === "" ? 0 : parseFloat(formProduto.custo), user_id: session.user.id };
+    const payload = { ...formProduto, preco_base: formProduto.preco_base === "" ? 0 : parseFloat(formProduto.preco_base), custo: formProduto.custo === "" ? 0 : parseFloat(formProduto.custo), user_id: session.user.id, tenant_id: tenantId };
     if (editandoProduto) { const { data } = await supabase.from("produtos").update(payload).eq("id", editandoProduto.id).select(); if (data) setProdutos(produtos.map((p) => (p.id === editandoProduto.id ? data[0] : p))); }
     else { const { data } = await supabase.from("produtos").insert([payload]).select(); if (data) setProdutos([data[0], ...produtos]); }
     fecharModalProduto();
@@ -215,6 +240,7 @@ function App() {
   };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center"><span className="text-gray-400 text-sm">Carregando...</span></div>;
+  if (session && !tenantId) return <div className="min-h-screen flex items-center justify-center"><span className="text-gray-400 text-sm">Carregando dados do tenant...</span></div>;
 
   if (!session) return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -249,7 +275,7 @@ function App() {
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <h1 className="text-sm font-semibold text-gray-800 tracking-wide">CRM GuardIAn</h1>
           <nav className="flex items-center gap-1">{navItems.map((n) => (<button key={n.key} onClick={() => setViewMode(n.key)} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-colors ${viewMode === n.key ? "bg-gray-100 text-gray-900" : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"}`}>{n.icon}<span className="hidden sm:inline">{n.label}</span>{n.count !== undefined && <span className="text-gray-400 text-[10px]">{n.count}</span>}</button>))}</nav>
-          <div className="flex items-center gap-2"><span className="text-xs text-gray-400 hidden md:inline">{session.user.email}</span><button onClick={handleSignOut} className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded hover:bg-gray-100"><Icons.LogOut />Sair</button></div>
+          <div className="flex items-center gap-2">{tenantNome && <span className="text-xs font-medium text-gray-600 hidden md:inline">{tenantNome}</span>}{tenantNome && <span className="text-gray-300 hidden md:inline">|</span>}<span className="text-xs text-gray-400 hidden md:inline">{session.user.email}</span><button onClick={handleSignOut} className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded hover:bg-gray-100"><Icons.LogOut />Sair</button></div>
         </div>
       </header>
 
