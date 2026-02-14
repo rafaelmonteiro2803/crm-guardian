@@ -132,7 +132,15 @@ function App() {
 
   const carregarTodosDados = async () => { await Promise.all([carregarClientes(), carregarUsuarios(), carregarOportunidades(), carregarVendas(), carregarTitulos(), carregarProdutos()]); };
   const carregarClientes = async () => { const { data } = await supabase.from("clientes").select("*").order("data_cadastro", { ascending: false }); if (data) setClientes(data); };
-  const carregarUsuarios = async () => { const { data } = await supabase.from("tenant_members").select("id, user_id, role, created_at").eq("tenant_id", tenantId).order("created_at", { ascending: false }); if (data) setUsuarios(data); };
+  const carregarUsuarios = async () => {
+    const { data, error } = await supabase.rpc("get_tenant_members_with_email", { p_tenant_id: tenantId });
+    if (!error && data) {
+      setUsuarios(data);
+      return;
+    }
+    const { data: fallback } = await supabase.from("tenant_members").select("id, user_id, role, created_at").eq("tenant_id", tenantId).order("created_at", { ascending: false });
+    if (fallback) setUsuarios(fallback);
+  };
   const carregarOportunidades = async () => { const { data } = await supabase.from("oportunidades").select("*").order("created_at", { ascending: false }); if (data) setOportunidades(data); };
   const carregarVendas = async () => { const { data } = await supabase.from("vendas").select("*").order("data_venda", { ascending: false }); if (data) setVendas(data); };
   const carregarTitulos = async () => { const { data } = await supabase.from("titulos").select("*").order("data_vencimento", { ascending: true }); if (data) setTitulos(data); };
@@ -351,6 +359,7 @@ function App() {
           <div className="space-y-3">
             <div className="flex items-center justify-between"><h2 className="text-sm font-semibold text-gray-700">Usuários</h2><button onClick={() => abrirModalUsuario()} className="inline-flex items-center gap-1 bg-gray-800 hover:bg-gray-700 text-white px-3 py-1.5 rounded text-xs font-medium"><Icons.Plus />Novo</button></div>
             <DataGrid columns={[
+              { key: "email", label: "Email", render: (u) => u.email ? <span className="text-gray-800">{u.email}</span> : <span className="text-gray-300">-</span>, filterValue: (u) => u.email || "" },
               { key: "user_id", label: "ID do Usuário", render: (u) => <span className="font-mono text-[11px] text-gray-700">{u.user_id}</span>, filterValue: (u) => u.user_id || "" },
               { key: "role", label: "Perfil", render: (u) => <span className="capitalize">{u.role || "member"}</span>, filterValue: (u) => u.role || "" },
               { key: "created_at", label: "Adicionado em", render: (u) => <span className="text-gray-500">{u.created_at ? new Date(u.created_at).toLocaleDateString("pt-BR") : "-"}</span>, filterValue: (u) => u.created_at ? new Date(u.created_at).toLocaleDateString("pt-BR") : "" },
