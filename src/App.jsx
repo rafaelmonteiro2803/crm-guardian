@@ -101,7 +101,7 @@ function App() {
   const [formVenda, setFormVenda] = useState({ cliente_id: "", descricao: "", valor: "", data_venda: new Date().toISOString().split("T")[0], forma_pagamento: "à vista", observacoes: "", desconto: "", itens: [] });
   const [formTitulo, setFormTitulo] = useState({ venda_id: "", descricao: "", valor: "", data_emissao: new Date().toISOString().split("T")[0], data_vencimento: "", status: "pendente" });
   const [formProduto, setFormProduto] = useState({ nome: "", tipo: "produto", descricao: "", categoria: "", preco_base: "", custo: "", unidade_medida: "", ativo: true, observacoes: "" });
-  const [formUsuario, setFormUsuario] = useState({ user_id: "", role: "member" });
+  const [formUsuario, setFormUsuario] = useState({ email: "", role: "member" });
   const estagios = ["prospecção", "qualificação", "proposta", "negociação", "fechado", "cancelado"];
 
   useEffect(() => { supabase.auth.getSession().then(({ data: { session } }) => { setSession(session); setLoading(false); }); const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setSession(session)); return () => subscription.unsubscribe(); }, []);
@@ -219,31 +219,24 @@ function App() {
   const excluirProduto = async (id) => { if (!confirm("Excluir produto?")) return; await supabase.from("produtos").delete().eq("id", id); setProdutos(produtos.filter((p) => p.id !== id)); };
 
   const salvarUsuario = async () => {
-    if (!formUsuario.user_id.trim()) return alert("ID do usuário é obrigatório!");
-    const payload = { user_id: formUsuario.user_id.trim(), role: formUsuario.role || "member", tenant_id: tenantId };
+    if (!formUsuario.email.trim()) return alert("Email é obrigatório!");
     if (editandoUsuario) {
-      const { error } = await supabase
-        .from("tenant_members")
-        .update({ role: payload.role })
-        .eq("id", editandoUsuario.id)
-        .eq("tenant_id", tenantId);
-
+      const { data, error } = await supabase.rpc("update_tenant_member_role", { p_member_id: editandoUsuario.id, p_tenant_id: tenantId, p_role: formUsuario.role || "member" });
       if (error) return alert(`Erro ao atualizar membro: ${error.message}`);
-
-      await carregarUsuarios();
+      if (data && data.length > 0) { setUsuarios(usuarios.map((u) => (u.id === editandoUsuario.id ? data[0] : u))); } else { await carregarUsuarios(); }
     } else {
-      const { data, error } = await supabase.from("tenant_members").insert([payload]).select();
+      const { data, error } = await supabase.rpc("add_tenant_member_by_email", { p_tenant_id: tenantId, p_email: formUsuario.email.trim(), p_role: formUsuario.role || "member" });
       if (error) return alert(`Erro ao adicionar membro: ${error.message}`);
-
-      if (!data?.length) {
-        await carregarUsuarios();
-      } else {
-        setUsuarios([data[0], ...usuarios]);
-      }
+      if (data && data.length > 0) { setUsuarios([data[0], ...usuarios]); } else { await carregarUsuarios(); }
     }
     fecharModalUsuario();
   };
-  const excluirUsuario = async (id) => { if (!confirm("Remover membro do tenant?")) return; await supabase.from("tenant_members").delete().eq("id", id); setUsuarios(usuarios.filter((u) => u.id !== id)); };
+  const excluirUsuario = async (id) => {
+    if (!confirm("Excluir usuário?")) return;
+    const { error } = await supabase.rpc("remove_tenant_member", { p_member_id: id, p_tenant_id: tenantId });
+    if (error) return alert(`Erro ao remover membro: ${error.message}`);
+    setUsuarios(usuarios.filter((u) => u.id !== id));
+  };
 
   const abrirModalCliente = (c = null) => { if (c) { setEditandoCliente(c); setFormCliente({ nome: c.nome, email: c.email || "", telefone: c.telefone || "", empresa: c.empresa || "", observacoes: c.observacoes || "" }); } setModalCliente(true); };
   const fecharModalCliente = () => { setModalCliente(false); setEditandoCliente(null); setFormCliente({ nome: "", email: "", telefone: "", empresa: "", observacoes: "" }); };
@@ -256,18 +249,8 @@ function App() {
   const abrirModalProduto = (p = null) => { if (p) { setEditandoProduto(p); setFormProduto({ nome: p.nome || "", tipo: p.tipo || "produto", descricao: p.descricao || "", categoria: p.categoria || "", preco_base: (p.preco_base ?? 0).toString(), custo: (p.custo ?? 0).toString(), unidade_medida: p.unidade_medida || "", ativo: p.ativo ?? true, observacoes: p.observacoes || "" }); } setModalProduto(true); };
   const fecharModalProduto = () => { setModalProduto(false); setEditandoProduto(null); setFormProduto({ nome: "", tipo: "produto", descricao: "", categoria: "", preco_base: "", custo: "", unidade_medida: "", ativo: true, observacoes: "" }); };
 
-  const abrirModalUsuario = (u = null) => {
-    if (u) {
-      setEditandoUsuario(u);
-      setFormUsuario({ user_id: u.user_id || "", role: u.role || "member" });
-    }
-    setModalUsuario(true);
-  };
-  const fecharModalUsuario = () => {
-    setModalUsuario(false);
-    setEditandoUsuario(null);
-    setFormUsuario({ user_id: "", role: "member" });
-  };
+  const abrirModalUsuario = (u = null) => { if (u) { setEditandoUsuario(u); setFormUsuario({ email: u.email || "", role: u.role || "member" }); } setModalUsuario(true); };
+  const fecharModalUsuario = () => { setModalUsuario(false); setEditandoUsuario(null); setFormUsuario({ email: "", role: "member" }); };
 
   const getClienteNome = (id) => clientes.find((c) => c.id === id)?.nome || "N/A";
   const getProdutoNome = (id) => produtos.find((p) => p.id === id)?.nome || null;
@@ -371,11 +354,10 @@ function App() {
           <div className="space-y-3">
             <div className="flex items-center justify-between"><h2 className="text-sm font-semibold text-gray-700">Usuários</h2><button onClick={() => abrirModalUsuario()} className="inline-flex items-center gap-1 bg-gray-800 hover:bg-gray-700 text-white px-3 py-1.5 rounded text-xs font-medium"><Icons.Plus />Novo</button></div>
             <DataGrid columns={[
-              { key: "email", label: "Email", render: (u) => u.email ? <span className="text-gray-800">{u.email}</span> : <span className="text-gray-300">-</span>, filterValue: (u) => u.email || "" },
-              { key: "user_id", label: "ID do Usuário", render: (u) => <span className="font-mono text-[11px] text-gray-700">{u.user_id}</span>, filterValue: (u) => u.user_id || "" },
-              { key: "role", label: "Perfil", render: (u) => <span className="capitalize">{u.role || "member"}</span>, filterValue: (u) => u.role || "" },
-              { key: "created_at", label: "Adicionado em", render: (u) => <span className="text-gray-500">{u.created_at ? new Date(u.created_at).toLocaleDateString("pt-BR") : "-"}</span>, filterValue: (u) => u.created_at ? new Date(u.created_at).toLocaleDateString("pt-BR") : "" },
-            ]} data={usuarios} actions={(u) => actBtns(() => abrirModalUsuario(u), () => excluirUsuario(u.id))} emptyMessage="Nenhum membro do tenant cadastrado." />
+              { key: "email", label: "Email", render: (u) => <span className="font-medium text-gray-800">{u.email || "-"}</span>, filterValue: (u) => u.email || "" },
+              { key: "role", label: "Perfil", render: (u) => { const r = u.role || "member"; const cls = r === "owner" ? "bg-purple-50 text-purple-700" : r === "admin" ? "bg-blue-50 text-blue-700" : "bg-gray-100 text-gray-600"; return <span className={`px-1.5 py-0.5 rounded text-[11px] capitalize ${cls}`}>{r}</span>; }, filterValue: (u) => u.role || "" },
+              { key: "created_at", label: "Cadastro", render: (u) => <span className="text-gray-500">{u.created_at ? new Date(u.created_at).toLocaleDateString("pt-BR") : "-"}</span>, filterValue: (u) => u.created_at ? new Date(u.created_at).toLocaleDateString("pt-BR") : "", sortValue: (u) => u.created_at },
+            ]} data={usuarios} actions={(u) => actBtns(() => abrirModalUsuario(u), () => excluirUsuario(u.id))} emptyMessage="Nenhum usuário cadastrado." />
           </div>
         )}
 
@@ -464,10 +446,10 @@ function App() {
       <div><label className="block text-xs text-gray-600 mb-0.5">Pagamento</label><select value={formVenda.forma_pagamento} onChange={(e) => setFormVenda({...formVenda, forma_pagamento: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none">{["à vista","parcelado","boleto","cartão","pix"].map((f) => <option key={f} value={f}>{f.charAt(0).toUpperCase()+f.slice(1)}</option>)}</select></div>
       <div><label className="block text-xs text-gray-600 mb-0.5">Observações</label><textarea value={formVenda.observacoes} onChange={(e) => setFormVenda({...formVenda, observacoes: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" rows="2" /></div></div><div className="flex gap-2 mt-4"><button onClick={fecharModalVenda} className="flex-1 px-3 py-1.5 border border-gray-200 rounded text-xs hover:bg-gray-50">Cancelar</button><button onClick={salvarVenda} className="flex-1 px-3 py-1.5 bg-gray-800 text-white rounded text-xs hover:bg-gray-700">{editandoVenda ? "Salvar" : "Adicionar"}</button></div></div></div>)}
 
-      {modalUsuario && (<div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50"><div className="bg-white rounded-lg border border-gray-200 max-w-sm w-full p-4"><h3 className="text-sm font-semibold mb-3">{editandoUsuario ? "Editar Membro" : "Novo Membro"}</h3><div className="space-y-2.5">
-        <div><label className="block text-xs text-gray-600 mb-0.5">ID do Usuário (auth.users) *</label><input type="text" value={formUsuario.user_id} onChange={(e) => setFormUsuario({...formUsuario, user_id: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" placeholder="UUID do usuário" disabled={!!editandoUsuario} /></div>
+      {modalUsuario && (<div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50"><div className="bg-white rounded-lg border border-gray-200 max-w-sm w-full p-4 max-h-[90vh] overflow-y-auto"><h3 className="text-sm font-semibold mb-3">{editandoUsuario ? "Editar Usuário" : "Novo Usuário"}</h3><div className="space-y-2.5">
+        <div><label className="block text-xs text-gray-600 mb-0.5">Email *</label><input type="email" value={formUsuario.email} onChange={(e) => setFormUsuario({...formUsuario, email: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" placeholder="email@exemplo.com" disabled={!!editandoUsuario} /></div>
         <div><label className="block text-xs text-gray-600 mb-0.5">Perfil</label><select value={formUsuario.role} onChange={(e) => setFormUsuario({...formUsuario, role: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"><option value="owner">Owner</option><option value="admin">Admin</option><option value="member">Member</option></select></div>
-        <p className="text-[11px] text-gray-400">Esta tela utiliza a tabela tenant_members (sem criar nova estrutura de usuários).</p>
+        {editandoUsuario && editandoUsuario.created_at && (<div className="bg-gray-50 border border-gray-200 rounded p-2.5"><p className="text-[11px] text-gray-500">Membro desde: <span className="font-medium text-gray-700">{new Date(editandoUsuario.created_at).toLocaleDateString("pt-BR")}</span></p></div>)}
         </div><div className="flex gap-2 mt-4"><button onClick={fecharModalUsuario} className="flex-1 px-3 py-1.5 border border-gray-200 rounded text-xs hover:bg-gray-50">Cancelar</button><button onClick={salvarUsuario} className="flex-1 px-3 py-1.5 bg-gray-800 text-white rounded text-xs hover:bg-gray-700">{editandoUsuario ? "Salvar" : "Adicionar"}</button></div></div></div>)}
 
       {modalTitulo && (() => { const vr = formTitulo.venda_id ? vendas.find((v) => v.id === formTitulo.venda_id) : null; const sv = vr ? vr.valor - titulos.filter((t) => t.venda_id === vr.id && t.status === "pago" && (!editandoTitulo || t.id !== editandoTitulo.id)).reduce((a, t) => a + Number(t.valor), 0) : null; return (
