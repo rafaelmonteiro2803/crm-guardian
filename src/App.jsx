@@ -222,12 +222,24 @@ function App() {
     if (!formUsuario.user_id.trim()) return alert("ID do usuário é obrigatório!");
     const payload = { user_id: formUsuario.user_id.trim(), role: formUsuario.role || "member", tenant_id: tenantId };
     if (editandoUsuario) {
-      const { data } = await supabase.from("tenant_members").update({ role: payload.role }).eq("id", editandoUsuario.id).select();
-      if (data) setUsuarios(usuarios.map((u) => (u.id === editandoUsuario.id ? data[0] : u)));
+      const { error } = await supabase
+        .from("tenant_members")
+        .update({ role: payload.role })
+        .eq("id", editandoUsuario.id)
+        .eq("tenant_id", tenantId);
+
+      if (error) return alert(`Erro ao atualizar membro: ${error.message}`);
+
+      await carregarUsuarios();
     } else {
       const { data, error } = await supabase.from("tenant_members").insert([payload]).select();
       if (error) return alert(`Erro ao adicionar membro: ${error.message}`);
-      if (data) setUsuarios([data[0], ...usuarios]);
+
+      if (!data?.length) {
+        await carregarUsuarios();
+      } else {
+        setUsuarios([data[0], ...usuarios]);
+      }
     }
     fecharModalUsuario();
   };
