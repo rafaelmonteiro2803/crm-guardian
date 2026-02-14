@@ -152,7 +152,7 @@ function App() {
   useEffect(() => { if (session && tenantId) carregarTodosDados(); }, [session, tenantId]);
 
   const carregarTodosDados = async () => { await Promise.all([carregarClientes(), carregarUsuarios(), carregarOportunidades(), carregarVendas(), carregarTitulos(), carregarProdutos()]); };
-  const carregarClientes = async () => { const { data } = await supabase.from("clientes").select("*").order("data_cadastro", { ascending: false }); if (data) setClientes(data); };
+  const carregarClientes = async () => { const { data } = await supabase.from("clientes").select("*").eq("tenant_id", tenantId).order("data_cadastro", { ascending: false }); if (data) setClientes(data); };
   const carregarUsuarios = async () => {
     const { data, error } = await supabase.rpc("get_tenant_members_with_email", { p_tenant_id: tenantId });
     if (!error && data) {
@@ -162,10 +162,10 @@ function App() {
     const { data: fallback } = await supabase.from("tenant_members").select("id, user_id, role, created_at").eq("tenant_id", tenantId).order("created_at", { ascending: false });
     if (fallback) setUsuarios(fallback);
   };
-  const carregarOportunidades = async () => { const { data } = await supabase.from("oportunidades").select("*").order("created_at", { ascending: false }); if (data) setOportunidades(data); };
-  const carregarVendas = async () => { const { data } = await supabase.from("vendas").select("*").order("data_venda", { ascending: false }); if (data) setVendas(data); };
-  const carregarTitulos = async () => { const { data } = await supabase.from("titulos").select("*").order("data_vencimento", { ascending: true }); if (data) setTitulos(data); };
-  const carregarProdutos = async () => { const { data } = await supabase.from("produtos").select("*").order("created_at", { ascending: false }); if (data) setProdutos(data); };
+  const carregarOportunidades = async () => { const { data } = await supabase.from("oportunidades").select("*").eq("tenant_id", tenantId).order("created_at", { ascending: false }); if (data) setOportunidades(data); };
+  const carregarVendas = async () => { const { data } = await supabase.from("vendas").select("*").eq("tenant_id", tenantId).order("data_venda", { ascending: false }); if (data) setVendas(data); };
+  const carregarTitulos = async () => { const { data } = await supabase.from("titulos").select("*").eq("tenant_id", tenantId).order("data_vencimento", { ascending: true }); if (data) setTitulos(data); };
+  const carregarProdutos = async () => { const { data } = await supabase.from("produtos").select("*").eq("tenant_id", tenantId).order("created_at", { ascending: false }); if (data) setProdutos(data); };
 
   const handleSignUp = async (e) => { e.preventDefault(); setAuthMessage(""); const { error } = await supabase.auth.signUp({ email, password }); setAuthMessage(error ? "Erro: " + error.message : "Conta criada! Verifique seu email."); };
   const handleSignIn = async (e) => { e.preventDefault(); setAuthMessage(""); const { error } = await supabase.auth.signInWithPassword({ email, password }); if (error) setAuthMessage("Erro: " + error.message); };
