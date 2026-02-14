@@ -81,6 +81,8 @@ function App() {
   const [viewMode, setViewMode] = useState("dashboard");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [selectedTenantId, setSelectedTenantId] = useState("");
+  const [tenantsList, setTenantsList] = useState([]);
   const [isSignUp, setIsSignUp] = useState(false);
   const [authMessage, setAuthMessage] = useState("");
   const [modalCliente, setModalCliente] = useState(false);
@@ -106,6 +108,9 @@ function App() {
 
   useEffect(() => { supabase.auth.getSession().then(({ data: { session } }) => { setSession(session); setLoading(false); }); const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setSession(session)); return () => subscription.unsubscribe(); }, []);
 
+  useEffect(() => { carregarTenants(); }, []);
+  const carregarTenants = async () => { const { data } = await supabase.rpc("get_all_tenants"); if (data) setTenantsList(data); };
+
   useEffect(() => {
     if (session) {
       carregarTenant();
@@ -116,15 +121,31 @@ function App() {
   }, [session]);
 
   const carregarTenant = async () => {
-    const { data } = await supabase
-      .from("tenant_members")
-      .select("tenant_id, tenants(id, nome)")
-      .eq("user_id", session.user.id)
-      .limit(1)
-      .single();
-    if (data) {
-      setTenantId(data.tenant_id);
-      setTenantNome(data.tenants?.nome || "");
+    if (selectedTenantId) {
+      const { data } = await supabase
+        .from("tenant_members")
+        .select("tenant_id, tenants(id, nome)")
+        .eq("user_id", session.user.id)
+        .eq("tenant_id", selectedTenantId)
+        .single();
+      if (data) {
+        setTenantId(data.tenant_id);
+        setTenantNome(data.tenants?.nome || "");
+      } else {
+        setAuthMessage("Erro: Você não tem acesso a este tenant.");
+        await supabase.auth.signOut();
+      }
+    } else {
+      const { data } = await supabase
+        .from("tenant_members")
+        .select("tenant_id, tenants(id, nome)")
+        .eq("user_id", session.user.id)
+        .limit(1)
+        .single();
+      if (data) {
+        setTenantId(data.tenant_id);
+        setTenantNome(data.tenants?.nome || "");
+      }
     }
   };
 
@@ -148,7 +169,7 @@ function App() {
 
   const handleSignUp = async (e) => { e.preventDefault(); setAuthMessage(""); const { error } = await supabase.auth.signUp({ email, password }); setAuthMessage(error ? "Erro: " + error.message : "Conta criada! Verifique seu email."); };
   const handleSignIn = async (e) => { e.preventDefault(); setAuthMessage(""); const { error } = await supabase.auth.signInWithPassword({ email, password }); if (error) setAuthMessage("Erro: " + error.message); };
-  const handleSignOut = async () => { await supabase.auth.signOut(); setClientes([]); setUsuarios([]); setOportunidades([]); setVendas([]); setTitulos([]); setProdutos([]); setTenantId(null); setTenantNome(""); };
+  const handleSignOut = async () => { await supabase.auth.signOut(); setClientes([]); setUsuarios([]); setOportunidades([]); setVendas([]); setTitulos([]); setProdutos([]); setTenantId(null); setTenantNome(""); setSelectedTenantId(""); };
 
   const salvarCliente = async () => {
     if (!formCliente.nome.trim()) return alert("Nome é obrigatório!");
@@ -297,6 +318,7 @@ function App() {
         <h1 className="text-lg font-semibold text-center text-gray-800 mb-1">CRM GuardIAn</h1>
         <p className="text-center text-gray-400 text-xs mb-5">Sistema de Gestão</p>
         <form onSubmit={isSignUp ? handleSignUp : handleSignIn} className="space-y-3">
+          <div><label className="block text-xs font-medium text-gray-600 mb-1">Tenant</label><select value={selectedTenantId} onChange={(e) => setSelectedTenantId(e.target.value)} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" required><option value="">Selecione o tenant...</option>{tenantsList.map((t) => <option key={t.id} value={t.id}>{t.nome}</option>)}</select></div>
           <div><label className="block text-xs font-medium text-gray-600 mb-1">Email</label><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" required /></div>
           <div><label className="block text-xs font-medium text-gray-600 mb-1">Senha</label><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" required /></div>
           {authMessage && <div className={`p-2 rounded text-xs ${authMessage.includes("Erro") ? "bg-red-50 text-red-600" : "bg-green-50 text-green-600"}`}>{authMessage}</div>}
