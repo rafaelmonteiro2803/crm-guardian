@@ -1,0 +1,3 @@
+-- Migration intencionalmente vazia.
+-- Ajuste solicitado: não criar estrutura de banco para usuários.
+-- O cadastro/listagem de usuários foi reprocessado para usar tenant_members.
