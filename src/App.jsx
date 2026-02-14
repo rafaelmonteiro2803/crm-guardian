@@ -74,6 +74,7 @@ function App() {
   const [tenantId, setTenantId] = useState(null);
   const [tenantNome, setTenantNome] = useState("");
   const [clientes, setClientes] = useState([]);
+  const [usuarios, setUsuarios] = useState([]);
   const [oportunidades, setOportunidades] = useState([]);
   const [vendas, setVendas] = useState([]);
   const [titulos, setTitulos] = useState([]);
@@ -92,12 +93,15 @@ function App() {
   const [editandoTitulo, setEditandoTitulo] = useState(null);
   const [produtos, setProdutos] = useState([]);
   const [modalProduto, setModalProduto] = useState(false);
+  const [modalUsuario, setModalUsuario] = useState(false);
   const [editandoProduto, setEditandoProduto] = useState(null);
+  const [editandoUsuario, setEditandoUsuario] = useState(null);
   const [formCliente, setFormCliente] = useState({ nome: "", email: "", telefone: "", empresa: "", observacoes: "" });
   const [formOportunidade, setFormOportunidade] = useState({ titulo: "", cliente_id: "", produto_id: "", valor: "", estagio: "prospecção", data_inicio: new Date().toISOString().split("T")[0] });
   const [formVenda, setFormVenda] = useState({ cliente_id: "", descricao: "", valor: "", data_venda: new Date().toISOString().split("T")[0], forma_pagamento: "à vista", observacoes: "", desconto: "", itens: [] });
   const [formTitulo, setFormTitulo] = useState({ venda_id: "", descricao: "", valor: "", data_emissao: new Date().toISOString().split("T")[0], data_vencimento: "", status: "pendente" });
   const [formProduto, setFormProduto] = useState({ nome: "", tipo: "produto", descricao: "", categoria: "", preco_base: "", custo: "", unidade_medida: "", ativo: true, observacoes: "" });
+  const [formUsuario, setFormUsuario] = useState({ user_id: "", role: "member" });
   const estagios = ["prospecção", "qualificação", "proposta", "negociação", "fechado", "cancelado"];
 
   useEffect(() => { supabase.auth.getSession().then(({ data: { session } }) => { setSession(session); setLoading(false); }); const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setSession(session)); return () => subscription.unsubscribe(); }, []);
@@ -126,8 +130,17 @@ function App() {
 
   useEffect(() => { if (session && tenantId) carregarTodosDados(); }, [session, tenantId]);
 
-  const carregarTodosDados = async () => { await Promise.all([carregarClientes(), carregarOportunidades(), carregarVendas(), carregarTitulos(), carregarProdutos()]); };
+  const carregarTodosDados = async () => { await Promise.all([carregarClientes(), carregarUsuarios(), carregarOportunidades(), carregarVendas(), carregarTitulos(), carregarProdutos()]); };
   const carregarClientes = async () => { const { data } = await supabase.from("clientes").select("*").order("data_cadastro", { ascending: false }); if (data) setClientes(data); };
+  const carregarUsuarios = async () => {
+    const { data, error } = await supabase.rpc("get_tenant_members_with_email", { p_tenant_id: tenantId });
+    if (!error && data) {
+      setUsuarios(data);
+      return;
+    }
+    const { data: fallback } = await supabase.from("tenant_members").select("id, user_id, role, created_at").eq("tenant_id", tenantId).order("created_at", { ascending: false });
+    if (fallback) setUsuarios(fallback);
+  };
   const carregarOportunidades = async () => { const { data } = await supabase.from("oportunidades").select("*").order("created_at", { ascending: false }); if (data) setOportunidades(data); };
   const carregarVendas = async () => { const { data } = await supabase.from("vendas").select("*").order("data_venda", { ascending: false }); if (data) setVendas(data); };
   const carregarTitulos = async () => { const { data } = await supabase.from("titulos").select("*").order("data_vencimento", { ascending: true }); if (data) setTitulos(data); };
@@ -135,7 +148,7 @@ function App() {
 
   const handleSignUp = async (e) => { e.preventDefault(); setAuthMessage(""); const { error } = await supabase.auth.signUp({ email, password }); setAuthMessage(error ? "Erro: " + error.message : "Conta criada! Verifique seu email."); };
   const handleSignIn = async (e) => { e.preventDefault(); setAuthMessage(""); const { error } = await supabase.auth.signInWithPassword({ email, password }); if (error) setAuthMessage("Erro: " + error.message); };
-  const handleSignOut = async () => { await supabase.auth.signOut(); setClientes([]); setOportunidades([]); setVendas([]); setTitulos([]); setProdutos([]); setTenantId(null); setTenantNome(""); };
+  const handleSignOut = async () => { await supabase.auth.signOut(); setClientes([]); setUsuarios([]); setOportunidades([]); setVendas([]); setTitulos([]); setProdutos([]); setTenantId(null); setTenantNome(""); };
 
   const salvarCliente = async () => {
     if (!formCliente.nome.trim()) return alert("Nome é obrigatório!");
@@ -205,6 +218,21 @@ function App() {
   };
   const excluirProduto = async (id) => { if (!confirm("Excluir produto?")) return; await supabase.from("produtos").delete().eq("id", id); setProdutos(produtos.filter((p) => p.id !== id)); };
 
+  const salvarUsuario = async () => {
+    if (!formUsuario.user_id.trim()) return alert("ID do usuário é obrigatório!");
+    const payload = { user_id: formUsuario.user_id.trim(), role: formUsuario.role || "member", tenant_id: tenantId };
+    if (editandoUsuario) {
+      const { data } = await supabase.from("tenant_members").update({ role: payload.role }).eq("id", editandoUsuario.id).select();
+      if (data) setUsuarios(usuarios.map((u) => (u.id === editandoUsuario.id ? data[0] : u)));
+    } else {
+      const { data, error } = await supabase.from("tenant_members").insert([payload]).select();
+      if (error) return alert(`Erro ao adicionar membro: ${error.message}`);
+      if (data) setUsuarios([data[0], ...usuarios]);
+    }
+    fecharModalUsuario();
+  };
+  const excluirUsuario = async (id) => { if (!confirm("Remover membro do tenant?")) return; await supabase.from("tenant_members").delete().eq("id", id); setUsuarios(usuarios.filter((u) => u.id !== id)); };
+
   const abrirModalCliente = (c = null) => { if (c) { setEditandoCliente(c); setFormCliente({ nome: c.nome, email: c.email || "", telefone: c.telefone || "", empresa: c.empresa || "", observacoes: c.observacoes || "" }); } setModalCliente(true); };
   const fecharModalCliente = () => { setModalCliente(false); setEditandoCliente(null); setFormCliente({ nome: "", email: "", telefone: "", empresa: "", observacoes: "" }); };
   const abrirModalOportunidade = (o = null) => { if (o) { setEditandoOportunidade(o); setFormOportunidade({ titulo: o.titulo, cliente_id: o.cliente_id, produto_id: o.produto_id || "", valor: o.valor.toString(), estagio: o.estagio, data_inicio: o.data_inicio }); } setModalOportunidade(true); };
@@ -215,6 +243,19 @@ function App() {
   const fecharModalTitulo = () => { setModalTitulo(false); setEditandoTitulo(null); setFormTitulo({ venda_id: "", descricao: "", valor: "", data_emissao: new Date().toISOString().split("T")[0], data_vencimento: "", status: "pendente" }); };
   const abrirModalProduto = (p = null) => { if (p) { setEditandoProduto(p); setFormProduto({ nome: p.nome || "", tipo: p.tipo || "produto", descricao: p.descricao || "", categoria: p.categoria || "", preco_base: (p.preco_base ?? 0).toString(), custo: (p.custo ?? 0).toString(), unidade_medida: p.unidade_medida || "", ativo: p.ativo ?? true, observacoes: p.observacoes || "" }); } setModalProduto(true); };
   const fecharModalProduto = () => { setModalProduto(false); setEditandoProduto(null); setFormProduto({ nome: "", tipo: "produto", descricao: "", categoria: "", preco_base: "", custo: "", unidade_medida: "", ativo: true, observacoes: "" }); };
+
+  const abrirModalUsuario = (u = null) => {
+    if (u) {
+      setEditandoUsuario(u);
+      setFormUsuario({ user_id: u.user_id || "", role: u.role || "member" });
+    }
+    setModalUsuario(true);
+  };
+  const fecharModalUsuario = () => {
+    setModalUsuario(false);
+    setEditandoUsuario(null);
+    setFormUsuario({ user_id: "", role: "member" });
+  };
 
   const getClienteNome = (id) => clientes.find((c) => c.id === id)?.nome || "N/A";
   const getProdutoNome = (id) => produtos.find((p) => p.id === id)?.nome || null;
@@ -262,6 +303,7 @@ function App() {
   const navItems = [
     { key: "dashboard", icon: <Icons.BarChart />, label: "Dashboard" },
     { key: "clientes", icon: <Icons.User />, label: "Clientes", count: clientes.length },
+    { key: "usuarios", icon: <Icons.User />, label: "Usuários", count: usuarios.length },
     { key: "produtos", icon: <Icons.ShoppingCart />, label: "Produtos", count: produtos.length },
     { key: "pipeline", icon: <Icons.TrendingUp />, label: "Pipeline", count: oportunidades.length },
     { key: "vendas", icon: <Icons.ShoppingCart />, label: "Vendas", count: vendas.length },
@@ -310,6 +352,18 @@ function App() {
               { key: "empresa", label: "Empresa", filterValue: (c) => c.empresa || "", render: (c) => c.empresa || <span className="text-gray-300">-</span> },
               { key: "data_cadastro", label: "Cadastro", render: (c) => <span className="text-gray-500">{new Date(c.data_cadastro).toLocaleDateString("pt-BR")}</span>, filterValue: (c) => new Date(c.data_cadastro).toLocaleDateString("pt-BR"), sortValue: (c) => c.data_cadastro },
             ]} data={clientes} actions={(c) => actBtns(() => abrirModalCliente(c), () => excluirCliente(c.id))} emptyMessage="Nenhum cliente cadastrado." />
+          </div>
+        )}
+
+        {viewMode === "usuarios" && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between"><h2 className="text-sm font-semibold text-gray-700">Usuários</h2><button onClick={() => abrirModalUsuario()} className="inline-flex items-center gap-1 bg-gray-800 hover:bg-gray-700 text-white px-3 py-1.5 rounded text-xs font-medium"><Icons.Plus />Novo</button></div>
+            <DataGrid columns={[
+              { key: "email", label: "Email", render: (u) => u.email ? <span className="text-gray-800">{u.email}</span> : <span className="text-gray-300">-</span>, filterValue: (u) => u.email || "" },
+              { key: "user_id", label: "ID do Usuário", render: (u) => <span className="font-mono text-[11px] text-gray-700">{u.user_id}</span>, filterValue: (u) => u.user_id || "" },
+              { key: "role", label: "Perfil", render: (u) => <span className="capitalize">{u.role || "member"}</span>, filterValue: (u) => u.role || "" },
+              { key: "created_at", label: "Adicionado em", render: (u) => <span className="text-gray-500">{u.created_at ? new Date(u.created_at).toLocaleDateString("pt-BR") : "-"}</span>, filterValue: (u) => u.created_at ? new Date(u.created_at).toLocaleDateString("pt-BR") : "" },
+            ]} data={usuarios} actions={(u) => actBtns(() => abrirModalUsuario(u), () => excluirUsuario(u.id))} emptyMessage="Nenhum membro do tenant cadastrado." />
           </div>
         )}
 
@@ -397,6 +451,12 @@ function App() {
       <div><label className="block text-xs text-gray-600 mb-0.5">Data</label><input type="date" value={formVenda.data_venda} onChange={(e) => setFormVenda({...formVenda, data_venda: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" /></div>
       <div><label className="block text-xs text-gray-600 mb-0.5">Pagamento</label><select value={formVenda.forma_pagamento} onChange={(e) => setFormVenda({...formVenda, forma_pagamento: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none">{["à vista","parcelado","boleto","cartão","pix"].map((f) => <option key={f} value={f}>{f.charAt(0).toUpperCase()+f.slice(1)}</option>)}</select></div>
       <div><label className="block text-xs text-gray-600 mb-0.5">Observações</label><textarea value={formVenda.observacoes} onChange={(e) => setFormVenda({...formVenda, observacoes: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" rows="2" /></div></div><div className="flex gap-2 mt-4"><button onClick={fecharModalVenda} className="flex-1 px-3 py-1.5 border border-gray-200 rounded text-xs hover:bg-gray-50">Cancelar</button><button onClick={salvarVenda} className="flex-1 px-3 py-1.5 bg-gray-800 text-white rounded text-xs hover:bg-gray-700">{editandoVenda ? "Salvar" : "Adicionar"}</button></div></div></div>)}
+
+      {modalUsuario && (<div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50"><div className="bg-white rounded-lg border border-gray-200 max-w-sm w-full p-4"><h3 className="text-sm font-semibold mb-3">{editandoUsuario ? "Editar Membro" : "Novo Membro"}</h3><div className="space-y-2.5">
+        <div><label className="block text-xs text-gray-600 mb-0.5">ID do Usuário (auth.users) *</label><input type="text" value={formUsuario.user_id} onChange={(e) => setFormUsuario({...formUsuario, user_id: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" placeholder="UUID do usuário" disabled={!!editandoUsuario} /></div>
+        <div><label className="block text-xs text-gray-600 mb-0.5">Perfil</label><select value={formUsuario.role} onChange={(e) => setFormUsuario({...formUsuario, role: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"><option value="owner">Owner</option><option value="admin">Admin</option><option value="member">Member</option></select></div>
+        <p className="text-[11px] text-gray-400">Esta tela utiliza a tabela tenant_members (sem criar nova estrutura de usuários).</p>
+        </div><div className="flex gap-2 mt-4"><button onClick={fecharModalUsuario} className="flex-1 px-3 py-1.5 border border-gray-200 rounded text-xs hover:bg-gray-50">Cancelar</button><button onClick={salvarUsuario} className="flex-1 px-3 py-1.5 bg-gray-800 text-white rounded text-xs hover:bg-gray-700">{editandoUsuario ? "Salvar" : "Adicionar"}</button></div></div></div>)}
 
       {modalTitulo && (() => { const vr = formTitulo.venda_id ? vendas.find((v) => v.id === formTitulo.venda_id) : null; const sv = vr ? vr.valor - titulos.filter((t) => t.venda_id === vr.id && t.status === "pago" && (!editandoTitulo || t.id !== editandoTitulo.id)).reduce((a, t) => a + Number(t.valor), 0) : null; return (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50"><div className="bg-white rounded-lg border border-gray-200 max-w-sm w-full p-4"><h3 className="text-sm font-semibold mb-3">{editandoTitulo ? "Editar Título" : "Novo Título"}</h3><div className="space-y-2.5">
