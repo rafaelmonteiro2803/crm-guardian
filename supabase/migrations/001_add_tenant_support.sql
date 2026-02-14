@@ -67,11 +67,13 @@ ALTER TABLE produtos ENABLE ROW LEVEL SECURITY;
 
 -- 9. Políticas RLS para tenant_members
 -- Usuário pode ver seus próprios memberships
+DROP POLICY IF EXISTS "tenant_members_select" ON tenant_members;
 CREATE POLICY "tenant_members_select" ON tenant_members
   FOR SELECT USING (user_id = auth.uid());
 
 -- 10. Políticas RLS para tenants
 -- Usuário pode ver tenants dos quais é membro
+DROP POLICY IF EXISTS "tenants_select" ON tenants;
 CREATE POLICY "tenants_select" ON tenants
   FOR SELECT USING (
     id IN (SELECT tenant_id FROM tenant_members WHERE user_id = auth.uid())
