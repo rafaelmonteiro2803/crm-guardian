@@ -115,6 +115,10 @@ function App() {
   const [osEncaminhar, setOsEncaminhar] = useState(null);
   const [formTecnico, setFormTecnico] = useState({ nome: "", cpf: "", email: "", telefone: "", especialidade: "", endereco: "", observacoes: "", ativo: true });
   const [formEncaminhar, setFormEncaminhar] = useState({ tecnico_id: "", comissao_percentual: "", comissao_valor: "" });
+  const [comissoes, setComissoes] = useState([]);
+  const [modalAgendarComissao, setModalAgendarComissao] = useState(false);
+  const [comissaoAgendar, setComissaoAgendar] = useState(null);
+  const [formAgendarComissao, setFormAgendarComissao] = useState({ data_agendamento: new Date().toISOString().split("T")[0], observacoes: "" });
   const estagios = ["prospecção", "qualificação", "proposta", "negociação", "fechado", "cancelado"];
 
   useEffect(() => { supabase.auth.getSession().then(({ data: { session } }) => { setSession(session); setLoading(false); }); const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setSession(session)); return () => subscription.unsubscribe(); }, []);
@@ -162,7 +166,7 @@ function App() {
 
   useEffect(() => { if (session && tenantId) carregarTodosDados(); }, [session, tenantId]);
 
-  const carregarTodosDados = async () => { await Promise.all([carregarClientes(), carregarUsuarios(), carregarOportunidades(), carregarVendas(), carregarTitulos(), carregarProdutos(), carregarTecnicos(), carregarOrdensServico()]); };
+  const carregarTodosDados = async () => { await Promise.all([carregarClientes(), carregarUsuarios(), carregarOportunidades(), carregarVendas(), carregarTitulos(), carregarProdutos(), carregarTecnicos(), carregarOrdensServico(), carregarComissoes()]); };
   const carregarClientes = async () => { const { data } = await supabase.from("clientes").select("*").eq("tenant_id", tenantId).order("data_cadastro", { ascending: false }); if (data) setClientes(data); };
   const carregarUsuarios = async () => {
     const { data, error } = await supabase.rpc("get_tenant_members_with_email", { p_tenant_id: tenantId });
@@ -179,10 +183,11 @@ function App() {
   const carregarProdutos = async () => { const { data } = await supabase.from("produtos").select("*").eq("tenant_id", tenantId).order("created_at", { ascending: false }); if (data) setProdutos(data); };
   const carregarTecnicos = async () => { const { data } = await supabase.from("tecnicos").select("*").eq("tenant_id", tenantId).order("created_at", { ascending: false }); if (data) setTecnicos(data); };
   const carregarOrdensServico = async () => { const { data } = await supabase.from("ordens_servico").select("*").eq("tenant_id", tenantId).order("created_at", { ascending: false }); if (data) setOrdensServico(data); };
+  const carregarComissoes = async () => { const { data } = await supabase.from("comissoes").select("*").eq("tenant_id", tenantId).order("created_at", { ascending: false }); if (data) setComissoes(data); };
 
   const handleSignUp = async (e) => { e.preventDefault(); setAuthMessage(""); const { error } = await supabase.auth.signUp({ email, password }); setAuthMessage(error ? "Erro: " + error.message : "Conta criada! Verifique seu email."); };
   const handleSignIn = async (e) => { e.preventDefault(); setAuthMessage(""); const { error } = await supabase.auth.signInWithPassword({ email, password }); if (error) setAuthMessage("Erro: " + error.message); };
-  const handleSignOut = async () => { await supabase.auth.signOut(); setClientes([]); setUsuarios([]); setOportunidades([]); setVendas([]); setTitulos([]); setProdutos([]); setTecnicos([]); setOrdensServico([]); setTenantId(null); setTenantNome(""); setSelectedTenantId(""); };
+  const handleSignOut = async () => { await supabase.auth.signOut(); setClientes([]); setUsuarios([]); setOportunidades([]); setVendas([]); setTitulos([]); setProdutos([]); setTecnicos([]); setOrdensServico([]); setComissoes([]); setTenantId(null); setTenantNome(""); setSelectedTenantId(""); };
 
   const salvarCliente = async () => {
     if (!formCliente.nome.trim()) return alert("Nome é obrigatório!");
@@ -274,8 +279,33 @@ function App() {
     if (data) setOrdensServico(ordensServico.map((o) => (o.id === osEncaminhar.id ? data[0] : o)));
     fecharModalEncaminhar();
   };
-  const concluirOrdemServico = async (id) => { if (!confirm("Marcar atendimento como concluído?")) return; const { data } = await supabase.from("ordens_servico").update({ status: "atendimento_concluido", data_conclusao: new Date().toISOString() }).eq("id", id).select(); if (data) setOrdensServico(ordensServico.map((o) => (o.id === id ? data[0] : o))); };
+  const concluirOrdemServico = async (id) => {
+    if (!confirm("Marcar atendimento como concluído?")) return;
+    const { data } = await supabase.from("ordens_servico").update({ status: "atendimento_concluido", data_conclusao: new Date().toISOString() }).eq("id", id).select();
+    if (data) {
+      setOrdensServico(ordensServico.map((o) => (o.id === id ? data[0] : o)));
+      const os = data[0];
+      if (os.tecnico_id && parseFloat(os.comissao_valor || 0) > 0) {
+        const novaComissao = { ordem_servico_id: os.id, tecnico_id: os.tecnico_id, valor: os.comissao_valor, percentual: os.comissao_percentual, status: "pendente", user_id: session.user.id, tenant_id: tenantId };
+        const { data: comissaoData } = await supabase.from("comissoes").insert([novaComissao]).select();
+        if (comissaoData) setComissoes((prev) => [comissaoData[0], ...prev]);
+      }
+    }
+  };
   const excluirOrdemServico = async (id) => { if (!confirm("Excluir ordem de serviço?")) return; await supabase.from("ordens_servico").delete().eq("id", id); setOrdensServico(ordensServico.filter((o) => o.id !== id)); };
+
+  const agendarComissao = async () => {
+    if (!formAgendarComissao.data_agendamento) return alert("Informe a data de agendamento!");
+    const { data } = await supabase.from("comissoes").update({ status: "agendado", data_agendamento: formAgendarComissao.data_agendamento, observacoes: formAgendarComissao.observacoes }).eq("id", comissaoAgendar.id).select();
+    if (data) setComissoes(comissoes.map((c) => (c.id === comissaoAgendar.id ? data[0] : c)));
+    fecharModalAgendarComissao();
+  };
+  const pagarComissao = async (id) => {
+    if (!confirm("Confirmar pagamento desta comissão?")) return;
+    const { data } = await supabase.from("comissoes").update({ status: "pago", data_pagamento: new Date().toISOString().split("T")[0] }).eq("id", id).select();
+    if (data) setComissoes(comissoes.map((c) => (c.id === id ? data[0] : c)));
+  };
+  const excluirComissao = async (id) => { if (!confirm("Excluir comissão?")) return; await supabase.from("comissoes").delete().eq("id", id); setComissoes(comissoes.filter((c) => c.id !== id)); };
 
   const salvarUsuario = async () => {
     if (!formUsuario.email.trim()) return alert("Email é obrigatório!");
