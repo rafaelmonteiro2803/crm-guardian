@@ -26,6 +26,9 @@ const Icons = {
   ClipboardList: ({ className = "w-4 h-4" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>),
   Cog: ({ className = "w-4 h-4" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>),
   ArrowRight: ({ className = "w-4 h-4" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>),
+  ChevronDown: ({ className = "w-4 h-4" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>),
+  Menu: ({ className = "w-5 h-5" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>),
+  X: ({ className = "w-5 h-5" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>),
 };
 
 function DataGrid({ columns, data, actions, emptyMessage, rowClassName }) {
@@ -119,11 +122,20 @@ function App() {
   const [modalAgendarComissao, setModalAgendarComissao] = useState(false);
   const [comissaoAgendar, setComissaoAgendar] = useState(null);
   const [formAgendarComissao, setFormAgendarComissao] = useState({ data_agendamento: new Date().toISOString().split("T")[0], observacoes: "" });
+  const [openDropdown, setOpenDropdown] = useState(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [tenantCor, setTenantCor] = useState(null);
   const estagios = ["prospecção", "qualificação", "proposta", "negociação", "fechado", "cancelado"];
 
   useEffect(() => { supabase.auth.getSession().then(({ data: { session } }) => { setSession(session); setLoading(false); }); const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setSession(session)); return () => subscription.unsubscribe(); }, []);
 
   useEffect(() => { carregarTenants(); }, []);
+  useEffect(() => {
+    if (!openDropdown) return;
+    const close = () => setOpenDropdown(null);
+    document.addEventListener("click", close);
+    return () => document.removeEventListener("click", close);
+  }, [openDropdown]);
   const carregarTenants = async () => { const { data } = await supabase.rpc("get_all_tenants"); if (data) setTenantsList(data); };
 
   useEffect(() => {
@@ -139,13 +151,14 @@ function App() {
     if (selectedTenantId) {
       const { data } = await supabase
         .from("tenant_members")
-        .select("tenant_id, tenants(id, nome)")
+        .select("tenant_id, tenants(id, nome, cor)")
         .eq("user_id", session.user.id)
         .eq("tenant_id", selectedTenantId)
         .single();
       if (data) {
         setTenantId(data.tenant_id);
         setTenantNome(data.tenants?.nome || "");
+        setTenantCor(data.tenants?.cor || null);
       } else {
         setAuthMessage("Erro: Você não tem acesso a este tenant.");
         await supabase.auth.signOut();
@@ -153,13 +166,14 @@ function App() {
     } else {
       const { data } = await supabase
         .from("tenant_members")
-        .select("tenant_id, tenants(id, nome)")
+        .select("tenant_id, tenants(id, nome, cor)")
         .eq("user_id", session.user.id)
         .limit(1)
         .single();
       if (data) {
         setTenantId(data.tenant_id);
         setTenantNome(data.tenants?.nome || "");
+        setTenantCor(data.tenants?.cor || null);
       }
     }
   };
@@ -407,28 +421,113 @@ function App() {
   );
 
   const ind = calcularIndicadores();
-  const navItems = [
-    { key: "dashboard", icon: <Icons.BarChart />, label: "Dashboard" },
-    { key: "clientes", icon: <Icons.User />, label: "Clientes", count: clientes.length },
-    { key: "usuarios", icon: <Icons.User />, label: "Usuários", count: usuarios.length },
-    { key: "produtos", icon: <Icons.ShoppingCart />, label: "Produtos", count: produtos.length },
-    { key: "pipeline", icon: <Icons.TrendingUp />, label: "Pipeline", count: oportunidades.length },
-    { key: "vendas", icon: <Icons.ShoppingCart />, label: "Vendas", count: vendas.length },
-    { key: "financeiro", icon: <Icons.CreditCard />, label: "Financeiro", count: titulos.length },
-    { key: "tecnicos", icon: <Icons.Cog />, label: "Técnicos", count: tecnicos.length },
-    { key: "ordens_servico", icon: <Icons.ClipboardList />, label: "Ordens de Serviço", count: ordensServico.length },
-    { key: "comissoes", icon: <Icons.DollarSign />, label: "Comissões", count: comissoes.filter((c) => c.status !== "pago").length },
+  const navGroups = [
+    {
+      key: "admin",
+      label: "Administrativo",
+      icon: <Icons.Cog />,
+      items: [
+        { key: "usuarios", label: "Usuários", icon: <Icons.User />, count: usuarios.length },
+        { key: "tecnicos", label: "Profissionais / Técnicos", icon: <Icons.Cog />, count: tecnicos.length },
+        { key: "produtos", label: "Produtos", icon: <Icons.ShoppingCart />, count: produtos.length },
+      ],
+    },
+    {
+      key: "comercial",
+      label: "Vendas",
+      icon: <Icons.TrendingUp />,
+      items: [
+        { key: "clientes", label: "Clientes", icon: <Icons.User />, count: clientes.length },
+        { key: "pipeline", label: "Pipeline", icon: <Icons.TrendingUp />, count: oportunidades.length },
+        { key: "vendas", label: "Vendas", icon: <Icons.ShoppingCart />, count: vendas.length },
+      ],
+    },
+    {
+      key: "operacional",
+      label: "Operacional",
+      icon: <Icons.ClipboardList />,
+      items: [
+        { key: "financeiro", label: "Financeiro", icon: <Icons.CreditCard />, count: titulos.length },
+        { key: "ordens_servico", label: "Ordens de Serviço", icon: <Icons.ClipboardList />, count: ordensServico.length },
+        { key: "comissoes", label: "Comissões", icon: <Icons.DollarSign />, count: comissoes.filter((c) => c.status !== "pago").length },
+      ],
+    },
   ];
   const actBtns = (onEdit, onDel) => (<div className="flex items-center gap-1"><button onClick={onEdit} className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 p-1 rounded"><Icons.Edit /></button><button onClick={onDel} className="text-gray-400 hover:text-red-600 hover:bg-red-50 p-1 rounded"><Icons.Trash /></button></div>);
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200 px-4 py-2">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <h1 className="text-sm font-semibold text-gray-800 tracking-wide">CRM GuardIAn</h1>
-          <nav className="flex items-center gap-1">{navItems.map((n) => (<button key={n.key} onClick={() => setViewMode(n.key)} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-colors ${viewMode === n.key ? "bg-gray-100 text-gray-900" : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"}`}>{n.icon}<span className="hidden sm:inline">{n.label}</span>{n.count !== undefined && <span className="text-gray-400 text-[10px]">{n.count}</span>}</button>))}</nav>
-          <div className="flex items-center gap-2">{tenantNome && <span className="text-xs font-medium text-gray-600 hidden md:inline">{tenantNome}</span>}{tenantNome && <span className="text-gray-300 hidden md:inline">|</span>}<span className="text-xs text-gray-400 hidden md:inline">{session.user.email}</span><button onClick={handleSignOut} className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded hover:bg-gray-100"><Icons.LogOut />Sair</button></div>
+      <header style={tenantCor ? { backgroundColor: tenantCor } : {}} className={`${tenantCor ? "" : "bg-white"} border-b border-gray-200 px-4 py-2`}>
+        <div className="max-w-7xl mx-auto flex items-center gap-3">
+          {/* Logo */}
+          <h1 className="text-sm font-semibold text-gray-800 tracking-wide whitespace-nowrap flex-shrink-0">CRM GuardIAn</h1>
+
+          {/* Desktop Nav */}
+          <nav className="hidden md:flex items-center gap-0.5 flex-1">
+            <button onClick={() => { setViewMode("dashboard"); setOpenDropdown(null); }} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-colors ${viewMode === "dashboard" ? "bg-gray-800 text-white" : "text-gray-600 hover:text-gray-900 hover:bg-black/5"}`}>
+              <Icons.BarChart /><span>Dashboard</span>
+            </button>
+            {navGroups.map(group => {
+              const isActive = group.items.some(i => i.key === viewMode);
+              const isOpen = openDropdown === group.key;
+              return (
+                <div key={group.key} className="relative">
+                  <button onClick={(e) => { e.stopPropagation(); setOpenDropdown(isOpen ? null : group.key); }} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-colors ${isActive ? "bg-gray-800 text-white" : "text-gray-600 hover:text-gray-900 hover:bg-black/5"}`}>
+                    {group.icon}<span>{group.label}</span><Icons.ChevronDown className={`w-3 h-3 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
+                  </button>
+                  {isOpen && (
+                    <div className="absolute top-full left-0 mt-1 w-52 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1 overflow-hidden">
+                      {group.items.map(item => (
+                        <button key={item.key} onClick={() => { setViewMode(item.key); setOpenDropdown(null); }} className={`w-full flex items-center gap-2 px-3 py-2 text-xs text-left transition-colors ${viewMode === item.key ? "bg-gray-100 text-gray-900 font-medium" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"}`}>
+                          {item.icon}<span className="flex-1">{item.label}</span>{item.count !== undefined && <span className="text-gray-400 text-[10px] tabular-nums">{item.count}</span>}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </nav>
+
+          {/* Desktop: user info + logout */}
+          <div className="hidden md:flex items-center gap-2 flex-shrink-0 ml-auto">
+            {tenantNome && <span className="text-xs font-medium text-gray-600">{tenantNome}</span>}
+            {tenantNome && <span className="text-gray-300">|</span>}
+            <span className="text-xs text-gray-400">{session.user.email}</span>
+            <button onClick={handleSignOut} className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded hover:bg-black/5"><Icons.LogOut />Sair</button>
+          </div>
+
+          {/* Mobile: logout + hamburger */}
+          <div className="md:hidden ml-auto flex items-center gap-1">
+            <button onClick={handleSignOut} className="inline-flex items-center p-1.5 rounded text-gray-500 hover:text-gray-700 hover:bg-black/5"><Icons.LogOut /></button>
+            <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="inline-flex items-center justify-center p-1.5 rounded text-gray-600 hover:text-gray-900 hover:bg-black/5">
+              {mobileMenuOpen ? <Icons.X /> : <Icons.Menu />}
+            </button>
+          </div>
         </div>
+
+        {/* Mobile menu panel */}
+        {mobileMenuOpen && (
+          <div className="md:hidden border-t border-gray-200 mt-2 py-2 max-w-7xl mx-auto">
+            <button onClick={() => { setViewMode("dashboard"); setMobileMenuOpen(false); }} className={`w-full flex items-center gap-2 px-3 py-2 rounded text-xs font-medium transition-colors ${viewMode === "dashboard" ? "bg-gray-800 text-white" : "text-gray-600 hover:bg-black/5"}`}>
+              <Icons.BarChart /><span>Dashboard</span>
+            </button>
+            {navGroups.map(group => (
+              <div key={group.key} className="mt-1">
+                <div className="px-3 py-1.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">{group.icon}{group.label}</div>
+                {group.items.map(item => (
+                  <button key={item.key} onClick={() => { setViewMode(item.key); setMobileMenuOpen(false); }} className={`w-full flex items-center gap-2 px-5 py-2 text-xs rounded transition-colors ${viewMode === item.key ? "bg-gray-800 text-white" : "text-gray-600 hover:bg-black/5"}`}>
+                    {item.icon}<span className="flex-1">{item.label}</span>{item.count !== undefined && <span className="text-[10px] tabular-nums opacity-60">{item.count}</span>}
+                  </button>
+                ))}
+              </div>
+            ))}
+            <div className="border-t border-gray-100 mt-2 pt-2 px-3">
+              <div className="text-xs font-medium text-gray-600">{tenantNome}</div>
+              <div className="text-[11px] text-gray-400">{session.user.email}</div>
+            </div>
+          </div>
+        )}
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-4">
