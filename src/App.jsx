@@ -346,6 +346,9 @@ function App() {
   const abrirModalEncaminhar = (os) => { setOsEncaminhar(os); setFormEncaminhar({ tecnico_id: os.tecnico_id || "", comissao_percentual: os.comissao_percentual?.toString() || "", comissao_valor: os.comissao_valor?.toString() || "" }); setModalEncaminhar(true); };
   const fecharModalEncaminhar = () => { setModalEncaminhar(false); setOsEncaminhar(null); setFormEncaminhar({ tecnico_id: "", comissao_percentual: "", comissao_valor: "" }); };
 
+  const abrirModalAgendarComissao = (c) => { setComissaoAgendar(c); setFormAgendarComissao({ data_agendamento: c.data_agendamento || new Date().toISOString().split("T")[0], observacoes: c.observacoes || "" }); setModalAgendarComissao(true); };
+  const fecharModalAgendarComissao = () => { setModalAgendarComissao(false); setComissaoAgendar(null); setFormAgendarComissao({ data_agendamento: new Date().toISOString().split("T")[0], observacoes: "" }); };
+
   const getClienteNome = (id) => clientes.find((c) => c.id === id)?.nome || "N/A";
   const getTecnicoNome = (id) => tecnicos.find((t) => t.id === id)?.nome || "N/A";
   const getProdutoNome = (id) => produtos.find((p) => p.id === id)?.nome || null;
@@ -414,6 +417,7 @@ function App() {
     { key: "financeiro", icon: <Icons.CreditCard />, label: "Financeiro", count: titulos.length },
     { key: "tecnicos", icon: <Icons.Cog />, label: "Técnicos", count: tecnicos.length },
     { key: "ordens_servico", icon: <Icons.ClipboardList />, label: "Ordens de Serviço", count: ordensServico.length },
+    { key: "comissoes", icon: <Icons.DollarSign />, label: "Comissões", count: comissoes.filter((c) => c.status !== "pago").length },
   ];
   const actBtns = (onEdit, onDel) => (<div className="flex items-center gap-1"><button onClick={onEdit} className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 p-1 rounded"><Icons.Edit /></button><button onClick={onDel} className="text-gray-400 hover:text-red-600 hover:bg-red-50 p-1 rounded"><Icons.Trash /></button></div>);
 
@@ -589,6 +593,96 @@ function App() {
             )} emptyMessage="Nenhuma ordem de serviço. Registre uma venda para gerar automaticamente." />
           </div>
         )}
+
+        {viewMode === "comissoes" && (
+          <div className="space-y-4">
+            <h2 className="text-sm font-semibold text-gray-700">Gestão de Comissões</h2>
+
+            {/* Cards consolidados por técnico — valores em aberto */}
+            {(() => {
+              const porTecnico = tecnicos
+                .map((t) => {
+                  const abertas = comissoes.filter((c) => c.tecnico_id === t.id && c.status !== "pago");
+                  return { t, total: abertas.reduce((s, c) => s + parseFloat(c.valor || 0), 0), pendente: abertas.filter((c) => c.status === "pendente").length, agendado: abertas.filter((c) => c.status === "agendado").length };
+                })
+                .filter((x) => x.pendente + x.agendado > 0);
+              if (!porTecnico.length) return (
+                <div className="bg-gray-50 border border-gray-200 rounded p-4 text-center text-xs text-gray-400">
+                  Nenhuma comissão em aberto. Conclua um atendimento com técnico e comissão para gerar cards.
+                </div>
+              );
+              return (
+                <div>
+                  <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-2">Valores em Aberto por Técnico</p>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    {porTecnico.map(({ t, total, pendente, agendado }) => (
+                      <div key={t.id} className="bg-white border border-blue-200 rounded p-3">
+                        <p className="text-xs font-semibold text-gray-800 truncate">{t.nome}</p>
+                        {t.especialidade && <p className="text-[10px] text-gray-400">{t.especialidade}</p>}
+                        <p className="text-xl font-bold text-blue-700 mt-1">R$ {fmtBRL(total)}</p>
+                        <p className="text-[10px] text-gray-500 mt-0.5">
+                          {pendente > 0 && <span className="text-gray-600">{pendente} pendente{pendente > 1 ? "s" : ""}</span>}
+                          {pendente > 0 && agendado > 0 && " · "}
+                          {agendado > 0 && <span className="text-yellow-600">{agendado} agendado{agendado > 1 ? "s" : ""}</span>}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Kanban de comissões */}
+            {(() => {
+              const colunas = [
+                { key: "pendente", label: "Pendente de Pagamento", hClass: "bg-gray-100 border-gray-300 text-gray-700" },
+                { key: "agendado", label: "Pagamento Agendado", hClass: "bg-yellow-50 border-yellow-300 text-yellow-800" },
+                { key: "pago", label: "Pagamento Efetuado", hClass: "bg-green-50 border-green-300 text-green-800" },
+              ];
+              return (
+                <div className="flex gap-3 overflow-x-auto pb-2">
+                  {colunas.map((col) => {
+                    const cards = comissoes.filter((c) => c.status === col.key);
+                    const totalCol = cards.reduce((s, c) => s + parseFloat(c.valor || 0), 0);
+                    return (
+                      <div key={col.key} className="flex-shrink-0 w-64">
+                        <div className={`rounded p-2.5 mb-2 border ${col.hClass}`}>
+                          <h3 className="text-xs font-semibold">{col.label}</h3>
+                          <p className="text-[11px] opacity-75">{cards.length} {cards.length === 1 ? "card" : "cards"} · R$ {fmtBRL(totalCol)}</p>
+                        </div>
+                        <div className="space-y-2">
+                          {cards.length === 0 && <div className="bg-white border border-dashed border-gray-200 rounded p-4 text-center text-[11px] text-gray-400">Sem comissões</div>}
+                          {cards.map((c) => {
+                            const os = ordensServico.find((o) => o.id === c.ordem_servico_id) || {};
+                            return (
+                              <div key={c.id} className="bg-white border border-gray-200 rounded p-3 shadow-sm">
+                                <div className="flex justify-between items-start mb-1.5">
+                                  <span className="font-mono text-[10px] text-gray-400 bg-gray-50 px-1 rounded">{os.numero_os || "—"}</span>
+                                  <span className="text-sm font-bold text-blue-700">R$ {fmtBRL(c.valor)}</span>
+                                </div>
+                                <p className="text-xs font-semibold text-gray-800">{getTecnicoNome(c.tecnico_id)}</p>
+                                <p className="text-[11px] text-gray-500 mb-1">{getClienteNome(os.cliente_id)}</p>
+                                {parseFloat(c.percentual || 0) > 0 && <p className="text-[10px] text-gray-400">{c.percentual}% s/ R$ {fmtBRL(os.valor_total)}</p>}
+                                {c.data_agendamento && <p className="text-[10px] text-yellow-700 mt-1 font-medium">📅 Agendado: {new Date(c.data_agendamento + "T12:00:00").toLocaleDateString("pt-BR")}</p>}
+                                {c.data_pagamento && <p className="text-[10px] text-green-700 mt-1 font-medium">✓ Pago em: {new Date(c.data_pagamento + "T12:00:00").toLocaleDateString("pt-BR")}</p>}
+                                {c.observacoes && <p className="text-[10px] text-gray-400 mt-1 italic truncate" title={c.observacoes}>{c.observacoes}</p>}
+                                <div className="flex gap-1 mt-2 pt-2 border-t border-gray-100">
+                                  {c.status === "pendente" && <button onClick={() => abrirModalAgendarComissao(c)} className="flex-1 px-1.5 py-1 text-[11px] rounded bg-yellow-50 text-yellow-700 hover:bg-yellow-100 border border-yellow-200 font-medium">Agendar</button>}
+                                  {c.status === "agendado" && <button onClick={() => pagarComissao(c.id)} className="flex-1 px-1.5 py-1 text-[11px] rounded bg-green-50 text-green-700 hover:bg-green-100 border border-green-200 font-medium">Confirmar Pago</button>}
+                                  {c.status !== "pago" && <button onClick={() => excluirComissao(c.id)} className="text-gray-300 hover:text-red-500 p-1 rounded hover:bg-red-50"><Icons.Trash className="w-3 h-3" /></button>}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+          </div>
+        )}
       </main>
 
       {modalCliente && (<div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50"><div className="bg-white rounded-lg border border-gray-200 max-w-sm w-full p-4 max-h-[90vh] overflow-y-auto"><h3 className="text-sm font-semibold mb-3">{editandoCliente ? "Editar Cliente" : "Novo Cliente"}</h3><div className="space-y-2.5"><div><label className="block text-xs text-gray-600 mb-0.5">Nome *</label><input type="text" value={formCliente.nome} onChange={(e) => setFormCliente({...formCliente, nome: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" /></div><div><label className="block text-xs text-gray-600 mb-0.5">CPF</label><input type="text" value={formCliente.cpf} onChange={(e) => { const v = e.target.value.replace(/\D/g, "").slice(0, 11); const f = v.length > 9 ? v.replace(/(\d{3})(\d{3})(\d{3})(\d{1,2})/, "$1.$2.$3-$4") : v.length > 6 ? v.replace(/(\d{3})(\d{3})(\d{1,3})/, "$1.$2.$3") : v.length > 3 ? v.replace(/(\d{3})(\d{1,3})/, "$1.$2") : v; setFormCliente({...formCliente, cpf: f}); }} placeholder="000.000.000-00" className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" /></div><div><label className="block text-xs text-gray-600 mb-0.5">Email</label><input type="email" value={formCliente.email} onChange={(e) => setFormCliente({...formCliente, email: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" /></div><div><label className="block text-xs text-gray-600 mb-0.5">Telefone</label><input type="tel" value={formCliente.telefone} onChange={(e) => setFormCliente({...formCliente, telefone: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" /></div><div><label className="block text-xs text-gray-600 mb-0.5">Empresa</label><input type="text" value={formCliente.empresa} onChange={(e) => setFormCliente({...formCliente, empresa: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" /></div><div><label className="block text-xs text-gray-600 mb-0.5">Observações</label><textarea value={formCliente.observacoes} onChange={(e) => setFormCliente({...formCliente, observacoes: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" rows="2" /></div></div><div className="flex gap-2 mt-4"><button onClick={fecharModalCliente} className="flex-1 px-3 py-1.5 border border-gray-200 rounded text-xs hover:bg-gray-50">Cancelar</button><button onClick={salvarCliente} className="flex-1 px-3 py-1.5 bg-gray-800 text-white rounded text-xs hover:bg-gray-700">{editandoCliente ? "Salvar" : "Adicionar"}</button></div></div></div>)}
@@ -611,6 +705,19 @@ function App() {
         <div><label className="block text-xs text-gray-600 mb-0.5">Perfil</label><select value={formUsuario.role} onChange={(e) => setFormUsuario({...formUsuario, role: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"><option value="owner">Owner</option><option value="admin">Admin</option><option value="member">Member</option></select></div>
         {editandoUsuario && editandoUsuario.created_at && (<div className="bg-gray-50 border border-gray-200 rounded p-2.5"><p className="text-[11px] text-gray-500">Membro desde: <span className="font-medium text-gray-700">{new Date(editandoUsuario.created_at).toLocaleDateString("pt-BR")}</span></p></div>)}
         </div><div className="flex gap-2 mt-4"><button onClick={fecharModalUsuario} className="flex-1 px-3 py-1.5 border border-gray-200 rounded text-xs hover:bg-gray-50">Cancelar</button><button onClick={salvarUsuario} className="flex-1 px-3 py-1.5 bg-gray-800 text-white rounded text-xs hover:bg-gray-700">{editandoUsuario ? "Salvar" : "Adicionar"}</button></div></div></div>)}
+
+      {modalAgendarComissao && comissaoAgendar && (<div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50"><div className="bg-white rounded-lg border border-gray-200 max-w-xs w-full p-4"><h3 className="text-sm font-semibold mb-3">Agendar Pagamento de Comissão</h3>
+        <div className="bg-yellow-50 border border-yellow-200 rounded p-2.5 mb-3">
+          <p className="text-xs font-semibold text-gray-700">{getTecnicoNome(comissaoAgendar.tecnico_id)}</p>
+          <p className="text-lg font-bold text-blue-700">R$ {fmtBRL(comissaoAgendar.valor)}</p>
+          {parseFloat(comissaoAgendar.percentual || 0) > 0 && <p className="text-[10px] text-gray-500">{comissaoAgendar.percentual}% de comissão</p>}
+        </div>
+        <div className="space-y-2.5">
+          <div><label className="block text-xs text-gray-600 mb-0.5">Data do Pagamento *</label><input type="date" value={formAgendarComissao.data_agendamento} onChange={(e) => setFormAgendarComissao({...formAgendarComissao, data_agendamento: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" /></div>
+          <div><label className="block text-xs text-gray-600 mb-0.5">Observações</label><textarea value={formAgendarComissao.observacoes} onChange={(e) => setFormAgendarComissao({...formAgendarComissao, observacoes: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" rows="2" placeholder="Ex: transferência banco X, data combinada..." /></div>
+        </div>
+        <div className="flex gap-2 mt-4"><button onClick={fecharModalAgendarComissao} className="flex-1 px-3 py-1.5 border border-gray-200 rounded text-xs hover:bg-gray-50">Cancelar</button><button onClick={agendarComissao} className="flex-1 px-3 py-1.5 bg-yellow-600 text-white rounded text-xs hover:bg-yellow-700 font-medium">Agendar</button></div>
+        </div></div>)}
 
       {modalTecnico && (<div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50"><div className="bg-white rounded-lg border border-gray-200 max-w-sm w-full p-4 max-h-[90vh] overflow-y-auto"><h3 className="text-sm font-semibold mb-3">{editandoTecnico ? "Editar Técnico" : "Novo Técnico"}</h3><div className="space-y-2.5">
         <div><label className="block text-xs text-gray-600 mb-0.5">Nome *</label><input type="text" value={formTecnico.nome} onChange={(e) => setFormTecnico({...formTecnico, nome: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" /></div>
