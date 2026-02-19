@@ -27,6 +27,10 @@ const Icons = {
   Cog: ({ className = "w-4 h-4" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>),
   ArrowRight: ({ className = "w-4 h-4" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>),
   ChevronDown: ({ className = "w-4 h-4" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>),
+  Package: ({ className = "w-4 h-4" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>),
+  ArrowUpCircle: ({ className = "w-4 h-4" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 11l3-3m0 0l3 3m-3-3v8m0-13a9 9 0 110 18 9 9 0 010-18z" /></svg>),
+  ArrowDownCircle: ({ className = "w-4 h-4" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13l-3 3m0 0l-3-3m3 3V8m0 13a9 9 0 110-18 9 9 0 010-18z" /></svg>),
+  Link: ({ className = "w-4 h-4" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>),
   Menu: ({ className = "w-5 h-5" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>),
   X: ({ className = "w-5 h-5" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>),
 };
@@ -126,6 +130,29 @@ function App() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [tenantCor, setTenantCor] = useState(null);
   const estagios = ["prospecção", "qualificação", "proposta", "negociação", "fechado", "cancelado"];
+  const CATEGORIAS_ESTOQUE = [
+    { value: "cosmetico", label: "Cosméticos" },
+    { value: "insumo", label: "Insumos" },
+    { value: "descartavel", label: "Descartáveis" },
+    { value: "produto_revenda", label: "Produto de Revenda" },
+    { value: "equipamento", label: "Equipamentos" },
+    { value: "material_limpeza", label: "Material de Limpeza" },
+    { value: "embalagem", label: "Embalagens" },
+    { value: "outro", label: "Outros" },
+  ];
+  const [estoqueItens, setEstoqueItens] = useState([]);
+  const [estoqueMovimentacoes, setEstoqueMovimentacoes] = useState([]);
+  const [produtoEstoqueVinculos, setProdutoEstoqueVinculos] = useState([]);
+  const [modalEstoqueItem, setModalEstoqueItem] = useState(false);
+  const [modalMovimentacao, setModalMovimentacao] = useState(false);
+  const [modalVincularEstoque, setModalVincularEstoque] = useState(false);
+  const [editandoEstoqueItem, setEditandoEstoqueItem] = useState(null);
+  const [movimentacaoItem, setMovimentacaoItem] = useState(null);
+  const [movimentacaoTipo, setMovimentacaoTipo] = useState("entrada");
+  const [vinculoProduto, setVinculoProduto] = useState(null);
+  const [formEstoqueItem, setFormEstoqueItem] = useState({ nome: "", categoria: "insumo", descricao: "", unidade_medida: "un", quantidade_atual: "0", quantidade_minima: "0", custo_unitario: "0", fornecedor: "", codigo_referencia: "", ativo: true });
+  const [formMovimentacao, setFormMovimentacao] = useState({ tipo: "entrada", quantidade: "", custo_unitario: "", motivo: "compra", observacoes: "", data_movimentacao: new Date().toISOString().split("T")[0] });
+  const [formVincularEstoque, setFormVincularEstoque] = useState({ estoque_item_id: "", quantidade_usada: "1", observacoes: "" });
 
   useEffect(() => { supabase.auth.getSession().then(({ data: { session } }) => { setSession(session); setLoading(false); }); const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setSession(session)); return () => subscription.unsubscribe(); }, []);
 
@@ -180,7 +207,7 @@ function App() {
 
   useEffect(() => { if (session && tenantId) carregarTodosDados(); }, [session, tenantId]);
 
-  const carregarTodosDados = async () => { await Promise.all([carregarClientes(), carregarUsuarios(), carregarOportunidades(), carregarVendas(), carregarTitulos(), carregarProdutos(), carregarTecnicos(), carregarOrdensServico(), carregarComissoes()]); };
+  const carregarTodosDados = async () => { await Promise.all([carregarClientes(), carregarUsuarios(), carregarOportunidades(), carregarVendas(), carregarTitulos(), carregarProdutos(), carregarTecnicos(), carregarOrdensServico(), carregarComissoes(), carregarEstoqueItens(), carregarEstoqueMovimentacoes(), carregarProdutoEstoqueVinculos()]); };
   const carregarClientes = async () => { const { data } = await supabase.from("clientes").select("*").eq("tenant_id", tenantId).order("data_cadastro", { ascending: false }); if (data) setClientes(data); };
   const carregarUsuarios = async () => {
     const { data, error } = await supabase.rpc("get_tenant_members_with_email", { p_tenant_id: tenantId });
@@ -198,10 +225,13 @@ function App() {
   const carregarTecnicos = async () => { const { data } = await supabase.from("tecnicos").select("*").eq("tenant_id", tenantId).order("created_at", { ascending: false }); if (data) setTecnicos(data); };
   const carregarOrdensServico = async () => { const { data } = await supabase.from("ordens_servico").select("*").eq("tenant_id", tenantId).order("created_at", { ascending: false }); if (data) setOrdensServico(data); };
   const carregarComissoes = async () => { const { data } = await supabase.from("comissoes").select("*").eq("tenant_id", tenantId).order("created_at", { ascending: false }); if (data) setComissoes(data); };
+  const carregarEstoqueItens = async () => { const { data } = await supabase.from("estoque_itens").select("*").eq("tenant_id", tenantId).order("nome", { ascending: true }); if (data) setEstoqueItens(data); };
+  const carregarEstoqueMovimentacoes = async () => { const { data } = await supabase.from("estoque_movimentacoes").select("*").eq("tenant_id", tenantId).order("data_movimentacao", { ascending: false }); if (data) setEstoqueMovimentacoes(data); };
+  const carregarProdutoEstoqueVinculos = async () => { const { data } = await supabase.from("produto_estoque_vinculo").select("*").eq("tenant_id", tenantId); if (data) setProdutoEstoqueVinculos(data); };
 
   const handleSignUp = async (e) => { e.preventDefault(); setAuthMessage(""); const { error } = await supabase.auth.signUp({ email, password }); setAuthMessage(error ? "Erro: " + error.message : "Conta criada! Verifique seu email."); };
   const handleSignIn = async (e) => { e.preventDefault(); setAuthMessage(""); const { error } = await supabase.auth.signInWithPassword({ email, password }); if (error) setAuthMessage("Erro: " + error.message); };
-  const handleSignOut = async () => { await supabase.auth.signOut(); setClientes([]); setUsuarios([]); setOportunidades([]); setVendas([]); setTitulos([]); setProdutos([]); setTecnicos([]); setOrdensServico([]); setComissoes([]); setTenantId(null); setTenantNome(""); setSelectedTenantId(""); };
+  const handleSignOut = async () => { await supabase.auth.signOut(); setClientes([]); setUsuarios([]); setOportunidades([]); setVendas([]); setTitulos([]); setProdutos([]); setTecnicos([]); setOrdensServico([]); setComissoes([]); setEstoqueItens([]); setEstoqueMovimentacoes([]); setProdutoEstoqueVinculos([]); setTenantId(null); setTenantNome(""); setSelectedTenantId(""); };
 
   const salvarCliente = async () => {
     if (!formCliente.nome.trim()) return alert("Nome é obrigatório!");
@@ -321,6 +351,44 @@ function App() {
   };
   const excluirComissao = async (id) => { if (!confirm("Excluir comissão?")) return; await supabase.from("comissoes").delete().eq("id", id); setComissoes(comissoes.filter((c) => c.id !== id)); };
 
+  const salvarEstoqueItem = async () => {
+    if (!formEstoqueItem.nome.trim()) return alert("Nome é obrigatório!");
+    const payload = { ...formEstoqueItem, quantidade_atual: parseFloat(formEstoqueItem.quantidade_atual || 0), quantidade_minima: parseFloat(formEstoqueItem.quantidade_minima || 0), custo_unitario: parseFloat(formEstoqueItem.custo_unitario || 0), user_id: session.user.id, tenant_id: tenantId };
+    if (editandoEstoqueItem) { const { data } = await supabase.from("estoque_itens").update(payload).eq("id", editandoEstoqueItem.id).select(); if (data) setEstoqueItens(estoqueItens.map((e) => (e.id === editandoEstoqueItem.id ? data[0] : e))); }
+    else { const { data } = await supabase.from("estoque_itens").insert([payload]).select(); if (data) setEstoqueItens([...estoqueItens, data[0]].sort((a, b) => a.nome.localeCompare(b.nome))); }
+    fecharModalEstoqueItem();
+  };
+  const excluirEstoqueItem = async (id) => { if (!confirm("Excluir item do estoque?")) return; await supabase.from("estoque_itens").delete().eq("id", id); setEstoqueItens(estoqueItens.filter((e) => e.id !== id)); };
+
+  const salvarMovimentacao = async () => {
+    if (!formMovimentacao.quantidade || parseFloat(formMovimentacao.quantidade) <= 0) return alert("Informe uma quantidade válida!");
+    const item = estoqueItens.find((e) => e.id === movimentacaoItem.id);
+    if (!item) return;
+    const qtd = parseFloat(formMovimentacao.quantidade);
+    let novaQtd = parseFloat(item.quantidade_atual || 0);
+    if (formMovimentacao.tipo === "entrada") novaQtd += qtd;
+    else if (formMovimentacao.tipo === "saida") novaQtd = Math.max(0, novaQtd - qtd);
+    else novaQtd = qtd;
+    const mov = { estoque_item_id: movimentacaoItem.id, tipo: formMovimentacao.tipo, quantidade: qtd, custo_unitario: parseFloat(formMovimentacao.custo_unitario || item.custo_unitario || 0), motivo: formMovimentacao.motivo, observacoes: formMovimentacao.observacoes, data_movimentacao: formMovimentacao.data_movimentacao, user_id: session.user.id, tenant_id: tenantId };
+    const { data: movData } = await supabase.from("estoque_movimentacoes").insert([mov]).select();
+    if (movData) setEstoqueMovimentacoes([movData[0], ...estoqueMovimentacoes]);
+    const { data: itemData } = await supabase.from("estoque_itens").update({ quantidade_atual: novaQtd }).eq("id", movimentacaoItem.id).select();
+    if (itemData) setEstoqueItens(estoqueItens.map((e) => (e.id === movimentacaoItem.id ? itemData[0] : e)));
+    fecharModalMovimentacao();
+  };
+  const excluirMovimentacao = async (id) => { if (!confirm("Excluir movimentação?")) return; await supabase.from("estoque_movimentacoes").delete().eq("id", id); setEstoqueMovimentacoes(estoqueMovimentacoes.filter((m) => m.id !== id)); };
+
+  const salvarVinculo = async () => {
+    if (!formVincularEstoque.estoque_item_id) return alert("Selecione um item de estoque!");
+    if (!formVincularEstoque.quantidade_usada || parseFloat(formVincularEstoque.quantidade_usada) <= 0) return alert("Informe a quantidade usada!");
+    const payload = { produto_id: vinculoProduto.id, estoque_item_id: formVincularEstoque.estoque_item_id, quantidade_usada: parseFloat(formVincularEstoque.quantidade_usada), observacoes: formVincularEstoque.observacoes, tenant_id: tenantId };
+    const { data, error } = await supabase.from("produto_estoque_vinculo").insert([payload]).select();
+    if (error) return alert("Erro ao vincular: " + error.message);
+    if (data) setProdutoEstoqueVinculos([...produtoEstoqueVinculos, data[0]]);
+    setFormVincularEstoque({ estoque_item_id: "", quantidade_usada: "1", observacoes: "" });
+  };
+  const excluirVinculo = async (id) => { if (!confirm("Remover vínculo?")) return; await supabase.from("produto_estoque_vinculo").delete().eq("id", id); setProdutoEstoqueVinculos(produtoEstoqueVinculos.filter((v) => v.id !== id)); };
+
   const salvarUsuario = async () => {
     if (!formUsuario.email.trim()) return alert("Email é obrigatório!");
     if (editandoUsuario) {
@@ -362,10 +430,18 @@ function App() {
 
   const abrirModalAgendarComissao = (c) => { setComissaoAgendar(c); setFormAgendarComissao({ data_agendamento: c.data_agendamento || new Date().toISOString().split("T")[0], observacoes: c.observacoes || "" }); setModalAgendarComissao(true); };
   const fecharModalAgendarComissao = () => { setModalAgendarComissao(false); setComissaoAgendar(null); setFormAgendarComissao({ data_agendamento: new Date().toISOString().split("T")[0], observacoes: "" }); };
+  const abrirModalEstoqueItem = (e = null) => { if (e) { setEditandoEstoqueItem(e); setFormEstoqueItem({ nome: e.nome || "", categoria: e.categoria || "insumo", descricao: e.descricao || "", unidade_medida: e.unidade_medida || "un", quantidade_atual: (e.quantidade_atual ?? 0).toString(), quantidade_minima: (e.quantidade_minima ?? 0).toString(), custo_unitario: (e.custo_unitario ?? 0).toString(), fornecedor: e.fornecedor || "", codigo_referencia: e.codigo_referencia || "", ativo: e.ativo ?? true }); } setModalEstoqueItem(true); };
+  const fecharModalEstoqueItem = () => { setModalEstoqueItem(false); setEditandoEstoqueItem(null); setFormEstoqueItem({ nome: "", categoria: "insumo", descricao: "", unidade_medida: "un", quantidade_atual: "0", quantidade_minima: "0", custo_unitario: "0", fornecedor: "", codigo_referencia: "", ativo: true }); };
+  const abrirModalMovimentacao = (item, tipo = "entrada") => { setMovimentacaoItem(item); setMovimentacaoTipo(tipo); setFormMovimentacao({ tipo, quantidade: "", custo_unitario: (item.custo_unitario ?? 0).toString(), motivo: tipo === "entrada" ? "compra" : "uso_servico", observacoes: "", data_movimentacao: new Date().toISOString().split("T")[0] }); setModalMovimentacao(true); };
+  const fecharModalMovimentacao = () => { setModalMovimentacao(false); setMovimentacaoItem(null); setFormMovimentacao({ tipo: "entrada", quantidade: "", custo_unitario: "", motivo: "compra", observacoes: "", data_movimentacao: new Date().toISOString().split("T")[0] }); };
+  const abrirModalVincularEstoque = (produto) => { setVinculoProduto(produto); setFormVincularEstoque({ estoque_item_id: "", quantidade_usada: "1", observacoes: "" }); setModalVincularEstoque(true); };
+  const fecharModalVincularEstoque = () => { setModalVincularEstoque(false); setVinculoProduto(null); setFormVincularEstoque({ estoque_item_id: "", quantidade_usada: "1", observacoes: "" }); };
 
   const getClienteNome = (id) => clientes.find((c) => c.id === id)?.nome || "N/A";
   const getTecnicoNome = (id) => tecnicos.find((t) => t.id === id)?.nome || "N/A";
   const getProdutoNome = (id) => produtos.find((p) => p.id === id)?.nome || null;
+  const getEstoqueItemNome = (id) => estoqueItens.find((e) => e.id === id)?.nome || "N/A";
+  const getCategorialLabel = (v) => CATEGORIAS_ESTOQUE.find((c) => c.value === v)?.label || v;
   const fmtBRL = (v) => parseFloat(v || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 });
 
   const calcularIndicadores = () => {
@@ -450,6 +526,15 @@ function App() {
         { key: "financeiro", label: "Financeiro", icon: <Icons.CreditCard />, count: titulos.length },
         { key: "ordens_servico", label: "Ordens de Serviço", icon: <Icons.ClipboardList />, count: ordensServico.length },
         { key: "comissoes", label: "Comissões", icon: <Icons.DollarSign />, count: comissoes.filter((c) => c.status !== "pago").length },
+      ],
+    },
+    {
+      key: "estoque",
+      label: "Estoque",
+      icon: <Icons.Package />,
+      items: [
+        { key: "estoque_itens", label: "Itens de Estoque", icon: <Icons.Package />, count: estoqueItens.filter((e) => e.ativo).length },
+        { key: "estoque_movimentacoes", label: "Movimentações", icon: <Icons.ArrowUpCircle />, count: estoqueMovimentacoes.length },
       ],
     },
   ];
@@ -591,8 +676,15 @@ function App() {
               { key: "categoria", label: "Categoria", render: (p) => p.categoria || <span className="text-gray-300">-</span>, filterValue: (p) => p.categoria || "" },
               { key: "preco_base", label: "Preço", render: (p) => <span className="font-medium text-green-700">R$ {fmtBRL(p.preco_base)}</span>, sortValue: (p) => parseFloat(p.preco_base || 0) },
               { key: "custo", label: "Custo", render: (p) => `R$ ${fmtBRL(p.custo)}`, sortValue: (p) => parseFloat(p.custo || 0) },
+              { key: "insumos", label: "Insumos Vinculados", filterable: false, render: (p) => { const vinculos = produtoEstoqueVinculos.filter((v) => v.produto_id === p.id); if (!vinculos.length) return <span className="text-gray-300 text-[11px]">Nenhum</span>; return <div className="space-y-0.5">{vinculos.slice(0, 2).map((v) => <div key={v.id} className="text-[11px] text-gray-600"><span className="font-medium">{getEstoqueItemNome(v.estoque_item_id)}</span> <span className="text-gray-400">× {parseFloat(v.quantidade_usada).toLocaleString("pt-BR", { maximumFractionDigits: 3 })}</span></div>)}{vinculos.length > 2 && <div className="text-[10px] text-gray-400">+{vinculos.length - 2} mais</div>}</div>; } },
               { key: "ativo", label: "Status", render: (p) => p.ativo ? <span className="px-1.5 py-0.5 rounded text-[11px] bg-green-50 text-green-700">Ativo</span> : <span className="px-1.5 py-0.5 rounded text-[11px] bg-gray-100 text-gray-500">Inativo</span>, filterValue: (p) => p.ativo ? "Ativo" : "Inativo" },
-            ]} data={produtos} actions={(p) => actBtns(() => abrirModalProduto(p), () => excluirProduto(p.id))} emptyMessage="Nenhum produto cadastrado." />
+            ]} data={produtos} actions={(p) => (
+              <div className="flex items-center gap-1">
+                <button onClick={() => abrirModalVincularEstoque(p)} title="Gerenciar insumos do estoque vinculados" className="text-blue-600 hover:bg-blue-50 px-1.5 py-0.5 rounded text-[11px] font-medium flex items-center gap-0.5"><Icons.Link className="w-3 h-3" />Insumos</button>
+                <button onClick={() => abrirModalProduto(p)} className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 p-1 rounded"><Icons.Edit /></button>
+                <button onClick={() => excluirProduto(p.id)} className="text-gray-400 hover:text-red-600 hover:bg-red-50 p-1 rounded"><Icons.Trash /></button>
+              </div>
+            )} emptyMessage="Nenhum produto cadastrado." />
           </div>
         )}
 
@@ -782,6 +874,77 @@ function App() {
             })()}
           </div>
         )}
+        {viewMode === "estoque_itens" && (() => {
+          const itensBaixoEstoque = estoqueItens.filter((e) => e.ativo && parseFloat(e.quantidade_atual || 0) <= parseFloat(e.quantidade_minima || 0) && parseFloat(e.quantidade_minima || 0) > 0);
+          const categoriaCount = CATEGORIAS_ESTOQUE.map((c) => ({ ...c, count: estoqueItens.filter((e) => e.categoria === c.value && e.ativo).length })).filter((c) => c.count > 0);
+          return (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-semibold text-gray-700">Itens de Estoque</h2>
+                <button onClick={() => abrirModalEstoqueItem()} className="inline-flex items-center gap-1 bg-gray-800 hover:bg-gray-700 text-white px-3 py-1.5 rounded text-xs font-medium"><Icons.Plus />Novo Item</button>
+              </div>
+              {itensBaixoEstoque.length > 0 && (
+                <div className="bg-red-50 border border-red-200 rounded p-3 flex items-start gap-2">
+                  <Icons.AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs font-semibold text-red-700">Itens abaixo do estoque mínimo ({itensBaixoEstoque.length})</p>
+                    <p className="text-[11px] text-red-600 mt-0.5">{itensBaixoEstoque.map((e) => `${e.nome} (${parseFloat(e.quantidade_atual || 0)} ${e.unidade_medida || "un"})`).join(" · ")}</p>
+                  </div>
+                </div>
+              )}
+              {categoriaCount.length > 0 && (
+                <div className="flex gap-2 flex-wrap">
+                  {categoriaCount.map((c) => (
+                    <span key={c.value} className="inline-flex items-center gap-1 px-2 py-0.5 bg-white border border-gray-200 rounded text-[11px] text-gray-600">
+                      <span className="font-medium text-gray-800">{c.count}</span> {c.label}
+                    </span>
+                  ))}
+                </div>
+              )}
+              <DataGrid columns={[
+                { key: "nome", label: "Item", render: (e) => <span className="font-medium text-gray-800">{e.nome}</span>, filterValue: (e) => e.nome || "" },
+                { key: "categoria", label: "Categoria", render: (e) => <span className="px-1.5 py-0.5 rounded text-[11px] bg-blue-50 text-blue-700">{getCategorialLabel(e.categoria)}</span>, filterValue: (e) => getCategorialLabel(e.categoria) },
+                { key: "quantidade_atual", label: "Qtd Atual", render: (e) => { const qtd = parseFloat(e.quantidade_atual || 0); const min = parseFloat(e.quantidade_minima || 0); const abaixo = min > 0 && qtd <= min; return <span className={`font-semibold ${abaixo ? "text-red-600" : "text-gray-800"}`}>{qtd.toLocaleString("pt-BR", { maximumFractionDigits: 3 })} {e.unidade_medida || "un"}{abaixo ? " ⚠" : ""}</span>; }, sortValue: (e) => parseFloat(e.quantidade_atual || 0) },
+                { key: "quantidade_minima", label: "Qtd Mínima", render: (e) => `${parseFloat(e.quantidade_minima || 0).toLocaleString("pt-BR", { maximumFractionDigits: 3 })} ${e.unidade_medida || "un"}`, sortValue: (e) => parseFloat(e.quantidade_minima || 0) },
+                { key: "custo_unitario", label: "Custo Unit.", render: (e) => `R$ ${fmtBRL(e.custo_unitario)}`, sortValue: (e) => parseFloat(e.custo_unitario || 0) },
+                { key: "fornecedor", label: "Fornecedor", render: (e) => e.fornecedor || <span className="text-gray-300">-</span>, filterValue: (e) => e.fornecedor || "" },
+                { key: "ativo", label: "Status", render: (e) => e.ativo ? <span className="px-1.5 py-0.5 rounded text-[11px] bg-green-50 text-green-700">Ativo</span> : <span className="px-1.5 py-0.5 rounded text-[11px] bg-gray-100 text-gray-500">Inativo</span>, filterValue: (e) => e.ativo ? "Ativo" : "Inativo" },
+              ]} data={estoqueItens} actions={(e) => (
+                <div className="flex items-center gap-1">
+                  <button onClick={() => abrirModalMovimentacao(e, "entrada")} title="Registrar Entrada" className="text-green-600 hover:bg-green-50 px-1.5 py-0.5 rounded text-[11px] font-medium flex items-center gap-0.5"><Icons.ArrowUpCircle className="w-3 h-3" />Entrada</button>
+                  <button onClick={() => abrirModalMovimentacao(e, "saida")} title="Registrar Saída" className="text-orange-600 hover:bg-orange-50 px-1.5 py-0.5 rounded text-[11px] font-medium flex items-center gap-0.5"><Icons.ArrowDownCircle className="w-3 h-3" />Saída</button>
+                  <button onClick={() => abrirModalEstoqueItem(e)} className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 p-1 rounded"><Icons.Edit /></button>
+                  <button onClick={() => excluirEstoqueItem(e.id)} className="text-gray-400 hover:text-red-600 hover:bg-red-50 p-1 rounded"><Icons.Trash /></button>
+                </div>
+              )} rowClassName={(e) => { const qtd = parseFloat(e.quantidade_atual || 0); const min = parseFloat(e.quantidade_minima || 0); return min > 0 && qtd <= min ? "bg-red-50/40" : ""; }} emptyMessage="Nenhum item de estoque cadastrado." />
+            </div>
+          );
+        })()}
+
+        {viewMode === "estoque_movimentacoes" && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-gray-700">Movimentações de Estoque</h2>
+              <button onClick={() => { if (!estoqueItens.length) return alert("Cadastre itens de estoque primeiro!"); abrirModalMovimentacao(estoqueItens[0], "entrada"); }} className="inline-flex items-center gap-1 bg-gray-800 hover:bg-gray-700 text-white px-3 py-1.5 rounded text-xs font-medium"><Icons.Plus />Nova Movimentação</button>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {[{ label: "Entradas", tipo: "entrada", cls: "border-green-200", tcls: "text-green-700" },{ label: "Saídas", tipo: "saida", cls: "border-orange-200", tcls: "text-orange-700" },{ label: "Ajustes", tipo: "ajuste", cls: "border-blue-200", tcls: "text-blue-700" }].map(({ label, tipo, cls, tcls }) => {
+                const movs = estoqueMovimentacoes.filter((m) => m.tipo === tipo);
+                return <div key={tipo} className={`bg-white border rounded p-3 ${cls}`}><p className={`text-xs font-medium ${tcls}`}>{label}</p><p className={`text-lg font-semibold ${tcls}`}>{movs.length}</p><p className="text-[11px] text-gray-400">movimentações</p></div>;
+              })}
+              <div className="bg-white border border-gray-200 rounded p-3"><p className="text-xs font-medium text-gray-700">Total Registros</p><p className="text-lg font-semibold text-gray-700">{estoqueMovimentacoes.length}</p><p className="text-[11px] text-gray-400">movimentações</p></div>
+            </div>
+            <DataGrid columns={[
+              { key: "data_movimentacao", label: "Data", render: (m) => new Date(m.data_movimentacao + "T12:00:00").toLocaleDateString("pt-BR"), filterValue: (m) => new Date(m.data_movimentacao + "T12:00:00").toLocaleDateString("pt-BR"), sortValue: (m) => m.data_movimentacao },
+              { key: "estoque_item_id", label: "Item", render: (m) => <span className="font-medium text-gray-800">{getEstoqueItemNome(m.estoque_item_id)}</span>, filterValue: (m) => getEstoqueItemNome(m.estoque_item_id) },
+              { key: "tipo", label: "Tipo", render: (m) => m.tipo === "entrada" ? <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] bg-green-50 text-green-700"><Icons.ArrowUpCircle className="w-3 h-3" />Entrada</span> : m.tipo === "saida" ? <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] bg-orange-50 text-orange-700"><Icons.ArrowDownCircle className="w-3 h-3" />Saída</span> : <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] bg-blue-50 text-blue-700">Ajuste</span>, filterValue: (m) => m.tipo },
+              { key: "quantidade", label: "Quantidade", render: (m) => { const item = estoqueItens.find((e) => e.id === m.estoque_item_id); return <span className="font-semibold">{parseFloat(m.quantidade).toLocaleString("pt-BR", { maximumFractionDigits: 3 })} {item?.unidade_medida || "un"}</span>; }, sortValue: (m) => parseFloat(m.quantidade || 0) },
+              { key: "motivo", label: "Motivo", render: (m) => { const labels = { compra: "Compra", uso_servico: "Uso em Serviço", venda: "Venda", ajuste: "Ajuste", perda: "Perda", devolucao: "Devolução", inventario: "Inventário" }; return labels[m.motivo] || m.motivo; }, filterValue: (m) => m.motivo },
+              { key: "custo_unitario", label: "Custo Unit.", render: (m) => parseFloat(m.custo_unitario || 0) > 0 ? `R$ ${fmtBRL(m.custo_unitario)}` : <span className="text-gray-300">-</span>, sortValue: (m) => parseFloat(m.custo_unitario || 0) },
+              { key: "observacoes", label: "Observações", render: (m) => m.observacoes ? <span className="text-gray-500 text-[11px]" title={m.observacoes}>{m.observacoes.slice(0, 40)}{m.observacoes.length > 40 ? "..." : ""}</span> : <span className="text-gray-300">-</span>, filterValue: (m) => m.observacoes || "" },
+            ]} data={estoqueMovimentacoes} actions={(m) => (<button onClick={() => excluirMovimentacao(m.id)} className="text-gray-400 hover:text-red-600 hover:bg-red-50 p-1 rounded"><Icons.Trash /></button>)} emptyMessage="Nenhuma movimentação registrada." />
+          </div>
+        )}
       </main>
 
       {modalCliente && (<div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50"><div className="bg-white rounded-lg border border-gray-200 max-w-sm w-full p-4 max-h-[90vh] overflow-y-auto"><h3 className="text-sm font-semibold mb-3">{editandoCliente ? "Editar Cliente" : "Novo Cliente"}</h3><div className="space-y-2.5"><div><label className="block text-xs text-gray-600 mb-0.5">Nome *</label><input type="text" value={formCliente.nome} onChange={(e) => setFormCliente({...formCliente, nome: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" /></div><div><label className="block text-xs text-gray-600 mb-0.5">CPF</label><input type="text" value={formCliente.cpf} onChange={(e) => { const v = e.target.value.replace(/\D/g, "").slice(0, 11); const f = v.length > 9 ? v.replace(/(\d{3})(\d{3})(\d{3})(\d{1,2})/, "$1.$2.$3-$4") : v.length > 6 ? v.replace(/(\d{3})(\d{3})(\d{1,3})/, "$1.$2.$3") : v.length > 3 ? v.replace(/(\d{3})(\d{1,3})/, "$1.$2") : v; setFormCliente({...formCliente, cpf: f}); }} placeholder="000.000.000-00" className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" /></div><div><label className="block text-xs text-gray-600 mb-0.5">Email</label><input type="email" value={formCliente.email} onChange={(e) => setFormCliente({...formCliente, email: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" /></div><div><label className="block text-xs text-gray-600 mb-0.5">Telefone</label><input type="tel" value={formCliente.telefone} onChange={(e) => setFormCliente({...formCliente, telefone: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" /></div><div><label className="block text-xs text-gray-600 mb-0.5">Empresa</label><input type="text" value={formCliente.empresa} onChange={(e) => setFormCliente({...formCliente, empresa: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" /></div><div><label className="block text-xs text-gray-600 mb-0.5">Observações</label><textarea value={formCliente.observacoes} onChange={(e) => setFormCliente({...formCliente, observacoes: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" rows="2" /></div></div><div className="flex gap-2 mt-4"><button onClick={fecharModalCliente} className="flex-1 px-3 py-1.5 border border-gray-200 rounded text-xs hover:bg-gray-50">Cancelar</button><button onClick={salvarCliente} className="flex-1 px-3 py-1.5 bg-gray-800 text-white rounded text-xs hover:bg-gray-700">{editandoCliente ? "Salvar" : "Adicionar"}</button></div></div></div>)}
@@ -850,6 +1013,104 @@ function App() {
         <div><label className="block text-xs text-gray-600 mb-0.5">Status</label><select value={formTitulo.status} onChange={(e) => setFormTitulo({...formTitulo, status: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"><option value="pendente">Pendente</option><option value="pago">Pago</option></select></div>
         </div><div className="flex gap-2 mt-4"><button onClick={fecharModalTitulo} className="flex-1 px-3 py-1.5 border border-gray-200 rounded text-xs hover:bg-gray-50">Cancelar</button><button onClick={salvarTitulo} className="flex-1 px-3 py-1.5 bg-gray-800 text-white rounded text-xs hover:bg-gray-700">{editandoTitulo ? "Salvar" : "Adicionar"}</button></div></div></div>
       ); })()}
+
+      {modalEstoqueItem && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg border border-gray-200 max-w-md w-full p-4 max-h-[90vh] overflow-y-auto">
+            <h3 className="text-sm font-semibold mb-3">{editandoEstoqueItem ? "Editar Item de Estoque" : "Novo Item de Estoque"}</h3>
+            <div className="space-y-2.5">
+              <div><label className="block text-xs text-gray-600 mb-0.5">Nome *</label><input type="text" value={formEstoqueItem.nome} onChange={(e) => setFormEstoqueItem({...formEstoqueItem, nome: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" placeholder="Ex: Creme hidratante, Luva descartável..." /></div>
+              <div><label className="block text-xs text-gray-600 mb-0.5">Categoria *</label><select value={formEstoqueItem.categoria} onChange={(e) => setFormEstoqueItem({...formEstoqueItem, categoria: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none">{CATEGORIAS_ESTOQUE.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}</select></div>
+              <div><label className="block text-xs text-gray-600 mb-0.5">Descrição</label><textarea value={formEstoqueItem.descricao} onChange={(e) => setFormEstoqueItem({...formEstoqueItem, descricao: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" rows="2" /></div>
+              <div className="grid grid-cols-2 gap-2">
+                <div><label className="block text-xs text-gray-600 mb-0.5">Unidade de Medida</label><input type="text" value={formEstoqueItem.unidade_medida} onChange={(e) => setFormEstoqueItem({...formEstoqueItem, unidade_medida: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" placeholder="un, kg, ml, L, cx..." /></div>
+                <div><label className="block text-xs text-gray-600 mb-0.5">Custo Unitário (R$)</label><input type="number" step="0.01" min="0" value={formEstoqueItem.custo_unitario} onChange={(e) => setFormEstoqueItem({...formEstoqueItem, custo_unitario: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" /></div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div><label className="block text-xs text-gray-600 mb-0.5">Quantidade Atual</label><input type="number" step="0.001" min="0" value={formEstoqueItem.quantidade_atual} onChange={(e) => setFormEstoqueItem({...formEstoqueItem, quantidade_atual: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" /></div>
+                <div><label className="block text-xs text-gray-600 mb-0.5">Quantidade Mínima</label><input type="number" step="0.001" min="0" value={formEstoqueItem.quantidade_minima} onChange={(e) => setFormEstoqueItem({...formEstoqueItem, quantidade_minima: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" /></div>
+              </div>
+              <div><label className="block text-xs text-gray-600 mb-0.5">Fornecedor</label><input type="text" value={formEstoqueItem.fornecedor} onChange={(e) => setFormEstoqueItem({...formEstoqueItem, fornecedor: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" /></div>
+              <div><label className="block text-xs text-gray-600 mb-0.5">Código / Referência</label><input type="text" value={formEstoqueItem.codigo_referencia} onChange={(e) => setFormEstoqueItem({...formEstoqueItem, codigo_referencia: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" placeholder="SKU, código interno..." /></div>
+              <div className="flex items-center gap-2"><input id="ei-ativo" type="checkbox" checked={!!formEstoqueItem.ativo} onChange={(e) => setFormEstoqueItem({...formEstoqueItem, ativo: e.target.checked})} /><label htmlFor="ei-ativo" className="text-xs text-gray-600">Ativo</label></div>
+            </div>
+            <div className="flex gap-2 mt-4"><button onClick={fecharModalEstoqueItem} className="flex-1 px-3 py-1.5 border border-gray-200 rounded text-xs hover:bg-gray-50">Cancelar</button><button onClick={salvarEstoqueItem} className="flex-1 px-3 py-1.5 bg-gray-800 text-white rounded text-xs hover:bg-gray-700">{editandoEstoqueItem ? "Salvar" : "Adicionar"}</button></div>
+          </div>
+        </div>
+      )}
+
+      {modalMovimentacao && movimentacaoItem && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg border border-gray-200 max-w-sm w-full p-4 max-h-[90vh] overflow-y-auto">
+            <h3 className="text-sm font-semibold mb-1">{movimentacaoTipo === "entrada" ? "Registrar Entrada" : movimentacaoTipo === "saida" ? "Registrar Saída" : "Ajuste de Estoque"}</h3>
+            <div className={`rounded p-2.5 mb-3 border ${movimentacaoTipo === "entrada" ? "bg-green-50 border-green-200" : movimentacaoTipo === "saida" ? "bg-orange-50 border-orange-200" : "bg-blue-50 border-blue-200"}`}>
+              <p className="text-xs font-semibold text-gray-800">{movimentacaoItem.nome}</p>
+              <p className="text-[11px] text-gray-500">{getCategorialLabel(movimentacaoItem.categoria)} · Estoque atual: <span className="font-medium">{parseFloat(movimentacaoItem.quantidade_atual || 0).toLocaleString("pt-BR", { maximumFractionDigits: 3 })} {movimentacaoItem.unidade_medida || "un"}</span></p>
+            </div>
+            <div className="space-y-2.5">
+              <div><label className="block text-xs text-gray-600 mb-0.5">Tipo *</label><select value={formMovimentacao.tipo} onChange={(e) => { const t = e.target.value; setFormMovimentacao({...formMovimentacao, tipo: t, motivo: t === "entrada" ? "compra" : t === "saida" ? "uso_servico" : "ajuste"}); setMovimentacaoTipo(t); }} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"><option value="entrada">Entrada</option><option value="saida">Saída</option><option value="ajuste">Ajuste (definir quantidade)</option></select></div>
+              <div><label className="block text-xs text-gray-600 mb-0.5">Motivo *</label><select value={formMovimentacao.motivo} onChange={(e) => setFormMovimentacao({...formMovimentacao, motivo: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none">
+                {formMovimentacao.tipo === "entrada" && <><option value="compra">Compra</option><option value="devolucao">Devolução</option><option value="inventario">Inventário</option></>}
+                {formMovimentacao.tipo === "saida" && <><option value="uso_servico">Uso em Serviço</option><option value="venda">Venda</option><option value="perda">Perda / Vencimento</option><option value="inventario">Inventário</option></>}
+                {formMovimentacao.tipo === "ajuste" && <option value="ajuste">Ajuste de Estoque</option>}
+              </select></div>
+              <div><label className="block text-xs text-gray-600 mb-0.5">{formMovimentacao.tipo === "ajuste" ? "Nova Quantidade *" : "Quantidade *"}</label><input type="number" step="0.001" min="0" value={formMovimentacao.quantidade} onChange={(e) => setFormMovimentacao({...formMovimentacao, quantidade: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" placeholder="0" /></div>
+              {formMovimentacao.tipo === "entrada" && <div><label className="block text-xs text-gray-600 mb-0.5">Custo Unitário (R$)</label><input type="number" step="0.01" min="0" value={formMovimentacao.custo_unitario} onChange={(e) => setFormMovimentacao({...formMovimentacao, custo_unitario: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" /></div>}
+              <div><label className="block text-xs text-gray-600 mb-0.5">Data</label><input type="date" value={formMovimentacao.data_movimentacao} onChange={(e) => setFormMovimentacao({...formMovimentacao, data_movimentacao: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" /></div>
+              <div><label className="block text-xs text-gray-600 mb-0.5">Observações</label><textarea value={formMovimentacao.observacoes} onChange={(e) => setFormMovimentacao({...formMovimentacao, observacoes: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" rows="2" /></div>
+            </div>
+            <div className="flex gap-2 mt-4"><button onClick={fecharModalMovimentacao} className="flex-1 px-3 py-1.5 border border-gray-200 rounded text-xs hover:bg-gray-50">Cancelar</button><button onClick={salvarMovimentacao} className={`flex-1 px-3 py-1.5 text-white rounded text-xs font-medium ${movimentacaoTipo === "entrada" ? "bg-green-700 hover:bg-green-800" : movimentacaoTipo === "saida" ? "bg-orange-600 hover:bg-orange-700" : "bg-blue-700 hover:bg-blue-800"}`}>Confirmar</button></div>
+          </div>
+        </div>
+      )}
+
+      {modalVincularEstoque && vinculoProduto && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg border border-gray-200 max-w-md w-full p-4 max-h-[90vh] overflow-y-auto">
+            <h3 className="text-sm font-semibold mb-1">Insumos de Estoque</h3>
+            <div className="bg-gray-50 border border-gray-200 rounded p-2.5 mb-3">
+              <p className="text-xs font-semibold text-gray-800">{vinculoProduto.nome}</p>
+              <p className="text-[11px] text-gray-500 capitalize">{vinculoProduto.tipo}{vinculoProduto.categoria ? ` · ${vinculoProduto.categoria}` : ""}</p>
+            </div>
+            <div className="mb-3">
+              <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-2">Insumos Vinculados</p>
+              {produtoEstoqueVinculos.filter((v) => v.produto_id === vinculoProduto.id).length === 0 ? (
+                <p className="text-xs text-gray-400 text-center py-3 border border-dashed border-gray-200 rounded">Nenhum insumo vinculado</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {produtoEstoqueVinculos.filter((v) => v.produto_id === vinculoProduto.id).map((v) => {
+                    const item = estoqueItens.find((e) => e.id === v.estoque_item_id);
+                    return (
+                      <div key={v.id} className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded p-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium text-gray-800 truncate">{item?.nome || "Item removido"}</p>
+                          <p className="text-[11px] text-gray-500">{item ? getCategorialLabel(item.categoria) : ""} · <span className="font-semibold">{parseFloat(v.quantidade_usada).toLocaleString("pt-BR", { maximumFractionDigits: 3 })} {item?.unidade_medida || "un"}</span> por uso</p>
+                          {v.observacoes && <p className="text-[10px] text-gray-400 italic">{v.observacoes}</p>}
+                        </div>
+                        <button onClick={() => excluirVinculo(v.id)} className="text-gray-400 hover:text-red-600 hover:bg-red-50 p-1 rounded flex-shrink-0"><Icons.Trash className="w-3 h-3" /></button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            {estoqueItens.filter((e) => e.ativo).length > 0 && (
+              <div className="border-t border-gray-100 pt-3">
+                <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-2">Adicionar Insumo</p>
+                <div className="space-y-2">
+                  <div><label className="block text-xs text-gray-600 mb-0.5">Item de Estoque *</label><select value={formVincularEstoque.estoque_item_id} onChange={(e) => setFormVincularEstoque({...formVincularEstoque, estoque_item_id: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"><option value="">Selecione um item</option>{estoqueItens.filter((e) => e.ativo && !produtoEstoqueVinculos.some((v) => v.produto_id === vinculoProduto.id && v.estoque_item_id === e.id)).map((e) => <option key={e.id} value={e.id}>{e.nome} ({getCategorialLabel(e.categoria)}) · Estoque: {parseFloat(e.quantidade_atual || 0).toLocaleString("pt-BR", { maximumFractionDigits: 3 })} {e.unidade_medida || "un"}</option>)}</select></div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div><label className="block text-xs text-gray-600 mb-0.5">Qtd por Uso *</label><input type="number" step="0.001" min="0.001" value={formVincularEstoque.quantidade_usada} onChange={(e) => setFormVincularEstoque({...formVincularEstoque, quantidade_usada: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" /></div>
+                    <div><label className="block text-xs text-gray-600 mb-0.5">Observações</label><input type="text" value={formVincularEstoque.observacoes} onChange={(e) => setFormVincularEstoque({...formVincularEstoque, observacoes: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" /></div>
+                  </div>
+                  <button onClick={salvarVinculo} className="w-full px-3 py-1.5 bg-blue-700 text-white rounded text-xs hover:bg-blue-800 font-medium flex items-center justify-center gap-1"><Icons.Link className="w-3 h-3" />Vincular Insumo</button>
+                </div>
+              </div>
+            )}
+            <div className="flex gap-2 mt-4"><button onClick={fecharModalVincularEstoque} className="flex-1 px-3 py-1.5 bg-gray-800 text-white rounded text-xs hover:bg-gray-700">Fechar</button></div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
