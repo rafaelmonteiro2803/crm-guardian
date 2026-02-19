@@ -78,6 +78,12 @@ function DataGrid({ columns, data, actions, emptyMessage, rowClassName }) {
   );
 }
 
+const checkIsMobile = () => {
+  const isSmartphone = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  const isNarrow = window.innerWidth <= 768;
+  return (isSmartphone || isNarrow) && !sessionStorage.getItem('crm-full-version');
+};
+
 function App() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -128,6 +134,7 @@ function App() {
   const [formAgendarComissao, setFormAgendarComissao] = useState({ data_agendamento: new Date().toISOString().split("T")[0], observacoes: "" });
   const [openDropdown, setOpenDropdown] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(checkIsMobile);
   const [tenantCor, setTenantCor] = useState(null);
   const estagios = ["prospecção", "qualificação", "proposta", "negociação", "fechado", "cancelado"];
   const CATEGORIAS_ESTOQUE = [
@@ -163,6 +170,16 @@ function App() {
     document.addEventListener("click", close);
     return () => document.removeEventListener("click", close);
   }, [openDropdown]);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(checkIsMobile());
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    if (isMobile && viewMode !== 'dashboard') setViewMode('dashboard');
+  }, [isMobile]);
   const carregarTenants = async () => { const { data } = await supabase.rpc("get_all_tenants"); if (data) setTenantsList(data); };
 
   useEffect(() => {
@@ -582,17 +599,26 @@ function App() {
             <button onClick={handleSignOut} className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded hover:bg-black/5"><Icons.LogOut />Sair</button>
           </div>
 
-          {/* Mobile: logout + hamburger */}
+          {/* Mobile: logout + hamburger (ou apenas logout no modo smartphone) */}
           <div className="md:hidden ml-auto flex items-center gap-1">
-            <button onClick={handleSignOut} className="inline-flex items-center p-1.5 rounded text-gray-500 hover:text-gray-700 hover:bg-black/5"><Icons.LogOut /></button>
-            <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="inline-flex items-center justify-center p-1.5 rounded text-gray-600 hover:text-gray-900 hover:bg-black/5">
-              {mobileMenuOpen ? <Icons.X /> : <Icons.Menu />}
-            </button>
+            {isMobile ? (
+              <>
+                {tenantNome && <span className="text-xs text-gray-500 font-medium mr-1">{tenantNome}</span>}
+                <button onClick={handleSignOut} className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded hover:bg-black/5"><Icons.LogOut />Sair</button>
+              </>
+            ) : (
+              <>
+                <button onClick={handleSignOut} className="inline-flex items-center p-1.5 rounded text-gray-500 hover:text-gray-700 hover:bg-black/5"><Icons.LogOut /></button>
+                <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="inline-flex items-center justify-center p-1.5 rounded text-gray-600 hover:text-gray-900 hover:bg-black/5">
+                  {mobileMenuOpen ? <Icons.X /> : <Icons.Menu />}
+                </button>
+              </>
+            )}
           </div>
         </div>
 
         {/* Mobile menu panel */}
-        {mobileMenuOpen && (
+        {!isMobile && mobileMenuOpen && (
           <div className="md:hidden border-t border-gray-200 mt-2 py-2 max-w-7xl mx-auto">
             <button onClick={() => { setViewMode("dashboard"); setMobileMenuOpen(false); }} className={`w-full flex items-center gap-2 px-3 py-2 rounded text-xs font-medium transition-colors ${viewMode === "dashboard" ? "bg-gray-800 text-white" : "text-gray-600 hover:bg-black/5"}`}>
               <Icons.BarChart /><span>Dashboard</span>
@@ -615,7 +641,7 @@ function App() {
         )}
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-4">
+      <main className={`max-w-7xl mx-auto px-4 py-4${isMobile ? " pb-20" : ""}`}>
         {viewMode === "dashboard" && (
           <div className="space-y-4">
             <h2 className="text-sm font-semibold text-gray-700">Visão Geral</h2>
@@ -1109,6 +1135,19 @@ function App() {
             )}
             <div className="flex gap-2 mt-4"><button onClick={fecharModalVincularEstoque} className="flex-1 px-3 py-1.5 bg-gray-800 text-white rounded text-xs hover:bg-gray-700">Fechar</button></div>
           </div>
+        </div>
+      )}
+
+      {/* Barra fixa de acesso à versão completa — visível apenas em smartphones */}
+      {isMobile && (
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 py-3 text-center shadow-md">
+          <p className="text-[11px] text-gray-400 mb-1">Você está na versão mobile</p>
+          <button
+            onClick={() => { sessionStorage.setItem('crm-full-version', '1'); window.location.reload(); }}
+            className="text-xs text-blue-600 hover:text-blue-800 font-medium underline underline-offset-2"
+          >
+            Abrir versão completa →
+          </button>
         </div>
       )}
     </div>
