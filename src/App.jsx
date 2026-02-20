@@ -1,82 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { createClient } from "@supabase/supabase-js";
-
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-const Icons = {
-  User: ({ className = "w-4 h-4" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>),
-  Plus: ({ className = "w-4 h-4" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>),
-  Edit: ({ className = "w-3.5 h-3.5" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>),
-  Trash: ({ className = "w-3.5 h-3.5" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>),
-  Mail: ({ className = "w-3.5 h-3.5" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>),
-  Phone: ({ className = "w-3.5 h-3.5" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>),
-  Calendar: ({ className = "w-3 h-3" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>),
-  LogOut: ({ className = "w-4 h-4" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>),
-  BarChart: ({ className = "w-4 h-4" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>),
-  TrendingUp: ({ className = "w-4 h-4" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>),
-  ShoppingCart: ({ className = "w-4 h-4" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>),
-  CreditCard: ({ className = "w-4 h-4" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>),
-  DollarSign: ({ className = "w-4 h-4" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>),
-  CheckCircle: ({ className = "w-4 h-4" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>),
-  XCircle: ({ className = "w-4 h-4" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>),
-  Clock: ({ className = "w-4 h-4" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>),
-  AlertCircle: ({ className = "w-4 h-4" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>),
-  ClipboardList: ({ className = "w-4 h-4" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>),
-  Cog: ({ className = "w-4 h-4" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>),
-  ArrowRight: ({ className = "w-4 h-4" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>),
-  ChevronDown: ({ className = "w-4 h-4" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>),
-  Package: ({ className = "w-4 h-4" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>),
-  ArrowUpCircle: ({ className = "w-4 h-4" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 11l3-3m0 0l3 3m-3-3v8m0-13a9 9 0 110 18 9 9 0 010-18z" /></svg>),
-  ArrowDownCircle: ({ className = "w-4 h-4" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13l-3 3m0 0l-3-3m3 3V8m0 13a9 9 0 110-18 9 9 0 010-18z" /></svg>),
-  Link: ({ className = "w-4 h-4" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>),
-  Menu: ({ className = "w-5 h-5" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>),
-  X: ({ className = "w-5 h-5" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>),
-};
-
-function DataGrid({ columns, data, actions, emptyMessage, rowClassName }) {
-  const [filters, setFilters] = useState({});
-  const [sortCfg, setSortCfg] = useState({ key: null, dir: "asc" });
-  const [page, setPage] = useState(1);
-  const perPage = 10;
-  useEffect(() => { setPage(1); }, [filters, data.length]);
-  const filtered = data.filter((item) => columns.every((col) => { const f = filters[col.key]; if (!f) return true; const v = col.filterValue ? col.filterValue(item) : String(item[col.key] || ""); return v.toLowerCase().includes(f.toLowerCase()); }));
-  const sorted = [...filtered].sort((a, b) => { if (!sortCfg.key) return 0; const col = columns.find((c) => c.key === sortCfg.key); const av = col?.sortValue ? col.sortValue(a) : (a[sortCfg.key] ?? ""); const bv = col?.sortValue ? col.sortValue(b) : (b[sortCfg.key] ?? ""); if (av < bv) return sortCfg.dir === "asc" ? -1 : 1; if (av > bv) return sortCfg.dir === "asc" ? 1 : -1; return 0; });
-  const totalPages = Math.max(1, Math.ceil(sorted.length / perPage));
-  const rows = sorted.slice((page - 1) * perPage, page * perPage);
-  return (
-    <div className="bg-white border border-gray-200 rounded overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b bg-gray-50">
-              {columns.map((col) => (<th key={col.key} className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer select-none hover:bg-gray-100" onClick={() => setSortCfg((p) => ({ key: col.key, dir: p.key === col.key && p.dir === "asc" ? "desc" : "asc" }))}><span className="inline-flex items-center gap-1">{col.label}{sortCfg.key === col.key && <span className="text-gray-400">{sortCfg.dir === "asc" ? "↑" : "↓"}</span>}</span></th>))}
-              {actions && <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>}
-            </tr>
-            <tr className="border-b">
-              {columns.map((col) => (<th key={col.key} className="px-3 py-1">{col.filterable !== false && <input type="text" placeholder="Filtrar..." value={filters[col.key] || ""} onChange={(e) => setFilters((p) => ({ ...p, [col.key]: e.target.value }))} className="w-full border border-gray-200 rounded px-2 py-1 text-xs font-normal text-gray-600 focus:ring-1 focus:ring-gray-300 outline-none" />}</th>))}
-              {actions && <th className="px-3 py-1" />}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {rows.length === 0 ? (<tr><td colSpan={columns.length + (actions ? 1 : 0)} className="px-3 py-8 text-center text-gray-400">{emptyMessage || "Nenhum registro."}</td></tr>) : rows.map((item, i) => (<tr key={item.id || i} className={`hover:bg-gray-50 ${rowClassName ? rowClassName(item) : ""}`}>{columns.map((col) => (<td key={col.key} className={`px-3 py-2 ${col.className || ""}`}>{col.render ? col.render(item) : (item[col.key] ?? "-")}</td>))}{actions && <td className="px-3 py-2 whitespace-nowrap">{actions(item)}</td>}</tr>))}
-          </tbody>
-        </table>
-      </div>
-      <div className="flex items-center justify-between px-3 py-1.5 border-t bg-gray-50 text-xs text-gray-500">
-        <span>{sorted.length} registro(s)</span>
-        <div className="flex items-center gap-1">
-          <button onClick={() => setPage(1)} disabled={page <= 1} className="px-1.5 py-0.5 rounded hover:bg-gray-200 disabled:opacity-30">«</button>
-          <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1} className="px-1.5 py-0.5 rounded hover:bg-gray-200 disabled:opacity-30">‹</button>
-          <span className="px-2">{page}/{totalPages}</span>
-          <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages} className="px-1.5 py-0.5 rounded hover:bg-gray-200 disabled:opacity-30">›</button>
-          <button onClick={() => setPage(totalPages)} disabled={page >= totalPages} className="px-1.5 py-0.5 rounded hover:bg-gray-200 disabled:opacity-30">»</button>
-        </div>
-      </div>
-    </div>
-  );
-}
+import { supabase } from "./lib/supabase";
+import { Icons } from "./components/Icons";
+import { DataGrid } from "./components/DataGrid";
+import { useClientes } from "./hooks/useClientes";
+import { ClientesPage } from "./pages/Clientes";
 
 const checkIsMobile = () => {
   const isSmartphone = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -89,7 +16,6 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [tenantId, setTenantId] = useState(null);
   const [tenantNome, setTenantNome] = useState("");
-  const [clientes, setClientes] = useState([]);
   const [usuarios, setUsuarios] = useState([]);
   const [oportunidades, setOportunidades] = useState([]);
   const [vendas, setVendas] = useState([]);
@@ -102,11 +28,9 @@ function App() {
   const [tenantLocked, setTenantLocked] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [authMessage, setAuthMessage] = useState("");
-  const [modalCliente, setModalCliente] = useState(false);
   const [modalOportunidade, setModalOportunidade] = useState(false);
   const [modalVenda, setModalVenda] = useState(false);
   const [modalTitulo, setModalTitulo] = useState(false);
-  const [editandoCliente, setEditandoCliente] = useState(null);
   const [editandoOportunidade, setEditandoOportunidade] = useState(null);
   const [editandoVenda, setEditandoVenda] = useState(null);
   const [editandoTitulo, setEditandoTitulo] = useState(null);
@@ -115,7 +39,6 @@ function App() {
   const [modalUsuario, setModalUsuario] = useState(false);
   const [editandoProduto, setEditandoProduto] = useState(null);
   const [editandoUsuario, setEditandoUsuario] = useState(null);
-  const [formCliente, setFormCliente] = useState({ nome: "", cpf: "", email: "", telefone: "", empresa: "", observacoes: "" });
   const [formOportunidade, setFormOportunidade] = useState({ titulo: "", cliente_id: "", produto_id: "", valor: "", estagio: "prospecção", data_inicio: new Date().toISOString().split("T")[0] });
   const [formVenda, setFormVenda] = useState({ cliente_id: "", descricao: "", valor: "", data_venda: new Date().toISOString().split("T")[0], forma_pagamento: "à vista", observacoes: "", desconto: "", itens: [] });
   const [formTitulo, setFormTitulo] = useState({ venda_id: "", descricao: "", valor: "", data_emissao: new Date().toISOString().split("T")[0], data_vencimento: "", status: "pendente" });
@@ -161,6 +84,14 @@ function App() {
   const [formEstoqueItem, setFormEstoqueItem] = useState({ nome: "", categoria: "insumo", descricao: "", unidade_medida: "un", quantidade_atual: "0", quantidade_minima: "0", custo_unitario: "0", fornecedor: "", codigo_referencia: "", ativo: true });
   const [formMovimentacao, setFormMovimentacao] = useState({ tipo: "entrada", quantidade: "", custo_unitario: "", motivo: "compra", observacoes: "", data_movimentacao: new Date().toISOString().split("T")[0] });
   const [formVincularEstoque, setFormVincularEstoque] = useState({ estoque_item_id: "", quantidade_usada: "1", observacoes: "" });
+
+  const {
+    clientes,
+    setClientes,
+    carregar: carregarClientes,
+    salvar: salvarCliente,
+    excluir: excluirCliente,
+  } = useClientes(tenantId, session?.user?.id);
 
   useEffect(() => { supabase.auth.getSession().then(({ data: { session } }) => { setSession(session); setLoading(false); }); const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setSession(session)); return () => subscription.unsubscribe(); }, []);
 
@@ -238,7 +169,6 @@ function App() {
   useEffect(() => { if (session && tenantId) carregarTodosDados(); }, [session, tenantId]);
 
   const carregarTodosDados = async () => { await Promise.all([carregarClientes(), carregarUsuarios(), carregarOportunidades(), carregarVendas(), carregarTitulos(), carregarProdutos(), carregarTecnicos(), carregarOrdensServico(), carregarComissoes(), carregarEstoqueItens(), carregarEstoqueMovimentacoes(), carregarProdutoEstoqueVinculos()]); };
-  const carregarClientes = async () => { const { data } = await supabase.from("clientes").select("*").eq("tenant_id", tenantId).order("data_cadastro", { ascending: false }); if (data) setClientes(data); };
   const carregarUsuarios = async () => {
     const { data, error } = await supabase.rpc("get_tenant_members_with_email", { p_tenant_id: tenantId });
     if (!error && data) {
@@ -262,14 +192,6 @@ function App() {
   const handleSignUp = async (e) => { e.preventDefault(); setAuthMessage(""); const { error } = await supabase.auth.signUp({ email, password }); setAuthMessage(error ? "Erro: " + error.message : "Conta criada! Verifique seu email."); };
   const handleSignIn = async (e) => { e.preventDefault(); setAuthMessage(""); const { error } = await supabase.auth.signInWithPassword({ email, password }); if (error) setAuthMessage("Erro: " + error.message); };
   const handleSignOut = async () => { await supabase.auth.signOut(); setClientes([]); setUsuarios([]); setOportunidades([]); setVendas([]); setTitulos([]); setProdutos([]); setTecnicos([]); setOrdensServico([]); setComissoes([]); setEstoqueItens([]); setEstoqueMovimentacoes([]); setProdutoEstoqueVinculos([]); setTenantId(null); setTenantNome(""); setSelectedTenantId(""); };
-
-  const salvarCliente = async () => {
-    if (!formCliente.nome.trim()) return alert("Nome é obrigatório!");
-    if (editandoCliente) { const { data } = await supabase.from("clientes").update(formCliente).eq("id", editandoCliente.id).select(); if (data) setClientes(clientes.map((c) => (c.id === editandoCliente.id ? data[0] : c))); }
-    else { const { data } = await supabase.from("clientes").insert([{ ...formCliente, user_id: session.user.id, tenant_id: tenantId }]).select(); if (data) setClientes([data[0], ...clientes]); }
-    fecharModalCliente();
-  };
-  const excluirCliente = async (id) => { if (!confirm("Excluir cliente?")) return; await supabase.from("clientes").delete().eq("id", id); setClientes(clientes.filter((c) => c.id !== id)); };
 
   const salvarOportunidade = async () => {
     if (!formOportunidade.titulo.trim()) return alert("Título é obrigatório!");
@@ -439,8 +361,6 @@ function App() {
     setUsuarios(usuarios.filter((u) => u.id !== id));
   };
 
-  const abrirModalCliente = (c = null) => { if (c) { setEditandoCliente(c); setFormCliente({ nome: c.nome, cpf: c.cpf || "", email: c.email || "", telefone: c.telefone || "", empresa: c.empresa || "", observacoes: c.observacoes || "" }); } setModalCliente(true); };
-  const fecharModalCliente = () => { setModalCliente(false); setEditandoCliente(null); setFormCliente({ nome: "", cpf: "", email: "", telefone: "", empresa: "", observacoes: "" }); };
   const abrirModalOportunidade = (o = null) => { if (o) { setEditandoOportunidade(o); setFormOportunidade({ titulo: o.titulo, cliente_id: o.cliente_id, produto_id: o.produto_id || "", valor: o.valor.toString(), estagio: o.estagio, data_inicio: o.data_inicio }); } setModalOportunidade(true); };
   const fecharModalOportunidade = () => { setModalOportunidade(false); setEditandoOportunidade(null); setFormOportunidade({ titulo: "", cliente_id: "", produto_id: "", valor: "", estagio: "prospecção", data_inicio: new Date().toISOString().split("T")[0] }); };
   const abrirModalVenda = (v = null) => { if (v) { setEditandoVenda(v); setFormVenda({ cliente_id: v.cliente_id, descricao: v.descricao, valor: v.valor.toString(), data_venda: v.data_venda, forma_pagamento: v.forma_pagamento, observacoes: v.observacoes || "", desconto: (v.desconto ?? 0).toString(), itens: v.itens || [] }); } setModalVenda(true); };
@@ -682,17 +602,11 @@ function App() {
         )}
 
         {viewMode === "clientes" && (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between"><h2 className="text-sm font-semibold text-gray-700">Clientes</h2><button onClick={() => abrirModalCliente()} className="inline-flex items-center gap-1 bg-gray-800 hover:bg-gray-700 text-white px-3 py-1.5 rounded text-xs font-medium"><Icons.Plus />Novo</button></div>
-            <DataGrid columns={[
-              { key: "nome", label: "Nome", render: (c) => <span className="font-medium text-gray-800">{c.nome}</span>, filterValue: (c) => c.nome || "" },
-              { key: "cpf", label: "CPF", filterValue: (c) => c.cpf || "", render: (c) => c.cpf || <span className="text-gray-300">-</span> },
-              { key: "email", label: "Email", filterValue: (c) => c.email || "", render: (c) => c.email || <span className="text-gray-300">-</span> },
-              { key: "telefone", label: "Telefone / WhatsApp", filterValue: (c) => c.telefone || "", render: (c) => { if (!c.telefone) return <span className="text-gray-300">-</span>; const num = c.telefone.replace(/\D/g, ""); const whatsNum = num.length <= 11 ? "55" + num : num; return <span className="flex items-center gap-1.5">{c.telefone}<a href={`https://wa.me/${whatsNum}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 text-green-600 hover:text-green-700 text-[11px] font-medium" title="Enviar mensagem no WhatsApp"><svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>WhatsApp</a></span>; } },
-              { key: "empresa", label: "Empresa", filterValue: (c) => c.empresa || "", render: (c) => c.empresa || <span className="text-gray-300">-</span> },
-              { key: "data_cadastro", label: "Cadastro", render: (c) => <span className="text-gray-500">{new Date(c.data_cadastro).toLocaleDateString("pt-BR")}</span>, filterValue: (c) => new Date(c.data_cadastro).toLocaleDateString("pt-BR"), sortValue: (c) => c.data_cadastro },
-            ]} data={clientes} actions={(c) => actBtns(() => abrirModalCliente(c), () => excluirCliente(c.id))} emptyMessage="Nenhum cliente cadastrado." />
-          </div>
+          <ClientesPage
+            clientes={clientes}
+            onSalvar={salvarCliente}
+            onExcluir={excluirCliente}
+          />
         )}
 
         {viewMode === "usuarios" && (
@@ -985,8 +899,6 @@ function App() {
           </div>
         )}
       </main>
-
-      {modalCliente && (<div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50"><div className="bg-white rounded-lg border border-gray-200 max-w-sm w-full p-4 max-h-[90vh] overflow-y-auto"><h3 className="text-sm font-semibold mb-3">{editandoCliente ? "Editar Cliente" : "Novo Cliente"}</h3><div className="space-y-2.5"><div><label className="block text-xs text-gray-600 mb-0.5">Nome *</label><input type="text" value={formCliente.nome} onChange={(e) => setFormCliente({...formCliente, nome: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" /></div><div><label className="block text-xs text-gray-600 mb-0.5">CPF</label><input type="text" value={formCliente.cpf} onChange={(e) => { const v = e.target.value.replace(/\D/g, "").slice(0, 11); const f = v.length > 9 ? v.replace(/(\d{3})(\d{3})(\d{3})(\d{1,2})/, "$1.$2.$3-$4") : v.length > 6 ? v.replace(/(\d{3})(\d{3})(\d{1,3})/, "$1.$2.$3") : v.length > 3 ? v.replace(/(\d{3})(\d{1,3})/, "$1.$2") : v; setFormCliente({...formCliente, cpf: f}); }} placeholder="000.000.000-00" className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" /></div><div><label className="block text-xs text-gray-600 mb-0.5">Email</label><input type="email" value={formCliente.email} onChange={(e) => setFormCliente({...formCliente, email: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" /></div><div><label className="block text-xs text-gray-600 mb-0.5">Telefone</label><input type="tel" value={formCliente.telefone} onChange={(e) => setFormCliente({...formCliente, telefone: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" /></div><div><label className="block text-xs text-gray-600 mb-0.5">Empresa</label><input type="text" value={formCliente.empresa} onChange={(e) => setFormCliente({...formCliente, empresa: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" /></div><div><label className="block text-xs text-gray-600 mb-0.5">Observações</label><textarea value={formCliente.observacoes} onChange={(e) => setFormCliente({...formCliente, observacoes: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" rows="2" /></div></div><div className="flex gap-2 mt-4"><button onClick={fecharModalCliente} className="flex-1 px-3 py-1.5 border border-gray-200 rounded text-xs hover:bg-gray-50">Cancelar</button><button onClick={salvarCliente} className="flex-1 px-3 py-1.5 bg-gray-800 text-white rounded text-xs hover:bg-gray-700">{editandoCliente ? "Salvar" : "Adicionar"}</button></div></div></div>)}
 
       {modalProduto && (<div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50"><div className="bg-white rounded-lg border border-gray-200 max-w-sm w-full p-4 max-h-[90vh] overflow-y-auto"><h3 className="text-sm font-semibold mb-3">{editandoProduto ? "Editar Produto" : "Novo Produto"}</h3><div className="space-y-2.5"><div><label className="block text-xs text-gray-600 mb-0.5">Nome *</label><input type="text" value={formProduto.nome} onChange={(e) => setFormProduto({...formProduto, nome: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" /></div><div><label className="block text-xs text-gray-600 mb-0.5">Tipo</label><select value={formProduto.tipo} onChange={(e) => setFormProduto({...formProduto, tipo: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"><option value="produto">Produto</option><option value="servico">Serviço</option></select></div><div><label className="block text-xs text-gray-600 mb-0.5">Categoria</label><input type="text" value={formProduto.categoria} onChange={(e) => setFormProduto({...formProduto, categoria: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" /></div><div><label className="block text-xs text-gray-600 mb-0.5">Descrição</label><textarea value={formProduto.descricao} onChange={(e) => setFormProduto({...formProduto, descricao: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" rows="2" /></div><div className="grid grid-cols-2 gap-2"><div><label className="block text-xs text-gray-600 mb-0.5">Preço (R$)</label><input type="number" step="0.01" value={formProduto.preco_base} onChange={(e) => setFormProduto({...formProduto, preco_base: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" /></div><div><label className="block text-xs text-gray-600 mb-0.5">Custo (R$)</label><input type="number" step="0.01" value={formProduto.custo} onChange={(e) => setFormProduto({...formProduto, custo: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" /></div></div><div><label className="block text-xs text-gray-600 mb-0.5">Unidade</label><input type="text" value={formProduto.unidade_medida} onChange={(e) => setFormProduto({...formProduto, unidade_medida: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" placeholder="un, hora, kg..." /></div><div className="flex items-center gap-2"><input id="pa" type="checkbox" checked={!!formProduto.ativo} onChange={(e) => setFormProduto({...formProduto, ativo: e.target.checked})} /><label htmlFor="pa" className="text-xs text-gray-600">Ativo</label></div><div><label className="block text-xs text-gray-600 mb-0.5">Observações</label><textarea value={formProduto.observacoes} onChange={(e) => setFormProduto({...formProduto, observacoes: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" rows="2" /></div></div><div className="flex gap-2 mt-4"><button onClick={fecharModalProduto} className="flex-1 px-3 py-1.5 border border-gray-200 rounded text-xs hover:bg-gray-50">Cancelar</button><button onClick={salvarProduto} className="flex-1 px-3 py-1.5 bg-gray-800 text-white rounded text-xs hover:bg-gray-700">{editandoProduto ? "Salvar" : "Adicionar"}</button></div></div></div>)}
 
