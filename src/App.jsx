@@ -8,6 +8,10 @@ import { useEstoque } from "./hooks/useEstoque";
 import { EstoqueItensPage } from "./pages/EstoqueItens";
 import { EstoqueMovimentacoesPage } from "./pages/EstoqueMovimentacoes";
 import { VincularEstoqueModal } from "./components/modals/VincularEstoqueModal";
+import { useTecnicos } from "./hooks/useTecnicos";
+import { TecnicosPage } from "./pages/Tecnicos";
+import { ComissoesPage } from "./pages/Comissoes";
+import { EncaminharModal } from "./components/modals/EncaminharModal";
 
 const checkIsMobile = () => {
   const isSmartphone = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -48,18 +52,9 @@ function App() {
   const [formTitulo, setFormTitulo] = useState({ venda_id: "", descricao: "", valor: "", data_emissao: new Date().toISOString().split("T")[0], data_vencimento: "", status: "pendente" });
   const [formProduto, setFormProduto] = useState({ nome: "", tipo: "produto", descricao: "", categoria: "", preco_base: "", custo: "", unidade_medida: "", ativo: true, observacoes: "" });
   const [formUsuario, setFormUsuario] = useState({ email: "", role: "member" });
-  const [tecnicos, setTecnicos] = useState([]);
   const [ordensServico, setOrdensServico] = useState([]);
-  const [modalTecnico, setModalTecnico] = useState(false);
   const [modalEncaminhar, setModalEncaminhar] = useState(false);
-  const [editandoTecnico, setEditandoTecnico] = useState(null);
   const [osEncaminhar, setOsEncaminhar] = useState(null);
-  const [formTecnico, setFormTecnico] = useState({ nome: "", cpf: "", email: "", telefone: "", especialidade: "", endereco: "", observacoes: "", ativo: true });
-  const [formEncaminhar, setFormEncaminhar] = useState({ tecnico_id: "", comissao_percentual: "", comissao_valor: "" });
-  const [comissoes, setComissoes] = useState([]);
-  const [modalAgendarComissao, setModalAgendarComissao] = useState(false);
-  const [comissaoAgendar, setComissaoAgendar] = useState(null);
-  const [formAgendarComissao, setFormAgendarComissao] = useState({ data_agendamento: new Date().toISOString().split("T")[0], observacoes: "" });
   const [openDropdown, setOpenDropdown] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(checkIsMobile);
@@ -94,6 +89,20 @@ function App() {
     salvarVinculo,
     excluirVinculo,
   } = useEstoque(tenantId, session?.user?.id);
+
+  const {
+    tecnicos, setTecnicos,
+    comissoes, setComissoes,
+    carregarTecnicos,
+    carregarComissoes,
+    salvarTecnico,
+    excluirTecnico,
+    agendarComissao,
+    pagarComissao,
+    excluirComissao,
+    adicionarComissao,
+    getTecnicoNome,
+  } = useTecnicos(tenantId, session?.user?.id);
 
   useEffect(() => { supabase.auth.getSession().then(({ data: { session } }) => { setSession(session); setLoading(false); }); const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setSession(session)); return () => subscription.unsubscribe(); }, []);
 
@@ -184,9 +193,7 @@ function App() {
   const carregarVendas = async () => { const { data } = await supabase.from("vendas").select("*").eq("tenant_id", tenantId).order("data_venda", { ascending: false }); if (data) setVendas(data); };
   const carregarTitulos = async () => { const { data } = await supabase.from("titulos").select("*").eq("tenant_id", tenantId).order("data_vencimento", { ascending: true }); if (data) setTitulos(data); };
   const carregarProdutos = async () => { const { data } = await supabase.from("produtos").select("*").eq("tenant_id", tenantId).order("created_at", { ascending: false }); if (data) setProdutos(data); };
-  const carregarTecnicos = async () => { const { data } = await supabase.from("tecnicos").select("*").eq("tenant_id", tenantId).order("created_at", { ascending: false }); if (data) setTecnicos(data); };
   const carregarOrdensServico = async () => { const { data } = await supabase.from("ordens_servico").select("*").eq("tenant_id", tenantId).order("created_at", { ascending: false }); if (data) setOrdensServico(data); };
-  const carregarComissoes = async () => { const { data } = await supabase.from("comissoes").select("*").eq("tenant_id", tenantId).order("created_at", { ascending: false }); if (data) setComissoes(data); };
 
   const handleSignUp = async (e) => { e.preventDefault(); setAuthMessage(""); const { error } = await supabase.auth.signUp({ email, password }); setAuthMessage(error ? "Erro: " + error.message : "Conta criada! Verifique seu email."); };
   const handleSignIn = async (e) => { e.preventDefault(); setAuthMessage(""); const { error } = await supabase.auth.signInWithPassword({ email, password }); if (error) setAuthMessage("Erro: " + error.message); };
@@ -258,18 +265,9 @@ function App() {
   };
   const excluirProduto = async (id) => { if (!confirm("Excluir produto?")) return; await supabase.from("produtos").delete().eq("id", id); setProdutos(produtos.filter((p) => p.id !== id)); };
 
-  const salvarTecnico = async () => {
-    if (!formTecnico.nome.trim()) return alert("Nome é obrigatório!");
-    const payload = { ...formTecnico, user_id: session.user.id, tenant_id: tenantId };
-    if (editandoTecnico) { const { data } = await supabase.from("tecnicos").update(payload).eq("id", editandoTecnico.id).select(); if (data) setTecnicos(tecnicos.map((t) => (t.id === editandoTecnico.id ? data[0] : t))); }
-    else { const { data } = await supabase.from("tecnicos").insert([payload]).select(); if (data) setTecnicos([data[0], ...tecnicos]); }
-    fecharModalTecnico();
-  };
-  const excluirTecnico = async (id) => { if (!confirm("Excluir técnico?")) return; await supabase.from("tecnicos").delete().eq("id", id); setTecnicos(tecnicos.filter((t) => t.id !== id)); };
-
-  const encaminharParaTecnico = async () => {
-    if (!formEncaminhar.tecnico_id) return alert("Selecione um técnico!");
-    const payload = { tecnico_id: formEncaminhar.tecnico_id, comissao_percentual: parseFloat(formEncaminhar.comissao_percentual || 0), comissao_valor: parseFloat(formEncaminhar.comissao_valor || 0), status: "em_atendimento", data_atribuicao: new Date().toISOString() };
+  const encaminharParaTecnico = async (form) => {
+    if (!form.tecnico_id) return alert("Selecione um técnico!");
+    const payload = { tecnico_id: form.tecnico_id, comissao_percentual: parseFloat(form.comissao_percentual || 0), comissao_valor: parseFloat(form.comissao_valor || 0), status: "em_atendimento", data_atribuicao: new Date().toISOString() };
     const { data } = await supabase.from("ordens_servico").update(payload).eq("id", osEncaminhar.id).select();
     if (data) setOrdensServico(ordensServico.map((o) => (o.id === osEncaminhar.id ? data[0] : o)));
     fecharModalEncaminhar();
@@ -283,24 +281,11 @@ function App() {
       if (os.tecnico_id && parseFloat(os.comissao_valor || 0) > 0) {
         const novaComissao = { ordem_servico_id: os.id, tecnico_id: os.tecnico_id, valor: os.comissao_valor, percentual: os.comissao_percentual, status: "pendente", user_id: session.user.id, tenant_id: tenantId };
         const { data: comissaoData } = await supabase.from("comissoes").insert([novaComissao]).select();
-        if (comissaoData) setComissoes((prev) => [comissaoData[0], ...prev]);
+        if (comissaoData) adicionarComissao(comissaoData[0]);
       }
     }
   };
   const excluirOrdemServico = async (id) => { if (!confirm("Excluir ordem de serviço?")) return; await supabase.from("ordens_servico").delete().eq("id", id); setOrdensServico(ordensServico.filter((o) => o.id !== id)); };
-
-  const agendarComissao = async () => {
-    if (!formAgendarComissao.data_agendamento) return alert("Informe a data de agendamento!");
-    const { data } = await supabase.from("comissoes").update({ status: "agendado", data_agendamento: formAgendarComissao.data_agendamento, observacoes: formAgendarComissao.observacoes }).eq("id", comissaoAgendar.id).select();
-    if (data) setComissoes(comissoes.map((c) => (c.id === comissaoAgendar.id ? data[0] : c)));
-    fecharModalAgendarComissao();
-  };
-  const pagarComissao = async (id) => {
-    if (!confirm("Confirmar pagamento desta comissão?")) return;
-    const { data } = await supabase.from("comissoes").update({ status: "pago", data_pagamento: new Date().toISOString().split("T")[0] }).eq("id", id).select();
-    if (data) setComissoes(comissoes.map((c) => (c.id === id ? data[0] : c)));
-  };
-  const excluirComissao = async (id) => { if (!confirm("Excluir comissão?")) return; await supabase.from("comissoes").delete().eq("id", id); setComissoes(comissoes.filter((c) => c.id !== id)); };
 
   const salvarUsuario = async () => {
     if (!formUsuario.email.trim()) return alert("Email é obrigatório!");
@@ -334,16 +319,10 @@ function App() {
   const abrirModalUsuario = (u = null) => { if (u) { setEditandoUsuario(u); setFormUsuario({ email: u.email || "", role: u.role || "member" }); } setModalUsuario(true); };
   const fecharModalUsuario = () => { setModalUsuario(false); setEditandoUsuario(null); setFormUsuario({ email: "", role: "member" }); };
 
-  const abrirModalTecnico = (t = null) => { if (t) { setEditandoTecnico(t); setFormTecnico({ nome: t.nome || "", cpf: t.cpf || "", email: t.email || "", telefone: t.telefone || "", especialidade: t.especialidade || "", endereco: t.endereco || "", observacoes: t.observacoes || "", ativo: t.ativo ?? true }); } setModalTecnico(true); };
-  const fecharModalTecnico = () => { setModalTecnico(false); setEditandoTecnico(null); setFormTecnico({ nome: "", cpf: "", email: "", telefone: "", especialidade: "", endereco: "", observacoes: "", ativo: true }); };
-  const abrirModalEncaminhar = (os) => { setOsEncaminhar(os); setFormEncaminhar({ tecnico_id: os.tecnico_id || "", comissao_percentual: os.comissao_percentual?.toString() || "", comissao_valor: os.comissao_valor?.toString() || "" }); setModalEncaminhar(true); };
-  const fecharModalEncaminhar = () => { setModalEncaminhar(false); setOsEncaminhar(null); setFormEncaminhar({ tecnico_id: "", comissao_percentual: "", comissao_valor: "" }); };
-
-  const abrirModalAgendarComissao = (c) => { setComissaoAgendar(c); setFormAgendarComissao({ data_agendamento: c.data_agendamento || new Date().toISOString().split("T")[0], observacoes: c.observacoes || "" }); setModalAgendarComissao(true); };
-  const fecharModalAgendarComissao = () => { setModalAgendarComissao(false); setComissaoAgendar(null); setFormAgendarComissao({ data_agendamento: new Date().toISOString().split("T")[0], observacoes: "" }); };
+  const abrirModalEncaminhar = (os) => { setOsEncaminhar(os); setModalEncaminhar(true); };
+  const fecharModalEncaminhar = () => { setModalEncaminhar(false); setOsEncaminhar(null); };
 
   const getClienteNome = (id) => clientes.find((c) => c.id === id)?.nome || "N/A";
-  const getTecnicoNome = (id) => tecnicos.find((t) => t.id === id)?.nome || "N/A";
   const getProdutoNome = (id) => produtos.find((p) => p.id === id)?.nome || null;
   const fmtBRL = (v) => parseFloat(v || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 });
 
@@ -650,18 +629,7 @@ function App() {
         )}
 
         {viewMode === "tecnicos" && (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between"><h2 className="text-sm font-semibold text-gray-700">Técnicos Responsáveis</h2><button onClick={() => abrirModalTecnico()} className="inline-flex items-center gap-1 bg-gray-800 hover:bg-gray-700 text-white px-3 py-1.5 rounded text-xs font-medium"><Icons.Plus />Novo</button></div>
-            <DataGrid columns={[
-              { key: "nome", label: "Nome", render: (t) => <span className="font-medium text-gray-800">{t.nome}</span>, filterValue: (t) => t.nome || "" },
-              { key: "especialidade", label: "Especialidade", render: (t) => t.especialidade || <span className="text-gray-300">-</span>, filterValue: (t) => t.especialidade || "" },
-              { key: "cpf", label: "CPF", render: (t) => t.cpf || <span className="text-gray-300">-</span>, filterValue: (t) => t.cpf || "" },
-              { key: "email", label: "Email", render: (t) => t.email || <span className="text-gray-300">-</span>, filterValue: (t) => t.email || "" },
-              { key: "telefone", label: "Telefone", render: (t) => t.telefone || <span className="text-gray-300">-</span>, filterValue: (t) => t.telefone || "" },
-              { key: "endereco", label: "Endereço", render: (t) => t.endereco || <span className="text-gray-300">-</span>, filterValue: (t) => t.endereco || "" },
-              { key: "ativo", label: "Status", render: (t) => t.ativo ? <span className="px-1.5 py-0.5 rounded text-[11px] bg-green-50 text-green-700">Ativo</span> : <span className="px-1.5 py-0.5 rounded text-[11px] bg-gray-100 text-gray-500">Inativo</span>, filterValue: (t) => t.ativo ? "Ativo" : "Inativo" },
-            ]} data={tecnicos} actions={(t) => actBtns(() => abrirModalTecnico(t), () => excluirTecnico(t.id))} emptyMessage="Nenhum técnico cadastrado." />
-          </div>
+          <TecnicosPage tecnicos={tecnicos} onSalvar={salvarTecnico} onExcluir={excluirTecnico} />
         )}
 
         {viewMode === "ordens_servico" && (
@@ -692,93 +660,17 @@ function App() {
         )}
 
         {viewMode === "comissoes" && (
-          <div className="space-y-4">
-            <h2 className="text-sm font-semibold text-gray-700">Gestão de Comissões</h2>
-
-            {/* Cards consolidados por técnico — valores em aberto */}
-            {(() => {
-              const porTecnico = tecnicos
-                .map((t) => {
-                  const abertas = comissoes.filter((c) => c.tecnico_id === t.id && c.status !== "pago");
-                  return { t, total: abertas.reduce((s, c) => s + parseFloat(c.valor || 0), 0), pendente: abertas.filter((c) => c.status === "pendente").length, agendado: abertas.filter((c) => c.status === "agendado").length };
-                })
-                .filter((x) => x.pendente + x.agendado > 0);
-              if (!porTecnico.length) return (
-                <div className="bg-gray-50 border border-gray-200 rounded p-4 text-center text-xs text-gray-400">
-                  Nenhuma comissão em aberto. Conclua um atendimento com técnico e comissão para gerar cards.
-                </div>
-              );
-              return (
-                <div>
-                  <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-2">Valores em Aberto por Técnico</p>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                    {porTecnico.map(({ t, total, pendente, agendado }) => (
-                      <div key={t.id} className="bg-white border border-blue-200 rounded p-3">
-                        <p className="text-xs font-semibold text-gray-800 truncate">{t.nome}</p>
-                        {t.especialidade && <p className="text-[10px] text-gray-400">{t.especialidade}</p>}
-                        <p className="text-xl font-bold text-blue-700 mt-1">R$ {fmtBRL(total)}</p>
-                        <p className="text-[10px] text-gray-500 mt-0.5">
-                          {pendente > 0 && <span className="text-gray-600">{pendente} pendente{pendente > 1 ? "s" : ""}</span>}
-                          {pendente > 0 && agendado > 0 && " · "}
-                          {agendado > 0 && <span className="text-yellow-600">{agendado} agendado{agendado > 1 ? "s" : ""}</span>}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })()}
-
-            {/* Kanban de comissões */}
-            {(() => {
-              const colunas = [
-                { key: "pendente", label: "Pendente de Pagamento", hClass: "bg-gray-100 border-gray-300 text-gray-700" },
-                { key: "agendado", label: "Pagamento Agendado", hClass: "bg-yellow-50 border-yellow-300 text-yellow-800" },
-                { key: "pago", label: "Pagamento Efetuado", hClass: "bg-green-50 border-green-300 text-green-800" },
-              ];
-              return (
-                <div className="flex gap-3 overflow-x-auto pb-2">
-                  {colunas.map((col) => {
-                    const cards = comissoes.filter((c) => c.status === col.key);
-                    const totalCol = cards.reduce((s, c) => s + parseFloat(c.valor || 0), 0);
-                    return (
-                      <div key={col.key} className="flex-shrink-0 w-64">
-                        <div className={`rounded p-2.5 mb-2 border ${col.hClass}`}>
-                          <h3 className="text-xs font-semibold">{col.label}</h3>
-                          <p className="text-[11px] opacity-75">{cards.length} {cards.length === 1 ? "card" : "cards"} · R$ {fmtBRL(totalCol)}</p>
-                        </div>
-                        <div className="space-y-2">
-                          {cards.length === 0 && <div className="bg-white border border-dashed border-gray-200 rounded p-4 text-center text-[11px] text-gray-400">Sem comissões</div>}
-                          {cards.map((c) => {
-                            const os = ordensServico.find((o) => o.id === c.ordem_servico_id) || {};
-                            return (
-                              <div key={c.id} className="bg-white border border-gray-200 rounded p-3 shadow-sm">
-                                <div className="flex justify-between items-start mb-1.5">
-                                  <span className="font-mono text-[10px] text-gray-400 bg-gray-50 px-1 rounded">{os.numero_os || "—"}</span>
-                                  <span className="text-sm font-bold text-blue-700">R$ {fmtBRL(c.valor)}</span>
-                                </div>
-                                <p className="text-xs font-semibold text-gray-800">{getTecnicoNome(c.tecnico_id)}</p>
-                                <p className="text-[11px] text-gray-500 mb-1">{getClienteNome(os.cliente_id)}</p>
-                                {parseFloat(c.percentual || 0) > 0 && <p className="text-[10px] text-gray-400">{c.percentual}% s/ R$ {fmtBRL(os.valor_total)}</p>}
-                                {c.data_agendamento && <p className="text-[10px] text-yellow-700 mt-1 font-medium">📅 Agendado: {new Date(c.data_agendamento + "T12:00:00").toLocaleDateString("pt-BR")}</p>}
-                                {c.data_pagamento && <p className="text-[10px] text-green-700 mt-1 font-medium">✓ Pago em: {new Date(c.data_pagamento + "T12:00:00").toLocaleDateString("pt-BR")}</p>}
-                                {c.observacoes && <p className="text-[10px] text-gray-400 mt-1 italic truncate" title={c.observacoes}>{c.observacoes}</p>}
-                                <div className="flex gap-1 mt-2 pt-2 border-t border-gray-100">
-                                  {c.status === "pendente" && <button onClick={() => abrirModalAgendarComissao(c)} className="flex-1 px-1.5 py-1 text-[11px] rounded bg-yellow-50 text-yellow-700 hover:bg-yellow-100 border border-yellow-200 font-medium">Agendar</button>}
-                                  {c.status === "agendado" && <button onClick={() => pagarComissao(c.id)} className="flex-1 px-1.5 py-1 text-[11px] rounded bg-green-50 text-green-700 hover:bg-green-100 border border-green-200 font-medium">Confirmar Pago</button>}
-                                  {c.status !== "pago" && <button onClick={() => excluirComissao(c.id)} className="text-gray-300 hover:text-red-500 p-1 rounded hover:bg-red-50"><Icons.Trash className="w-3 h-3" /></button>}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              );
-            })()}
-          </div>
+          <ComissoesPage
+            comissoes={comissoes}
+            tecnicos={tecnicos}
+            ordensServico={ordensServico}
+            getTecnicoNome={getTecnicoNome}
+            getClienteNome={getClienteNome}
+            fmtBRL={fmtBRL}
+            onAgendar={agendarComissao}
+            onPagar={pagarComissao}
+            onExcluir={excluirComissao}
+          />
         )}
         {viewMode === "estoque_itens" && (
           <EstoqueItensPage
@@ -820,40 +712,16 @@ function App() {
         {editandoUsuario && editandoUsuario.created_at && (<div className="bg-gray-50 border border-gray-200 rounded p-2.5"><p className="text-[11px] text-gray-500">Membro desde: <span className="font-medium text-gray-700">{new Date(editandoUsuario.created_at).toLocaleDateString("pt-BR")}</span></p></div>)}
         </div><div className="flex gap-2 mt-4"><button onClick={fecharModalUsuario} className="flex-1 px-3 py-1.5 border border-gray-200 rounded text-xs hover:bg-gray-50">Cancelar</button><button onClick={salvarUsuario} className="flex-1 px-3 py-1.5 bg-gray-800 text-white rounded text-xs hover:bg-gray-700">{editandoUsuario ? "Salvar" : "Adicionar"}</button></div></div></div>)}
 
-      {modalAgendarComissao && comissaoAgendar && (<div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50"><div className="bg-white rounded-lg border border-gray-200 max-w-xs w-full p-4"><h3 className="text-sm font-semibold mb-3">Agendar Pagamento de Comissão</h3>
-        <div className="bg-yellow-50 border border-yellow-200 rounded p-2.5 mb-3">
-          <p className="text-xs font-semibold text-gray-700">{getTecnicoNome(comissaoAgendar.tecnico_id)}</p>
-          <p className="text-lg font-bold text-blue-700">R$ {fmtBRL(comissaoAgendar.valor)}</p>
-          {parseFloat(comissaoAgendar.percentual || 0) > 0 && <p className="text-[10px] text-gray-500">{comissaoAgendar.percentual}% de comissão</p>}
-        </div>
-        <div className="space-y-2.5">
-          <div><label className="block text-xs text-gray-600 mb-0.5">Data do Pagamento *</label><input type="date" value={formAgendarComissao.data_agendamento} onChange={(e) => setFormAgendarComissao({...formAgendarComissao, data_agendamento: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" /></div>
-          <div><label className="block text-xs text-gray-600 mb-0.5">Observações</label><textarea value={formAgendarComissao.observacoes} onChange={(e) => setFormAgendarComissao({...formAgendarComissao, observacoes: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" rows="2" placeholder="Ex: transferência banco X, data combinada..." /></div>
-        </div>
-        <div className="flex gap-2 mt-4"><button onClick={fecharModalAgendarComissao} className="flex-1 px-3 py-1.5 border border-gray-200 rounded text-xs hover:bg-gray-50">Cancelar</button><button onClick={agendarComissao} className="flex-1 px-3 py-1.5 bg-yellow-600 text-white rounded text-xs hover:bg-yellow-700 font-medium">Agendar</button></div>
-        </div></div>)}
-
-      {modalTecnico && (<div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50"><div className="bg-white rounded-lg border border-gray-200 max-w-sm w-full p-4 max-h-[90vh] overflow-y-auto"><h3 className="text-sm font-semibold mb-3">{editandoTecnico ? "Editar Técnico" : "Novo Técnico"}</h3><div className="space-y-2.5">
-        <div><label className="block text-xs text-gray-600 mb-0.5">Nome *</label><input type="text" value={formTecnico.nome} onChange={(e) => setFormTecnico({...formTecnico, nome: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" /></div>
-        <div><label className="block text-xs text-gray-600 mb-0.5">CPF</label><input type="text" value={formTecnico.cpf} onChange={(e) => { const v = e.target.value.replace(/\D/g, "").slice(0, 11); const f = v.length > 9 ? v.replace(/(\d{3})(\d{3})(\d{3})(\d{1,2})/, "$1.$2.$3-$4") : v.length > 6 ? v.replace(/(\d{3})(\d{3})(\d{1,3})/, "$1.$2.$3") : v.length > 3 ? v.replace(/(\d{3})(\d{1,3})/, "$1.$2") : v; setFormTecnico({...formTecnico, cpf: f}); }} placeholder="000.000.000-00" className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" /></div>
-        <div><label className="block text-xs text-gray-600 mb-0.5">Email</label><input type="email" value={formTecnico.email} onChange={(e) => setFormTecnico({...formTecnico, email: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" /></div>
-        <div><label className="block text-xs text-gray-600 mb-0.5">Telefone</label><input type="tel" value={formTecnico.telefone} onChange={(e) => setFormTecnico({...formTecnico, telefone: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" /></div>
-        <div><label className="block text-xs text-gray-600 mb-0.5">Especialidade</label><input type="text" value={formTecnico.especialidade} onChange={(e) => setFormTecnico({...formTecnico, especialidade: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" placeholder="Ex: Elétrica, Hidráulica, TI..." /></div>
-        <div><label className="block text-xs text-gray-600 mb-0.5">Endereço</label><input type="text" value={formTecnico.endereco} onChange={(e) => setFormTecnico({...formTecnico, endereco: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" /></div>
-        <div><label className="block text-xs text-gray-600 mb-0.5">Observações</label><textarea value={formTecnico.observacoes} onChange={(e) => setFormTecnico({...formTecnico, observacoes: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" rows="2" /></div>
-        <div className="flex items-center gap-2"><input id="ta" type="checkbox" checked={!!formTecnico.ativo} onChange={(e) => setFormTecnico({...formTecnico, ativo: e.target.checked})} /><label htmlFor="ta" className="text-xs text-gray-600">Ativo</label></div>
-        </div><div className="flex gap-2 mt-4"><button onClick={fecharModalTecnico} className="flex-1 px-3 py-1.5 border border-gray-200 rounded text-xs hover:bg-gray-50">Cancelar</button><button onClick={salvarTecnico} className="flex-1 px-3 py-1.5 bg-gray-800 text-white rounded text-xs hover:bg-gray-700">{editandoTecnico ? "Salvar" : "Adicionar"}</button></div></div></div>)}
-
-      {modalEncaminhar && osEncaminhar && (<div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50"><div className="bg-white rounded-lg border border-gray-200 max-w-sm w-full p-4"><h3 className="text-sm font-semibold mb-3">Encaminhar para Técnico</h3>
-        <div className="bg-gray-50 border border-gray-200 rounded p-2.5 mb-3 space-y-1"><p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Ordem de Serviço</p><div className="flex justify-between text-xs"><span className="font-mono text-gray-700">{osEncaminhar.numero_os}</span><span className="font-medium text-green-700">R$ {fmtBRL(osEncaminhar.valor_total)}</span></div><p className="text-[11px] text-gray-600">{osEncaminhar.descricao}</p><p className="text-[11px] text-gray-500">Cliente: {getClienteNome(osEncaminhar.cliente_id)}</p></div>
-        <div className="space-y-2.5">
-          <div><label className="block text-xs text-gray-600 mb-0.5">Técnico Responsável *</label><select value={formEncaminhar.tecnico_id} onChange={(e) => setFormEncaminhar({...formEncaminhar, tecnico_id: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"><option value="">Selecione um técnico</option>{tecnicos.filter((t) => t.ativo !== false).map((t) => <option key={t.id} value={t.id}>{t.nome}{t.especialidade ? ` — ${t.especialidade}` : ""}</option>)}</select></div>
-          <div className="grid grid-cols-2 gap-2">
-            <div><label className="block text-xs text-gray-600 mb-0.5">Comissão (%)</label><input type="number" step="0.01" min="0" max="100" value={formEncaminhar.comissao_percentual} onChange={(e) => { const pct = parseFloat(e.target.value) || 0; const val = ((pct / 100) * parseFloat(osEncaminhar.valor_total || 0)).toFixed(2); setFormEncaminhar({...formEncaminhar, comissao_percentual: e.target.value, comissao_valor: val}); }} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" placeholder="0" /></div>
-            <div><label className="block text-xs text-gray-600 mb-0.5">Comissão (R$)</label><input type="number" step="0.01" min="0" value={formEncaminhar.comissao_valor} onChange={(e) => setFormEncaminhar({...formEncaminhar, comissao_valor: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" placeholder="0,00" /></div>
-          </div>
-        </div>
-        <div className="flex gap-2 mt-4"><button onClick={fecharModalEncaminhar} className="flex-1 px-3 py-1.5 border border-gray-200 rounded text-xs hover:bg-gray-50">Cancelar</button><button onClick={encaminharParaTecnico} className="flex-1 px-3 py-1.5 bg-blue-700 text-white rounded text-xs hover:bg-blue-800 inline-flex items-center justify-center gap-1"><Icons.ArrowRight className="w-3 h-3" />Encaminhar</button></div></div></div>)}
+      {modalEncaminhar && osEncaminhar && (
+        <EncaminharModal
+          os={osEncaminhar}
+          tecnicos={tecnicos}
+          getClienteNome={getClienteNome}
+          fmtBRL={fmtBRL}
+          onEncaminhar={encaminharParaTecnico}
+          onFechar={fecharModalEncaminhar}
+        />
+      )}
 
       {modalTitulo && (() => { const vr = formTitulo.venda_id ? vendas.find((v) => v.id === formTitulo.venda_id) : null; const sv = vr ? vr.valor - titulos.filter((t) => t.venda_id === vr.id && t.status === "pago" && (!editandoTitulo || t.id !== editandoTitulo.id)).reduce((a, t) => a + Number(t.valor), 0) : null; return (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50"><div className="bg-white rounded-lg border border-gray-200 max-w-sm w-full p-4"><h3 className="text-sm font-semibold mb-3">{editandoTitulo ? "Editar Título" : "Novo Título"}</h3><div className="space-y-2.5">
