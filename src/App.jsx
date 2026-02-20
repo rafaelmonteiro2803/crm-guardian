@@ -261,7 +261,7 @@ function App() {
 
   const handleSignUp = async (e) => { e.preventDefault(); setAuthMessage(""); const { error } = await supabase.auth.signUp({ email, password }); setAuthMessage(error ? "Erro: " + error.message : "Conta criada! Verifique seu email."); };
   const handleSignIn = async (e) => { e.preventDefault(); setAuthMessage(""); const { error } = await supabase.auth.signInWithPassword({ email, password }); if (error) setAuthMessage("Erro: " + error.message); };
-  const handleSignOut = async () => { await supabase.auth.signOut(); setClientes([]); setUsuarios([]); setOportunidades([]); setVendas([]); setTitulos([]); setProdutos([]); setTecnicos([]); setOrdensServico([]); setComissoes([]); setEstoqueItens([]); setEstoqueMovimentacoes([]); setProdutoEstoqueVinculos([]); setTenantId(null); setTenantNome(""); setSelectedTenantId(""); };
+  const handleSignOut = async () => { await supabase.auth.signOut(); setClientes([]); setUsuarios([]); setOportunidades([]); setVendas([]); setTitulos([]); setProdutos([]); setTecnicos([]); setOrdensServico([]); setComissoes([]); setEstoqueItens([]); setEstoqueMovimentacoes([]); setProdutoEstoqueVinculos([]); setTenantId(null); setTenantNome(""); if (!tenantLocked) setSelectedTenantId(""); };
 
   const salvarCliente = async () => {
     if (!formCliente.nome.trim()) return alert("Nome é obrigatório!");
