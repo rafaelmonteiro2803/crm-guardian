@@ -1,0 +1,435 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Contrato de Prestação de Serviços Estéticos — Sala Isis</title>
+  <style>
+    :root{
+      --bg:#0b0c10;
+      --paper:#ffffff;
+      --ink:#101114;
+      --muted:#5b616e;
+      --line:#e6e8ee;
+      --accent:#b38a2e; /* dourado suave */
+      --shadow: 0 12px 30px rgba(0,0,0,.18);
+      --radius: 16px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:var(--sans);
+      background: radial-gradient(1200px 700px at 20% 10%, rgba(179,138,46,.20), transparent 50%),
+                  radial-gradient(1000px 650px at 90% 20%, rgba(255,255,255,.08), transparent 45%),
+                  var(--bg);
+      color:var(--ink);
+    }
+    header.appbar{
+      position:sticky; top:0; z-index:10;
+      backdrop-filter: blur(10px);
+      background: rgba(11,12,16,.70);
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      color: #f3f4f6;
+    }
+    .appbar .wrap{
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 14px 18px;
+      display:flex;
+      gap:12px;
+      align-items:center;
+      justify-content:space-between;
+    }
+    .brand{
+      display:flex; align-items:center; gap:12px;
+      min-width: 0;
+    }
+    .badge{
+      width: 34px; height: 34px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, rgba(179,138,46,.95), rgba(255,231,165,.85));
+      box-shadow: 0 10px 20px rgba(179,138,46,.25);
+      display:grid; place-items:center;
+      color:#1a1205; font-weight:800;
+    }
+    .brand h1{
+      font-size: 14px; margin:0;
+      font-weight: 700;
+      letter-spacing:.2px;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .brand p{
+      margin:0;
+      font-size: 12px;
+      color: rgba(243,244,246,.72);
+    }
+    .actions{
+      display:flex; gap:10px; align-items:center;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+    button{
+      appearance:none;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.08);
+      color:#f3f4f6;
+      padding: 10px 12px;
+      border-radius: 12px;
+      cursor:pointer;
+      font-weight:600;
+      transition: transform .06s ease, background .15s ease, border-color .15s ease;
+    }
+    button:hover{ background: rgba(255,255,255,.12); border-color: rgba(255,255,255,.20);}
+    button:active{ transform: translateY(1px); }
+    button.primary{
+      border-color: rgba(179,138,46,.60);
+      background: rgba(179,138,46,.22);
+    }
+
+    main{
+      max-width: 1100px;
+      margin: 22px auto;
+      padding: 0 18px 32px;
+      display:grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+
+    .paper{
+      background: var(--paper);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 34px 34px 28px;
+      border: 1px solid rgba(255,255,255,.10);
+    }
+
+    .doc-header{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap: 18px;
+      border-bottom: 2px solid var(--line);
+      padding-bottom: 14px;
+      margin-bottom: 18px;
+    }
+    .doc-title{
+      margin:0;
+      font-size: 20px;
+      letter-spacing:.2px;
+    }
+    .doc-sub{
+      margin:6px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+    .meta{
+      min-width: 240px;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fafbff;
+    }
+    .meta .row{
+      display:flex;
+      justify-content:space-between;
+      gap: 10px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .meta .row strong{ color: var(--ink); font-weight:700; }
+    .meta .row + .row{ margin-top: 6px; }
+
+    h2{
+      font-size: 13px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: #2b2f38;
+      margin: 18px 0 10px;
+      padding-top: 6px;
+    }
+    p{
+      margin: 0 0 10px;
+      line-height: 1.6;
+      font-size: 14px;
+    }
+    .muted{ color: var(--muted); }
+    .hr{ height:1px; background: var(--line); margin: 16px 0; }
+    .accent{ color: var(--accent); font-weight:700; }
+    .grid-2{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 820px){
+      .paper{ padding: 22px 18px; }
+      .doc-header{ flex-direction:column; }
+      .meta{ min-width: 0; width: 100%; }
+      .grid-2{ grid-template-columns: 1fr; }
+    }
+
+    /* Campos editáveis */
+    .field{
+      display:inline-block;
+      min-width: 180px;
+      border-bottom: 1px dashed #c6cad6;
+      padding: 0 4px 2px;
+      margin: 0 3px;
+      color: #111827;
+    }
+    .field[contenteditable="true"]:focus{
+      outline: 2px solid rgba(179,138,46,.25);
+      border-bottom-color: rgba(179,138,46,.85);
+      border-radius: 6px;
+    }
+    .wide{ min-width: 320px; }
+    .full{ display:block; width:100%; min-width:0; }
+    .mono{ font-family: var(--mono); font-size: 13px; }
+
+    /* Checkbox visual */
+    .checks{
+      display:grid;
+      gap: 10px;
+      margin-top: 6px;
+    }
+    label.check{
+      display:flex;
+      gap:10px;
+      align-items:flex-start;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fafbff;
+    }
+    label.check input{ margin-top: 3px; }
+    label.check span{ font-size: 14px; line-height: 1.45; }
+
+    /* Assinaturas */
+    .signatures{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      margin-top: 14px;
+    }
+    .sig{
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px;
+      background: #fafbff;
+    }
+    .sig .line{
+      height: 44px;
+      border-bottom: 1px solid #cfd4e3;
+      margin-bottom: 8px;
+    }
+    .sig .who{
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    /* Impressão */
+    @media print{
+      body{ background: #fff; }
+      header.appbar{ display:none; }
+      main{ margin:0; padding:0; }
+      .paper{ box-shadow:none; border: none; border-radius:0; padding: 18mm 16mm; }
+      .meta{ background: #fff; }
+      label.check{ background:#fff; }
+      .sig{ background:#fff; }
+    }
+  </style>
+</head>
+<body>
+  <header class="appbar">
+    <div class="wrap">
+      <div class="brand">
+        <div class="badge">SI</div>
+        <div style="min-width:0">
+          <h1>Contrato — Prestação de Serviços Estéticos</h1>
+          <p>Versão para apresentação em tela • Sala Isis</p>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="primary" onclick="window.print()">Imprimir / Salvar em PDF</button>
+        <button onclick="fillToday()">Preencher data de hoje</button>
+        <button onclick="toggleHints()">Alternar dicas</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="paper" aria-label="Contrato">
+      <div class="doc-header">
+        <div>
+          <h1 class="doc-title">CONTRATO DE PRESTAÇÃO DE SERVIÇOS ESTÉTICOS</h1>
+          <p class="doc-sub">
+            Pelo presente instrumento, de um lado, a <strong>CONTRATADA</strong>, <strong>SALA ISIS</strong>
+            (Roberta Isis Barreto Monteiro LTDA), pessoa jurídica de direito privado, inscrita no CNPJ sob o nº
+            <span class="mono">63.485.055/0001-59</span>, com sede na Rua: Rio Grande do Sul, n°364 — Centro, São Caetano do Sul;
+            e, de outro lado, a(o) <strong>CONTRATANTE</strong>.
+          </p>
+        </div>
+        <aside class="meta" aria-label="Metadados">
+          <div class="row"><span>Local</span><strong>São Caetano do Sul</strong></div>
+          <div class="row"><span>Data</span><strong><span id="dateField" class="field" contenteditable="true">{{CONTRATO_DATA}}</span></strong></div>
+          <div class="row"><span>Versão</span><strong>Apresentação</strong></div>
+        </aside>
+      </div>
+
+      <h2>Identificação da(o) Contratante</h2>
+      <p>
+        Nome:
+        <span class="field full" contenteditable="true">{{CONTRATANTE_NOME}}</span>
+      </p>
+      <div class="grid-2">
+        <p>
+          RG:
+          <span class="field wide" contenteditable="true">{{CONTRATANTE_RG}}</span>
+        </p>
+        <p>
+          CPF:
+          <span class="field wide" contenteditable="true">{{CONTRATANTE_CPF}}</span>
+        </p>
+      </div>
+      <p>
+        E-mail:
+        <span class="field full" contenteditable="true">{{CONTRATANTE_EMAIL}}</span>
+      </p>
+      <p>
+        Telefone:
+        <span class="field wide" contenteditable="true">{{CONTRATANTE_TELEFONE}}</span>
+      </p>
+
+      <div class="hr"></div>
+
+      <h2>Do objeto</h2>
+      <p>
+        <strong>Cláusula 1ª:</strong> Por este instrumento a(o) CONTRATANTE adquire o pacote de tratamento oferecido pela CONTRATADA,
+        cujos serviços serão prestados por profissionais regularmente habilitados, o qual inclui os seguintes procedimentos:
+      </p>
+
+      <div class="checks" aria-label="Procedimentos">
+        <label class="check">
+          <input type="checkbox" />
+          <span><span class="field full" contenteditable="true">( ) _________________________________________________</span></span>
+        </label>
+        <label class="check">
+          <input type="checkbox" />
+          <span><span class="field full" contenteditable="true">( ) _________________________________________________</span></span>
+        </label>
+        <label class="check">
+          <input type="checkbox" />
+          <span><span class="field full" contenteditable="true">( ) _________________________________________________</span></span>
+        </label>
+        <label class="check">
+          <input type="checkbox" />
+          <span><span class="field full" contenteditable="true">( ) _________________________________________________</span></span>
+        </label>
+        <label class="check">
+          <input type="checkbox" />
+          <span><span class="field full" contenteditable="true">( ) _________________________________________________</span></span>
+        </label>
+      </div>
+
+      <p class="muted" data-hint>
+        Dica: clique nas linhas sublinhadas para preencher em tela (sem precisar editar o HTML).
+      </p>
+
+      <p>
+        <strong>Parágrafo único:</strong> A CONTRATADA obriga-se a prestar unicamente os serviços de estética à(o) CONTRATANTE supra selecionados,
+        por meio de técnicas, métodos e equipamentos próprios, objetivando apenas o tratamento facial ou corporal da(o) CONTRATANTE,
+        nos termos das condições gerais contidas nesse instrumento.
+      </p>
+
+      <p>
+        <strong>Cláusula 2ª:</strong> Após a aquisição dos procedimentos, a(o) CONTRATANTE terá direito de agendar as sessões necessárias para completar o tratamento,
+        durante a vigência do presente contrato, conforme agenda de disponibilidade da CONTRATADA.
+      </p>
+
+      <h2>Da utilização do pacote</h2>
+      <p><strong>Cláusula 3ª:</strong> A(O) CONTRATANTE deverá agendar os serviços que pretende realizar sempre com no mínimo 72 (setenta e duas) horas de antecedência, e, de acordo com a disponibilidade de agenda da CONTRATADA.</p>
+      <p><strong>Parágrafo Primeiro:</strong> A(O) CONTRATANTE deverá avisar a CONTRATADA, no prazo mínimo de 24 (vinte e quatro) horas de antecedência, caso haja necessidade de alteração nos horários e datas agendados, decorrentes de algum imprevisto que impossibilite a(o) CONTRATANTE de comparecer.</p>
+      <p><strong>Parágrafo Segundo:</strong> Na hipótese da sessão ser alterada com menos de 24 (vinte e quatro) horas de antecedência ou não comparecimento, o serviço será considerado como realizado e o crédito da CONTRATANTE como utilizado, devendo adquirir novo crédito caso necessário.</p>
+      <p><strong>Parágrafo Terceiro:</strong> Ocorrendo a hipótese do parágrafo primeiro da presente cláusula, o reagendamento dependerá da disponibilidade da CONTRATADA.</p>
+
+      <p><strong>Cláusula 4ª:</strong> Ocorrendo atraso por parte da(o) CONTRATANTE para sessão agendada no estabelecimento da CONTRATADA, o tempo das sessões serão reduzidos, na mesma proporção do atraso da(o) CONTRATANTE.</p>
+
+      <p><strong>Cláusula 6ª:</strong> O pacote é pessoal e intransferível, somente podendo utilizar os serviços a CONTRATANTE.</p>
+
+      <h2>Do preço</h2>
+      <p>
+        <strong>Cláusula 7ª:</strong> Para realização dos procedimentos selecionados na cláusula 1ª, deverá a(o) CONTRATANTE pagar a CONTRATADA o valor correspondente a
+        <span class="field wide" contenteditable="true">________________________________________________</span>.
+      </p>
+      <p><strong>Parágrafo único:</strong> na hipótese de desistência dos serviços no prazo de 24 (vinte e quatro) horas da aquisição do pacote, a CONTRATADA se compromete a devolver os valores pagos, exceto o custo dos produtos adquiridos para realização dos procedimentos e de eventuais taxas aplicadas em razão da opção de pagamento.</p>
+
+      <h2>Da rescisão</h2>
+      <p><strong>Cláusula 8ª:</strong> Após o prazo previsto no parágrafo único da cláusula 7ª, poderá a(o) CONTRATANTE rescindir o presente contrato, mediante aviso prévio de 30 (trinta) dias e pagamento de multa de 20% (vinte por cento) calculada sobre o valor total do contrato, sem devolução de eventuais parcelas já pagas e será descontado o custo dos produtos adquiridos para realização dos procedimentos e eventuais taxas aplicadas em razão da opção de pagamento.</p>
+
+      <p><strong>Cláusula 9ª:</strong> O presente contrato poderá ser rescindido por qualquer das partes, sem necessidade de notificação prévia ou incidência de multa, caso a parte contrária descumpra totalmente qualquer cláusula aqui disposta. Se o descumprimento ocorrer por parte da(o) CONTRATANTE nenhum valor será devolvido, se por culpa da CONTRATADA os valores serão reembolsados.</p>
+
+      <p><strong>Parágrafo segundo:</strong> Não será considerado como justo motivo insatisfações com o resultado dos procedimentos estéticos, sobretudo quando não houver culpa da CONTRATADA, tendo em vista que cada organismo reage distintamente do outro quanto a aderência aos procedimentos.</p>
+
+      <h2>Disposições gerais</h2>
+      <p><strong>Cláusula 10ª:</strong> A(O) CONTRATANTE declara ter sido previamente informada sobre todos os benefícios, risco, indicações, contraindicações, principais efeito colaterais e advertências gerais, relacionadas aos procedimentos, ora contratados, sendo que referidas informações foram suficientes esclarecidas, claras e elucidativas.</p>
+      <p><strong>Cláusula 11ª:</strong> A(O) CONTRATANTE declara que a CONTRATADA explicou acerca de todos os serviços disponíveis e sugeriu o tratamento que melhor se adeque aos objetivos pretendidos, de forma que a(o) CONTRATANTE optou por livre vontade pelos serviços selecionados na cláusula, ainda que distintos do orientado pela CONTRATADA, não podendo reclamar acerca de eventual resultado não atingido.</p>
+      <p><strong>Cláusula 12ª:</strong> A(O) CONTRATANTE declara ter ciência de que cada organismo reage de uma forma aos procedimentos e substâncias utilizadas, razão pela qual não há garantia dos resultados por parte da CONTRATADA.</p>
+      <p><strong>Cláusula 13ª:</strong> A(O) CONTRATANTE declara que todos os termos técnicos foram explicados, bem como todas as dúvidas foram sanadas.</p>
+      <p><strong>Cláusula 14ª:</strong> A(O) CONTRATANTE compromete-se a seguir todas as orientações e, havendo necessidade, fazer uso de produtos contidos em sua prescrição domiciliar, respeitando os horários indicados de utilização sem que os resultados almejados poderão não ser alcançados.</p>
+      <p><strong>Cláusula 15ª:</strong> A(O) CONTRATANTE declara ter plena ciência de que os resultados dos procedimentos estão condicionados a rigorosa frequência às sessões subscrita, disciplina alimentar e de atividade física paralelas, devendo considerar-se ainda a reação de cada organismo e as necessidades de cada indivíduo, do comportamento apresentado durante e após o tratamento estético, sendo todos estes fatos externos e independente do controle da CONTRATADA.</p>
+
+      <p><strong>Cláusula 16ª:</strong> A(O) CONTRATANTE declara não ter alergias, irritações, contraindicações ou qualquer outro fato impeditivo para realização dos procedimentos e/ou produtos utilizados, tendo plena ciência de que o organismo pode ter reações aos produtos, medicamentos ou serviços oferecidos pela CONTRATADA.</p>
+      <p><strong>Cláusula 17ª:</strong> A CONTRATADA não se responsabiliza por eventuais reações ou rejeição do organismo da(o) CONTRATANTE, principalmente se a(o) CONTRATANTE tinha conhecimento de possíveis efeitos adversos e não informou a CONTRATADA.</p>
+      <p><strong>Cláusula 18ª:</strong> Para dirimir quaisquer controvérsias oriundas deste contrato, as partes elegem o Fórum Central de São Paulo/SP, abrindo mão de qualquer outro, por mais privilegiado que seja.</p>
+
+      <div class="hr"></div>
+
+      <p class="muted">
+        E por estarem de acordo, firmam o presente, em duas vias de igual teor, na presença de duas testemunhas abaixo identificadas.
+      </p>
+
+      <p class="mono">
+        SÃO CAETANO DO SUL,
+        <span class="field" contenteditable="true">______</span>
+        de
+        <span class="field" contenteditable="true">________________________</span>
+        de
+        <span class="field" contenteditable="true">202____</span>.
+      </p>
+
+      <div class="signatures" aria-label="Assinaturas">
+        <div class="sig">
+          <div class="line" aria-hidden="true"></div>
+          <div class="who"><strong>CONTRATANTE</strong></div>
+        </div>
+        <div class="sig">
+          <div class="line" aria-hidden="true"></div>
+          <div class="who"><strong>CONTRATADA — SALA ISIS</strong></div>
+        </div>
+      </div>
+
+      <p class="muted" style="margin-top:12px" data-hint>
+        Dica: você pode preencher os campos e depois clicar em <span class="accent">Imprimir / Salvar em PDF</span>.
+      </p>
+    </section>
+  </main>
+
+  <script>
+    function pad(n){ return String(n).padStart(2,'0'); }
+    function fillToday(){
+      const d = new Date();
+      const txt = `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`;
+      document.getElementById('dateField').textContent = txt;
+    }
+    function toggleHints(){
+      document.querySelectorAll('[data-hint]').forEach(el=>{
+        el.style.display = (el.style.display === 'none') ? '' : 'none';
+      });
+    }
+  </script>
+</body>
+</html>
