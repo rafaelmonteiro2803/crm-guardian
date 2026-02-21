@@ -10,7 +10,7 @@ const templateModules = import.meta.glob("../templates/*.html", {
 
 // Monta lista de templates a partir dos módulos importados
 const templates = Object.entries(templateModules).map(([path, content]) => {
-  const filename = path.split("/").pop(); // ex: "contrato_servicos.html"
+  const filename = path.split("/").pop();
   const label = filename
     .replace(/\.html$/, "")
     .split(/[_-]/)
@@ -59,12 +59,9 @@ function preenchePlaceholders(html, venda, cliente, fmtBRL) {
   const hoje = new Date().toLocaleDateString("pt-BR");
 
   const substituicoes = {
-    // Datas
     "{{CONTRATO_DATA}}": fmtData(venda?.data_venda) || hoje,
     "{{VENDA_DATA}}": fmtData(venda?.data_venda) || hoje,
     "{{DATA_HOJE}}": hoje,
-
-    // Cliente / Contratante
     "{{CONTRATANTE_NOME}}": cliente?.nome || "",
     "{{CONTRATANTE_CPF}}": cliente?.cpf || "",
     "{{CONTRATANTE_RG}}": "",
@@ -75,15 +72,11 @@ function preenchePlaceholders(html, venda, cliente, fmtBRL) {
     "{{CLIENTE_EMAIL}}": cliente?.email || "",
     "{{CLIENTE_TELEFONE}}": cliente?.telefone || "",
     "{{CLIENTE_EMPRESA}}": cliente?.empresa || "",
-
-    // Venda
     "{{VENDA_DESCRICAO}}": venda?.descricao || "",
     "{{VENDA_VALOR}}": fmtValor(venda?.valor),
     "{{VENDA_VALOR_DESCONTO}}": fmtValor(venda?.desconto || 0),
     "{{VENDA_FORMA_PAGAMENTO}}": venda?.forma_pagamento || "",
     "{{VENDA_OBSERVACOES}}": venda?.observacoes || "",
-
-    // Itens/produtos da venda
     "{{ITENS_LISTA}}": buildItensHtml(venda?.itens),
   };
 
@@ -92,6 +85,25 @@ function preenchePlaceholders(html, venda, cliente, fmtBRL) {
     result = result.replaceAll(placeholder, value);
   }
   return result;
+}
+
+// Ícone do WhatsApp (SVG inline)
+function WhatsAppIcon({ className = "w-4 h-4" }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+    </svg>
+  );
+}
+
+// Spinner de carregamento
+function Spinner() {
+  return (
+    <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+    </svg>
+  );
 }
 
 // Botão da barra de ferramentas
@@ -112,6 +124,7 @@ export function DocumentosPage({ vendas, clientes, fmtBRL }) {
   const [vendaId, setVendaId] = useState("");
   const [templateName, setTemplateName] = useState("");
   const [docHtml, setDocHtml] = useState(null);
+  const [enviando, setEnviando] = useState(false);
   const iframeRef = useRef(null);
 
   const venda = vendas.find((v) => v.id === vendaId) || null;
@@ -139,6 +152,109 @@ export function DocumentosPage({ vendas, clientes, fmtBRL }) {
   const handleSalvarPDF = useCallback(() => {
     iframeRef.current?.contentWindow?.print();
   }, []);
+
+  // Gera PDF como blob a partir do conteúdo do iframe
+  const gerarPdfBlob = useCallback(async () => {
+    const iframeDoc = iframeRef.current?.contentDocument;
+    if (!iframeDoc) throw new Error("Documento não encontrado");
+
+    const html2canvas = (await import("html2canvas")).default;
+    const { jsPDF } = await import("jspdf");
+
+    const printEl = iframeDoc.body;
+
+    const canvas = await html2canvas(printEl, {
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      backgroundColor: "#ffffff",
+      windowWidth: 1100,
+    });
+
+    const imgData = canvas.toDataURL("image/jpeg", 0.92);
+    const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+    const imgW = pageW;
+    const imgH = (canvas.height * imgW) / canvas.width;
+
+    // Adiciona páginas conforme necessário
+    let posY = 0;
+    let restante = imgH;
+    while (restante > 0) {
+      pdf.addImage(imgData, "JPEG", 0, -posY, imgW, imgH);
+      restante -= pageH;
+      posY += pageH;
+      if (restante > 0) pdf.addPage();
+    }
+
+    return pdf.output("blob");
+  }, []);
+
+  // Enviar via WhatsApp
+  const handleEnviarWhatsApp = useCallback(async () => {
+    if (!docHtml) {
+      alert("Abra um documento primeiro.");
+      return;
+    }
+
+    if (!cliente?.telefone) {
+      alert("Este cliente não possui telefone cadastrado. Cadastre o telefone para enviar pelo WhatsApp.");
+      return;
+    }
+
+    setEnviando(true);
+
+    try {
+      const pdfBlob = await gerarPdfBlob();
+
+      const nomeArquivo = `documento_${new Date().toLocaleDateString("pt-BR").replace(/\//g, "-")}.pdf`;
+      const pdfFile = new File([pdfBlob], nomeArquivo, { type: "application/pdf" });
+
+      // Formata o número de telefone (adiciona DDI 55 se necessário)
+      const digits = cliente.telefone.replace(/\D/g, "");
+      const whatsNum = digits.length <= 11 ? "55" + digits : digits;
+
+      const msgTexto = `Olá${cliente.nome ? `, ${cliente.nome}` : ""}! Segue o documento referente à ${venda?.descricao ? `"${venda.descricao}"` : "venda"}. Qualquer dúvida, estou à disposição.`;
+
+      // Tenta Web Share API com arquivo (abre painel do SO — usuário escolhe WhatsApp)
+      if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+        await navigator.share({
+          title: nomeArquivo,
+          text: msgTexto,
+          files: [pdfFile],
+        });
+      } else {
+        // Fallback: faz download do PDF automaticamente e abre o WhatsApp Web
+        const blobUrl = URL.createObjectURL(pdfBlob);
+        const link = document.createElement("a");
+        link.href = blobUrl;
+        link.download = nomeArquivo;
+        link.click();
+        URL.revokeObjectURL(blobUrl);
+
+        // Abre WhatsApp Web com número e mensagem pré-preenchida
+        setTimeout(() => {
+          window.open(
+            `https://wa.me/${whatsNum}?text=${encodeURIComponent(msgTexto)}`,
+            "_blank"
+          );
+        }, 400);
+      }
+    } catch (err) {
+      if (err?.name === "AbortError") {
+        // Usuário cancelou o painel de compartilhamento — sem ação
+        return;
+      }
+      console.error("Erro ao gerar PDF para WhatsApp:", err);
+      alert(
+        "Não foi possível gerar o PDF automaticamente.\n\nUse o botão \"Salvar PDF\", salve o arquivo e envie manualmente pelo WhatsApp."
+      );
+    } finally {
+      setEnviando(false);
+    }
+  }, [docHtml, cliente, venda, gerarPdfBlob]);
 
   return (
     <div className="space-y-3">
@@ -320,8 +436,9 @@ export function DocumentosPage({ vendas, clientes, fmtBRL }) {
               />
             </div>
 
-            {/* Salvar PDF — à direita */}
-            <div className="ml-auto">
+            {/* Ações de exportação — à direita */}
+            <div className="ml-auto flex items-center gap-2">
+              {/* Salvar PDF (imprimir) */}
               <button
                 onClick={handleSalvarPDF}
                 type="button"
@@ -331,8 +448,36 @@ export function DocumentosPage({ vendas, clientes, fmtBRL }) {
                 <Icons.Printer />
                 Salvar PDF
               </button>
+
+              {/* Enviar pelo WhatsApp */}
+              <button
+                onClick={handleEnviarWhatsApp}
+                disabled={enviando}
+                type="button"
+                className="inline-flex items-center gap-1.5 bg-[#25D366] hover:bg-[#1ebe5d] text-white px-3 py-1.5 rounded text-xs font-medium transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                title={
+                  cliente?.telefone
+                    ? `Enviar para ${cliente.nome} (${cliente.telefone})`
+                    : "Cliente sem telefone cadastrado"
+                }
+              >
+                {enviando ? <Spinner /> : <WhatsAppIcon />}
+                {enviando ? "Gerando..." : "WhatsApp"}
+              </button>
             </div>
           </div>
+
+          {/* Aviso quando cliente não tem telefone */}
+          {!cliente?.telefone && (
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border-b border-amber-200">
+              <svg className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="text-xs text-amber-700">
+                Cliente sem telefone cadastrado — o envio pelo WhatsApp não estará disponível.
+              </span>
+            </div>
+          )}
 
           {/* iframe com o documento carregado */}
           <iframe
