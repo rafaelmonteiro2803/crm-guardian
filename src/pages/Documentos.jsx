@@ -47,6 +47,20 @@ function buildItensHtml(itens) {
   </table>`;
 }
 
+// Gera tabela HTML com os procedimentos/serviços vinculados à venda (formato (X) | DESCRIÇÃO)
+function buildProcedimentosHtml(itens) {
+  if (!itens || itens.length === 0) return "";
+  const rows = itens
+    .map(
+      (it) => `<tr>
+        <td style="width:36px;padding:8px 0;vertical-align:middle;font-weight:700;font-size:14px;white-space:nowrap">(X)</td>
+        <td style="padding:8px 10px 4px;border-bottom:1px dashed #c6cad6;font-size:14px;line-height:1.5">${it.nome || "-"}</td>
+      </tr>`
+    )
+    .join("");
+  return `<table style="width:100%;border-collapse:collapse;margin:4px 0"><tbody>${rows}</tbody></table>`;
+}
+
 // Substitui todos os placeholders {{CAMPO}} pelo valor correspondente da venda/cliente
 function preenchePlaceholders(html, venda, cliente, fmtBRL) {
   const fmtData = (d) =>
@@ -78,6 +92,7 @@ function preenchePlaceholders(html, venda, cliente, fmtBRL) {
     "{{VENDA_FORMA_PAGAMENTO}}": venda?.forma_pagamento || "",
     "{{VENDA_OBSERVACOES}}": venda?.observacoes || "",
     "{{ITENS_LISTA}}": buildItensHtml(venda?.itens),
+    "{{PROCEDIMENTOS_HTML}}": buildProcedimentosHtml(venda?.itens),
   };
 
   let result = html;
