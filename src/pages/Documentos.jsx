@@ -140,6 +140,7 @@ export function DocumentosPage({ vendas, clientes, fmtBRL }) {
   const [templateName, setTemplateName] = useState("");
   const [docHtml, setDocHtml] = useState(null);
   const [enviando, setEnviando] = useState(false);
+  const [enviandoEmail, setEnviandoEmail] = useState(false);
   const iframeRef = useRef(null);
 
   const venda = vendas.find((v) => v.id === vendaId) || null;
@@ -225,7 +226,6 @@ export function DocumentosPage({ vendas, clientes, fmtBRL }) {
       const pdfBlob = await gerarPdfBlob();
 
       const nomeArquivo = `documento_${new Date().toLocaleDateString("pt-BR").replace(/\//g, "-")}.pdf`;
-      const pdfFile = new File([pdfBlob], nomeArquivo, { type: "application/pdf" });
 
       // Formata o número de telefone (adiciona DDI 55 se necessário)
       const digits = cliente.telefone.replace(/\D/g, "");
@@ -233,33 +233,35 @@ export function DocumentosPage({ vendas, clientes, fmtBRL }) {
 
       const msgTexto = `Olá${cliente.nome ? `, ${cliente.nome}` : ""}! Segue o documento referente à ${venda?.descricao ? `"${venda.descricao}"` : "venda"}. Qualquer dúvida, estou à disposição.`;
 
-      // Tenta Web Share API com arquivo (abre painel do SO — usuário escolhe WhatsApp)
-      if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
-        await navigator.share({
-          title: nomeArquivo,
-          text: msgTexto,
-          files: [pdfFile],
-        });
-      } else {
-        // Fallback: faz download do PDF automaticamente e abre o WhatsApp Web
-        const blobUrl = URL.createObjectURL(pdfBlob);
-        const link = document.createElement("a");
-        link.href = blobUrl;
-        link.download = nomeArquivo;
-        link.click();
-        URL.revokeObjectURL(blobUrl);
+      const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-        // Abre WhatsApp Web com número e mensagem pré-preenchida
-        setTimeout(() => {
-          window.open(
-            `https://wa.me/${whatsNum}?text=${encodeURIComponent(msgTexto)}`,
-            "_blank"
-          );
-        }, 400);
+      // Em mobile usa Web Share API nativa (abre WhatsApp diretamente)
+      if (isMobile && navigator.canShare) {
+        const pdfFile = new File([pdfBlob], nomeArquivo, { type: "application/pdf" });
+        if (navigator.canShare({ files: [pdfFile] })) {
+          await navigator.share({ title: nomeArquivo, text: msgTexto, files: [pdfFile] });
+          return;
+        }
       }
+
+      // Desktop (ou mobile sem suporte): baixa o PDF e abre o WhatsApp Web
+      const blobUrl = URL.createObjectURL(pdfBlob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = nomeArquivo;
+      link.click();
+      URL.revokeObjectURL(blobUrl);
+
+      // Abre WhatsApp Web com número e mensagem pré-preenchida
+      setTimeout(() => {
+        window.open(
+          `https://wa.me/${whatsNum}?text=${encodeURIComponent(msgTexto)}`,
+          "_blank"
+        );
+      }, 400);
     } catch (err) {
       if (err?.name === "AbortError") {
-        // Usuário cancelou o painel de compartilhamento — sem ação
+        // Usuário cancelou — sem ação
         return;
       }
       console.error("Erro ao gerar PDF para WhatsApp:", err);
@@ -268,6 +270,49 @@ export function DocumentosPage({ vendas, clientes, fmtBRL }) {
       );
     } finally {
       setEnviando(false);
+    }
+  }, [docHtml, cliente, venda, gerarPdfBlob]);
+
+  // Enviar via Email (Web Share API com PDF em anexo, fallback para mailto:)
+  const handleEnviarEmail = useCallback(async () => {
+    if (!docHtml) {
+      alert("Abra um documento primeiro.");
+      return;
+    }
+
+    setEnviandoEmail(true);
+
+    try {
+      const pdfBlob = await gerarPdfBlob();
+      const nomeArquivo = `documento_${new Date().toLocaleDateString("pt-BR").replace(/\//g, "-")}.pdf`;
+      const pdfFile = new File([pdfBlob], nomeArquivo, { type: "application/pdf" });
+
+      const assunto = `Documento: ${venda?.descricao || "Venda"}`;
+      const msgTexto = `Olá${cliente?.nome ? `, ${cliente.nome}` : ""}!\n\nSegue em anexo o documento referente à ${venda?.descricao ? `"${venda.descricao}"` : "venda"}.\n\nQualquer dúvida, estou à disposição.`;
+
+      // Web Share API com arquivo (funciona em mobile e no painel de compartilhamento do SO)
+      if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+        await navigator.share({ title: assunto, text: msgTexto, files: [pdfFile] });
+        return;
+      }
+
+      // Fallback: baixa o PDF e abre o cliente de email via mailto:
+      const blobUrl = URL.createObjectURL(pdfBlob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = nomeArquivo;
+      link.click();
+      URL.revokeObjectURL(blobUrl);
+
+      setTimeout(() => {
+        window.location.href = `mailto:${cliente?.email || ""}?subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(msgTexto)}`;
+      }, 400);
+    } catch (err) {
+      if (err?.name === "AbortError") return;
+      console.error("Erro ao gerar PDF para email:", err);
+      alert("Não foi possível gerar o PDF automaticamente.\n\nUse o botão \"Salvar PDF\", salve o arquivo e envie manualmente por email.");
+    } finally {
+      setEnviandoEmail(false);
     }
   }, [docHtml, cliente, venda, gerarPdfBlob]);
 
@@ -462,6 +507,26 @@ export function DocumentosPage({ vendas, clientes, fmtBRL }) {
               >
                 <Icons.Printer />
                 Salvar PDF
+              </button>
+
+              {/* Enviar por Email */}
+              <button
+                onClick={handleEnviarEmail}
+                disabled={enviandoEmail}
+                type="button"
+                className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded text-xs font-medium transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                title={
+                  cliente?.email
+                    ? `Enviar para ${cliente.nome} (${cliente.email})`
+                    : "Enviar documento por email"
+                }
+              >
+                {enviandoEmail ? <Spinner /> : (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                )}
+                {enviandoEmail ? "Gerando..." : "Email"}
               </button>
 
               {/* Enviar pelo WhatsApp */}
