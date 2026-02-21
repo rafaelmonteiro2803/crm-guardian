@@ -6,6 +6,7 @@ import { useClientes } from "./hooks/useClientes";
 import { ClientesPage } from "./pages/Clientes";
 import { useEstoque } from "./hooks/useEstoque";
 import { EstoqueItensPage } from "./pages/EstoqueItens";
+import { DocumentosPage } from "./pages/Documentos";
 import { EstoqueMovimentacoesPage } from "./pages/EstoqueMovimentacoes";
 import { VincularEstoqueModal } from "./components/modals/VincularEstoqueModal";
 import { useTecnicos } from "./hooks/useTecnicos";
@@ -422,6 +423,7 @@ function App() {
         { key: "clientes", label: "Clientes", icon: <Icons.User />, count: clientes.length },
         { key: "pipeline", label: "Pipeline", icon: <Icons.TrendingUp />, count: oportunidades.length },
         { key: "vendas", label: "Vendas", icon: <Icons.ShoppingCart />, count: vendas.length },
+        { key: "documentos", label: "Documentos", icon: <Icons.FileText />, count: undefined },
       ],
     },
     {
@@ -632,6 +634,14 @@ function App() {
               { key: "valor", label: "Valor", render: (v) => <span className="font-medium text-green-700">R$ {fmtBRL(v.valor)}</span>, sortValue: (v) => parseFloat(v.valor||0) },
             ]} data={vendas} actions={(v) => actBtns(() => abrirModalVenda(v), () => excluirVenda(v.id))} emptyMessage="Nenhuma venda registrada." />
           </div>
+        )}
+
+        {viewMode === "documentos" && (
+          <DocumentosPage
+            vendas={vendas}
+            clientes={clientes}
+            fmtBRL={fmtBRL}
+          />
         )}
 
         {viewMode === "financeiro" && (
