@@ -12,6 +12,8 @@ import { useTecnicos } from "./hooks/useTecnicos";
 import { TecnicosPage } from "./pages/Tecnicos";
 import { ComissoesPage } from "./pages/Comissoes";
 import { EncaminharModal } from "./components/modals/EncaminharModal";
+import { useTenants } from "./hooks/useTenants";
+import { TenantsPage } from "./pages/Tenants";
 
 const checkIsMobile = () => {
   const isSmartphone = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -59,6 +61,7 @@ function App() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(checkIsMobile);
   const [tenantCor, setTenantCor] = useState(null);
+  const [userRole, setUserRole] = useState(null);
   const estagios = ["prospecção", "qualificação", "proposta", "negociação", "fechado", "cancelado"];
   // VincularEstoqueModal é acionado pela view de Produtos (ainda no App)
   const [modalVincularEstoque, setModalVincularEstoque] = useState(false);
@@ -103,6 +106,14 @@ function App() {
     adicionarComissao,
     getTecnicoNome,
   } = useTecnicos(tenantId, session?.user?.id);
+
+  const {
+    tenants,
+    setTenants,
+    carregar: carregarTodosTenants,
+    salvar: salvarTenant,
+    excluir: excluirTenant,
+  } = useTenants();
 
   useEffect(() => { supabase.auth.getSession().then(({ data: { session } }) => { setSession(session); setLoading(false); }); const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setSession(session)); return () => subscription.unsubscribe(); }, []);
 
@@ -150,7 +161,7 @@ function App() {
     if (selectedTenantId) {
       const { data } = await supabase
         .from("tenant_members")
-        .select("tenant_id, tenants(id, nome, cor)")
+        .select("tenant_id, role, tenants(id, nome, cor)")
         .eq("user_id", session.user.id)
         .eq("tenant_id", selectedTenantId)
         .single();
@@ -158,6 +169,7 @@ function App() {
         setTenantId(data.tenant_id);
         setTenantNome(data.tenants?.nome || "");
         setTenantCor(data.tenants?.cor || null);
+        setUserRole(data.role || "member");
       } else {
         setAuthMessage("Erro: Você não tem acesso a este tenant.");
         await supabase.auth.signOut();
@@ -165,7 +177,7 @@ function App() {
     } else {
       const { data } = await supabase
         .from("tenant_members")
-        .select("tenant_id, tenants(id, nome, cor)")
+        .select("tenant_id, role, tenants(id, nome, cor)")
         .eq("user_id", session.user.id)
         .limit(1)
         .single();
@@ -173,13 +185,16 @@ function App() {
         setTenantId(data.tenant_id);
         setTenantNome(data.tenants?.nome || "");
         setTenantCor(data.tenants?.cor || null);
+        setUserRole(data.role || "member");
       }
     }
   };
 
   useEffect(() => { if (session && tenantId) carregarTodosDados(); }, [session, tenantId]);
+  useEffect(() => { if (session && tenantId && userRole === "owner") carregarDadosOwner(); }, [session, tenantId, userRole]);
 
   const carregarTodosDados = async () => { await Promise.all([carregarClientes(), carregarUsuarios(), carregarOportunidades(), carregarVendas(), carregarTitulos(), carregarProdutos(), carregarTecnicos(), carregarOrdensServico(), carregarComissoes(), carregarEstoqueItens(), carregarEstoqueMovimentacoes(), carregarProdutoEstoqueVinculos()]); };
+  const carregarDadosOwner = async () => { try { await carregarTodosTenants(); } catch (e) { /* usuário sem permissão de owner — ignorar */ } };
   const carregarUsuarios = async () => {
     const { data, error } = await supabase.rpc("get_tenant_members_with_email", { p_tenant_id: tenantId });
     if (!error && data) {
@@ -197,7 +212,7 @@ function App() {
 
   const handleSignUp = async (e) => { e.preventDefault(); setAuthMessage(""); const { error } = await supabase.auth.signUp({ email, password }); setAuthMessage(error ? "Erro: " + error.message : "Conta criada! Verifique seu email."); };
   const handleSignIn = async (e) => { e.preventDefault(); setAuthMessage(""); const { error } = await supabase.auth.signInWithPassword({ email, password }); if (error) setAuthMessage("Erro: " + error.message); };
-  const handleSignOut = async () => { await supabase.auth.signOut(); setClientes([]); setUsuarios([]); setOportunidades([]); setVendas([]); setTitulos([]); setProdutos([]); setTecnicos([]); setOrdensServico([]); setComissoes([]); setEstoqueItens([]); setEstoqueMovimentacoes([]); setProdutoEstoqueVinculos([]); setTenantId(null); setTenantNome(""); setSelectedTenantId(""); };
+  const handleSignOut = async () => { await supabase.auth.signOut(); setClientes([]); setUsuarios([]); setOportunidades([]); setVendas([]); setTitulos([]); setProdutos([]); setTecnicos([]); setOrdensServico([]); setComissoes([]); setEstoqueItens([]); setEstoqueMovimentacoes([]); setProdutoEstoqueVinculos([]); setTenants([]); setTenantId(null); setTenantNome(""); setSelectedTenantId(""); setUserRole(null); };
 
   const salvarOportunidade = async () => {
     if (!formOportunidade.titulo.trim()) return alert("Título é obrigatório!");
@@ -379,7 +394,16 @@ function App() {
   );
 
   const ind = calcularIndicadores();
+  const isOwner = userRole === "owner";
   const navGroups = [
+    ...(isOwner ? [{
+      key: "sistema",
+      label: "Sistema",
+      icon: <Icons.Cog />,
+      items: [
+        { key: "tenants", label: "Tenants", icon: <Icons.Cog />, count: tenants.length },
+      ],
+    }] : []),
     {
       key: "admin",
       label: "Administrativo",
@@ -689,6 +713,14 @@ function App() {
             onSalvarMovimentacao={salvarMovimentacao}
             onExcluirMovimentacao={excluirMovimentacao}
             fmtBRL={fmtBRL}
+          />
+        )}
+
+        {viewMode === "tenants" && isOwner && (
+          <TenantsPage
+            tenants={tenants}
+            onSalvar={salvarTenant}
+            onExcluir={excluirTenant}
           />
         )}
       </main>
