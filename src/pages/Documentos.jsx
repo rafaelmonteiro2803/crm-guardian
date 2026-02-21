@@ -225,7 +225,6 @@ export function DocumentosPage({ vendas, clientes, fmtBRL }) {
       const pdfBlob = await gerarPdfBlob();
 
       const nomeArquivo = `documento_${new Date().toLocaleDateString("pt-BR").replace(/\//g, "-")}.pdf`;
-      const pdfFile = new File([pdfBlob], nomeArquivo, { type: "application/pdf" });
 
       // Formata o número de telefone (adiciona DDI 55 se necessário)
       const digits = cliente.telefone.replace(/\D/g, "");
@@ -233,33 +232,35 @@ export function DocumentosPage({ vendas, clientes, fmtBRL }) {
 
       const msgTexto = `Olá${cliente.nome ? `, ${cliente.nome}` : ""}! Segue o documento referente à ${venda?.descricao ? `"${venda.descricao}"` : "venda"}. Qualquer dúvida, estou à disposição.`;
 
-      // Tenta Web Share API com arquivo (abre painel do SO — usuário escolhe WhatsApp)
-      if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
-        await navigator.share({
-          title: nomeArquivo,
-          text: msgTexto,
-          files: [pdfFile],
-        });
-      } else {
-        // Fallback: faz download do PDF automaticamente e abre o WhatsApp Web
-        const blobUrl = URL.createObjectURL(pdfBlob);
-        const link = document.createElement("a");
-        link.href = blobUrl;
-        link.download = nomeArquivo;
-        link.click();
-        URL.revokeObjectURL(blobUrl);
+      const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-        // Abre WhatsApp Web com número e mensagem pré-preenchida
-        setTimeout(() => {
-          window.open(
-            `https://wa.me/${whatsNum}?text=${encodeURIComponent(msgTexto)}`,
-            "_blank"
-          );
-        }, 400);
+      // Em mobile usa Web Share API nativa (abre WhatsApp diretamente)
+      if (isMobile && navigator.canShare) {
+        const pdfFile = new File([pdfBlob], nomeArquivo, { type: "application/pdf" });
+        if (navigator.canShare({ files: [pdfFile] })) {
+          await navigator.share({ title: nomeArquivo, text: msgTexto, files: [pdfFile] });
+          return;
+        }
       }
+
+      // Desktop (ou mobile sem suporte): baixa o PDF e abre o WhatsApp Web
+      const blobUrl = URL.createObjectURL(pdfBlob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = nomeArquivo;
+      link.click();
+      URL.revokeObjectURL(blobUrl);
+
+      // Abre WhatsApp Web com número e mensagem pré-preenchida
+      setTimeout(() => {
+        window.open(
+          `https://wa.me/${whatsNum}?text=${encodeURIComponent(msgTexto)}`,
+          "_blank"
+        );
+      }, 400);
     } catch (err) {
       if (err?.name === "AbortError") {
-        // Usuário cancelou o painel de compartilhamento — sem ação
+        // Usuário cancelou — sem ação
         return;
       }
       console.error("Erro ao gerar PDF para WhatsApp:", err);
