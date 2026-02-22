@@ -6,6 +6,10 @@ import { useClientes } from "./hooks/useClientes";
 import { ClientesPage } from "./pages/Clientes";
 import { useEstoque } from "./hooks/useEstoque";
 import { EstoqueItensPage } from "./pages/EstoqueItens";
+import { useMovimentosBancarios } from "./hooks/useMovimentosBancarios";
+import { ContasBancariasPage } from "./pages/ContasBancarias";
+import { MovimentosBancariosPage } from "./pages/MovimentosBancarios";
+import { ConciliacaoBancariaPage } from "./pages/ConciliacaoBancaria";
 import { DocumentosPage } from "./pages/Documentos";
 import { EstoqueMovimentacoesPage } from "./pages/EstoqueMovimentacoes";
 import { VincularEstoqueModal } from "./components/modals/VincularEstoqueModal";
@@ -109,6 +113,24 @@ function App() {
   } = useTecnicos(tenantId, session?.user?.id);
 
   const {
+    contasBancarias,
+    setContasBancarias,
+    movimentosBancarios,
+    setMovimentosBancarios,
+    conciliacoesBancarias,
+    setConciliacoesBancarias,
+    carregarContas: carregarContasBancarias,
+    salvarConta: salvarContaBancaria,
+    excluirConta: excluirContaBancaria,
+    carregarMovimentos: carregarMovimentosBancarios,
+    salvarMovimento: salvarMovimentoBancario,
+    excluirMovimento: excluirMovimentoBancario,
+    carregarConciliacoes: carregarConciliacoesBancarias,
+    salvarConciliacao: salvarConciliacaoBancaria,
+    excluirConciliacao: excluirConciliacaoBancaria,
+  } = useMovimentosBancarios(tenantId, session?.user?.id);
+
+  const {
     tenants,
     setTenants,
     carregar: carregarTodosTenants,
@@ -194,7 +216,7 @@ function App() {
   useEffect(() => { if (session && tenantId) carregarTodosDados(); }, [session, tenantId]);
   useEffect(() => { if (session && tenantId && userRole === "owner") carregarDadosOwner(); }, [session, tenantId, userRole]);
 
-  const carregarTodosDados = async () => { await Promise.all([carregarClientes(), carregarUsuarios(), carregarOportunidades(), carregarVendas(), carregarTitulos(), carregarProdutos(), carregarTecnicos(), carregarOrdensServico(), carregarComissoes(), carregarEstoqueItens(), carregarEstoqueMovimentacoes(), carregarProdutoEstoqueVinculos()]); };
+  const carregarTodosDados = async () => { await Promise.all([carregarClientes(), carregarUsuarios(), carregarOportunidades(), carregarVendas(), carregarTitulos(), carregarProdutos(), carregarTecnicos(), carregarOrdensServico(), carregarComissoes(), carregarEstoqueItens(), carregarEstoqueMovimentacoes(), carregarProdutoEstoqueVinculos(), carregarContasBancarias(), carregarMovimentosBancarios(), carregarConciliacoesBancarias()]); };
   const carregarDadosOwner = async () => { try { await carregarTodosTenants(); } catch (e) { /* usuário sem permissão de owner — ignorar */ } };
   const carregarUsuarios = async () => {
     const { data, error } = await supabase.rpc("get_tenant_members_with_email", { p_tenant_id: tenantId });
@@ -213,7 +235,7 @@ function App() {
 
   const handleSignUp = async (e) => { e.preventDefault(); setAuthMessage(""); const { error } = await supabase.auth.signUp({ email, password }); setAuthMessage(error ? "Erro: " + error.message : "Conta criada! Verifique seu email."); };
   const handleSignIn = async (e) => { e.preventDefault(); setAuthMessage(""); const { error } = await supabase.auth.signInWithPassword({ email, password }); if (error) setAuthMessage("Erro: " + error.message); };
-  const handleSignOut = async () => { await supabase.auth.signOut(); setClientes([]); setUsuarios([]); setOportunidades([]); setVendas([]); setTitulos([]); setProdutos([]); setTecnicos([]); setOrdensServico([]); setComissoes([]); setEstoqueItens([]); setEstoqueMovimentacoes([]); setProdutoEstoqueVinculos([]); setTenants([]); setTenantId(null); setTenantNome(""); setSelectedTenantId(""); setUserRole(null); };
+  const handleSignOut = async () => { await supabase.auth.signOut(); setClientes([]); setUsuarios([]); setOportunidades([]); setVendas([]); setTitulos([]); setProdutos([]); setTecnicos([]); setOrdensServico([]); setComissoes([]); setEstoqueItens([]); setEstoqueMovimentacoes([]); setProdutoEstoqueVinculos([]); setContasBancarias([]); setMovimentosBancarios([]); setConciliacoesBancarias([]); setTenants([]); setTenantId(null); setTenantNome(""); setSelectedTenantId(""); setUserRole(null); };
 
   const salvarOportunidade = async () => {
     if (!formOportunidade.titulo.trim()) return alert("Título é obrigatório!");
@@ -443,6 +465,16 @@ function App() {
       items: [
         { key: "estoque_itens", label: "Itens de Estoque", icon: <Icons.Package />, count: estoqueItens.filter((e) => e.ativo).length },
         { key: "estoque_movimentacoes", label: "Movimentações", icon: <Icons.ArrowUpCircle />, count: estoqueMovimentacoes.length },
+      ],
+    },
+    {
+      key: "bancario",
+      label: "Bancário",
+      icon: <Icons.CreditCard />,
+      items: [
+        { key: "contas_bancarias", label: "Contas Bancárias", icon: <Icons.CreditCard />, count: contasBancarias.filter((c) => c.ativo).length },
+        { key: "movimentos_bancarios", label: "Movimentos Bancários", icon: <Icons.ArrowUpCircle />, count: movimentosBancarios.length },
+        { key: "conciliacao_bancaria", label: "Conciliação Bancária", icon: <Icons.CheckCircle />, count: conciliacoesBancarias.length },
       ],
     },
   ];
@@ -722,6 +754,36 @@ function App() {
             estoqueItens={estoqueItens}
             onSalvarMovimentacao={salvarMovimentacao}
             onExcluirMovimentacao={excluirMovimentacao}
+            fmtBRL={fmtBRL}
+          />
+        )}
+
+        {viewMode === "contas_bancarias" && (
+          <ContasBancariasPage
+            contasBancarias={contasBancarias}
+            onSalvar={salvarContaBancaria}
+            onExcluir={excluirContaBancaria}
+          />
+        )}
+
+        {viewMode === "movimentos_bancarios" && (
+          <MovimentosBancariosPage
+            movimentosBancarios={movimentosBancarios}
+            contasBancarias={contasBancarias}
+            onSalvar={salvarMovimentoBancario}
+            onExcluir={excluirMovimentoBancario}
+            fmtBRL={fmtBRL}
+          />
+        )}
+
+        {viewMode === "conciliacao_bancaria" && (
+          <ConciliacaoBancariaPage
+            conciliacoesBancarias={conciliacoesBancarias}
+            titulos={titulos}
+            movimentosBancarios={movimentosBancarios}
+            contasBancarias={contasBancarias}
+            onSalvar={salvarConciliacaoBancaria}
+            onExcluir={excluirConciliacaoBancaria}
             fmtBRL={fmtBRL}
           />
         )}
