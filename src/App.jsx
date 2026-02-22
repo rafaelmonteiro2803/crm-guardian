@@ -362,8 +362,8 @@ function App() {
     } else {
       setEditandoUsuario(null);
       setFormUsuario({ user_id: "", role: "member" });
-      const { data } = await supabase.rpc("get_system_users_for_tenant", { p_tenant_id: tenantId });
-      if (data) setUsuariosSistema(data);
+      const { data, error } = await supabase.rpc("get_system_users_for_tenant", { p_tenant_id: tenantId });
+      if (!error && data) setUsuariosSistema(data);
     }
     setModalUsuario(true);
   };
@@ -823,7 +823,7 @@ function App() {
       <div><label className="block text-xs text-gray-600 mb-0.5">Observações</label><textarea value={formVenda.observacoes} onChange={(e) => setFormVenda({...formVenda, observacoes: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" rows="2" /></div></div><div className="flex gap-2 mt-4"><button onClick={fecharModalVenda} className="flex-1 px-3 py-1.5 border border-gray-200 rounded text-xs hover:bg-gray-50">Cancelar</button><button onClick={salvarVenda} className="flex-1 px-3 py-1.5 bg-gray-800 text-white rounded text-xs hover:bg-gray-700">{editandoVenda ? "Salvar" : "Adicionar"}</button></div></div></div>)}
 
       {modalUsuario && (<div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50"><div className="bg-white rounded-lg border border-gray-200 max-w-sm w-full p-4 max-h-[90vh] overflow-y-auto"><h3 className="text-sm font-semibold mb-3">{editandoUsuario ? "Editar Usuário" : "Vincular Usuário"}</h3><div className="space-y-2.5">
-        {!editandoUsuario && (<div><label className="block text-xs text-gray-600 mb-0.5">Usuário *</label>{usuariosSistema.length === 0 ? (<p className="text-xs text-gray-400 italic">Todos os usuários já são membros deste tenant.</p>) : (<select value={formUsuario.user_id} onChange={(e) => setFormUsuario({...formUsuario, user_id: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"><option value="">Selecione um usuário...</option>{usuariosSistema.map((u) => <option key={u.user_id} value={u.user_id}>{u.email}</option>)}</select>)}</div>)}
+        {!editandoUsuario && (<div><label className="block text-xs text-gray-600 mb-0.5">Usuário *</label>{usuariosSistema.length === 0 ? (<p className="text-xs text-gray-400 italic">Nenhum usuário disponível para vincular.</p>) : (<select value={formUsuario.user_id} onChange={(e) => setFormUsuario({...formUsuario, user_id: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"><option value="">Selecione um usuário...</option>{usuariosSistema.map((u) => <option key={u.user_id} value={u.user_id}>{u.email}</option>)}</select>)}</div>)}
         {editandoUsuario && (<div className="bg-gray-50 border border-gray-100 rounded px-2.5 py-1.5"><p className="text-xs text-gray-500">Email: <span className="font-medium text-gray-700">{editandoUsuario.email}</span></p></div>)}
         <div><label className="block text-xs text-gray-600 mb-0.5">Perfil</label><select value={formUsuario.role} onChange={(e) => setFormUsuario({...formUsuario, role: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"><option value="owner">Owner</option><option value="admin">Admin</option><option value="member">Member</option></select></div>
         {editandoUsuario && editandoUsuario.created_at && (<div className="bg-gray-50 border border-gray-200 rounded p-2.5"><p className="text-[11px] text-gray-500">Membro desde: <span className="font-medium text-gray-700">{new Date(editandoUsuario.created_at).toLocaleDateString("pt-BR")}</span></p></div>)}

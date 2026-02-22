@@ -13,6 +13,7 @@ const FORM_INICIAL = { user_id: "", role: "member" };
 export function TenantMembersModal({ aberto, tenant, onClose }) {
   const [membros, setMembros] = useState([]);
   const [usuariosSistema, setUsuariosSistema] = useState([]);
+  const [carregandoUsuarios, setCarregandoUsuarios] = useState(false);
   const [carregando, setCarregando] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [editando, setEditando] = useState(null);
@@ -46,8 +47,14 @@ export function TenantMembersModal({ aberto, tenant, onClose }) {
   };
 
   const carregarUsuariosSistema = async () => {
-    const { data } = await supabase.rpc("get_all_system_users_for_owner");
-    if (data) setUsuariosSistema(data);
+    setCarregandoUsuarios(true);
+    const { data, error } = await supabase.rpc("get_all_system_users_for_owner");
+    setCarregandoUsuarios(false);
+    if (error) {
+      setErro("Erro ao carregar usuários: " + error.message);
+    } else {
+      setUsuariosSistema(data || []);
+    }
   };
 
   // Usuários disponíveis = todos do sistema que ainda não são membros deste tenant
@@ -183,7 +190,9 @@ export function TenantMembersModal({ aberto, tenant, onClose }) {
                   <label className="block text-xs text-gray-600 mb-0.5">
                     Usuário *
                   </label>
-                  {usuariosDisponiveis.length === 0 ? (
+                  {carregandoUsuarios ? (
+                    <p className="text-xs text-gray-400 italic">Carregando usuários...</p>
+                  ) : usuariosDisponiveis.length === 0 ? (
                     <p className="text-xs text-gray-400 italic">
                       Todos os usuários do sistema já são membros deste tenant.
                     </p>
