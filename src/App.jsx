@@ -67,6 +67,7 @@ function App() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(checkIsMobile);
   const [tenantCor, setTenantCor] = useState(null);
+  const [tenantSlogan, setTenantSlogan] = useState("");
   const [userRole, setUserRole] = useState(null);
   const estagios = ["prospecção", "qualificação", "proposta", "negociação", "fechado", "cancelado"];
   // VincularEstoqueModal é acionado pela view de Produtos (ainda no App)
@@ -178,6 +179,7 @@ function App() {
     } else {
       setTenantId(null);
       setTenantNome("");
+      setTenantSlogan("");
     }
   }, [session]);
 
@@ -185,13 +187,14 @@ function App() {
     if (selectedTenantId) {
       const { data } = await supabase
         .from("tenant_members")
-        .select("tenant_id, role, tenants(id, nome, cor)")
+        .select("tenant_id, role, tenants(id, nome, slogan, cor)")
         .eq("user_id", session.user.id)
         .eq("tenant_id", selectedTenantId)
         .single();
       if (data) {
         setTenantId(data.tenant_id);
         setTenantNome(data.tenants?.nome || "");
+        setTenantSlogan(data.tenants?.slogan || "");
         setTenantCor(data.tenants?.cor || null);
         setUserRole(data.role || "member");
       } else {
@@ -201,13 +204,14 @@ function App() {
     } else {
       const { data } = await supabase
         .from("tenant_members")
-        .select("tenant_id, role, tenants(id, nome, cor)")
+        .select("tenant_id, role, tenants(id, nome, slogan, cor)")
         .eq("user_id", session.user.id)
         .limit(1)
         .single();
       if (data) {
         setTenantId(data.tenant_id);
         setTenantNome(data.tenants?.nome || "");
+        setTenantSlogan(data.tenants?.slogan || "");
         setTenantCor(data.tenants?.cor || null);
         setUserRole(data.role || "member");
       }
@@ -236,7 +240,7 @@ function App() {
 
   const handleSignUp = async (e) => { e.preventDefault(); setAuthMessage(""); const { error } = await supabase.auth.signUp({ email, password }); setAuthMessage(error ? "Erro: " + error.message : "Conta criada! Verifique seu email."); };
   const handleSignIn = async (e) => { e.preventDefault(); setAuthMessage(""); const { error } = await supabase.auth.signInWithPassword({ email, password }); if (error) setAuthMessage("Erro: " + error.message); };
-  const handleSignOut = async () => { await supabase.auth.signOut(); setClientes([]); setUsuarios([]); setUsuariosSistema([]); setOportunidades([]); setVendas([]); setTitulos([]); setProdutos([]); setTecnicos([]); setOrdensServico([]); setComissoes([]); setEstoqueItens([]); setEstoqueMovimentacoes([]); setProdutoEstoqueVinculos([]); setContasBancarias([]); setMovimentosBancarios([]); setConciliacoesBancarias([]); setTenants([]); setTenantId(null); setTenantNome(""); setSelectedTenantId(""); setUserRole(null); };
+  const handleSignOut = async () => { await supabase.auth.signOut(); setClientes([]); setUsuarios([]); setUsuariosSistema([]); setOportunidades([]); setVendas([]); setTitulos([]); setProdutos([]); setTecnicos([]); setOrdensServico([]); setComissoes([]); setEstoqueItens([]); setEstoqueMovimentacoes([]); setProdutoEstoqueVinculos([]); setContasBancarias([]); setMovimentosBancarios([]); setConciliacoesBancarias([]); setTenants([]); setTenantId(null); setTenantNome(""); setTenantSlogan(""); setSelectedTenantId(""); setUserRole(null); };
 
   const salvarOportunidade = async () => {
     if (!formOportunidade.titulo.trim()) return alert("Título é obrigatório!");
@@ -497,7 +501,7 @@ function App() {
       <header style={tenantCor ? { backgroundColor: tenantCor } : {}} className={`${tenantCor ? "" : "bg-white"} border-b border-gray-200 px-4 py-2`}>
         <div className="max-w-7xl mx-auto flex items-center gap-3">
           {/* Logo */}
-          <h1 className="text-sm font-semibold text-gray-800 tracking-wide whitespace-nowrap flex-shrink-0">CRM GuardIAn</h1>
+          <h1 className="text-sm font-semibold text-gray-800 tracking-wide whitespace-nowrap flex-shrink-0">{tenantNome || "CRM GuardIAn"}</h1>
 
           {/* Desktop Nav */}
           <nav className="hidden md:flex items-center gap-0.5 flex-1">
@@ -528,8 +532,8 @@ function App() {
 
           {/* Desktop: user info + logout */}
           <div className="hidden md:flex items-center gap-2 flex-shrink-0 ml-auto">
-            {tenantNome && <span className="text-xs font-medium text-gray-600">{tenantNome}</span>}
-            {tenantNome && <span className="text-gray-300">|</span>}
+            {tenantSlogan && <span className="text-xs text-gray-500 italic">{tenantSlogan}</span>}
+            {tenantSlogan && <span className="text-gray-300">|</span>}
             <span className="text-xs text-gray-400">{session.user.email}</span>
             <button onClick={handleSignOut} className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded hover:bg-black/5"><Icons.LogOut />Sair</button>
           </div>
@@ -538,7 +542,7 @@ function App() {
           <div className="md:hidden ml-auto flex items-center gap-1">
             {isMobile ? (
               <>
-                {tenantNome && <span className="text-xs text-gray-500 font-medium mr-1">{tenantNome}</span>}
+                {tenantSlogan && <span className="text-xs text-gray-500 italic mr-1">{tenantSlogan}</span>}
                 <button onClick={handleSignOut} className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded hover:bg-black/5"><Icons.LogOut />Sair</button>
               </>
             ) : (
@@ -862,6 +866,13 @@ function App() {
         onExcluir={excluirVinculo}
         onClose={() => { setModalVincularEstoque(false); setVinculoProduto(null); }}
       />
+
+      {/* Rodapé */}
+      <footer className="border-t border-gray-200 bg-white mt-6">
+        <div className="max-w-7xl mx-auto px-4 py-3 text-center">
+          <p className="text-xs text-gray-400">© 2026 Guardian Tech. Todos os direitos reservados.</p>
+        </div>
+      </footer>
 
       {/* Barra fixa de acesso à versão completa — visível apenas em smartphones */}
       {isMobile && (
