@@ -2,10 +2,12 @@ import { useState } from "react";
 import { DataGrid } from "../components/DataGrid";
 import { Icons } from "../components/Icons";
 import { TenantModal } from "../components/modals/TenantModal";
+import { TenantMembersModal } from "../components/modals/TenantMembersModal";
 
 export function TenantsPage({ tenants, onSalvar, onExcluir }) {
   const [modalAberto, setModalAberto] = useState(false);
   const [editando, setEditando] = useState(null);
+  const [tenantMembros, setTenantMembros] = useState(null);
 
   const abrir = (t = null) => {
     setEditando(t);
@@ -106,14 +108,24 @@ export function TenantsPage({ tenants, onSalvar, onExcluir }) {
         actions={(t) => (
           <div className="flex items-center gap-1">
             <button
+              onClick={() => setTenantMembros(t)}
+              className="inline-flex items-center gap-1 text-blue-600 hover:bg-blue-50 px-1.5 py-0.5 rounded text-[11px] font-medium"
+              title="Gerenciar membros deste tenant"
+            >
+              <Icons.User />
+              Membros
+            </button>
+            <button
               onClick={() => abrir(t)}
               className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 p-1 rounded"
+              title="Editar tenant"
             >
               <Icons.Edit />
             </button>
             <button
               onClick={() => handleExcluir(t.id)}
               className="text-gray-400 hover:text-red-600 hover:bg-red-50 p-1 rounded"
+              title="Excluir tenant"
             >
               <Icons.Trash />
             </button>
@@ -127,6 +139,12 @@ export function TenantsPage({ tenants, onSalvar, onExcluir }) {
         editando={editando}
         onClose={fechar}
         onSalvar={handleSalvar}
+      />
+
+      <TenantMembersModal
+        aberto={!!tenantMembros}
+        tenant={tenantMembros}
+        onClose={() => setTenantMembros(null)}
       />
     </div>
   );
