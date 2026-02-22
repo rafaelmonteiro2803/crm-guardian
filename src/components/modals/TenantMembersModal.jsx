@@ -8,10 +8,11 @@ const ROLES = [
   { value: "member", label: "Member" },
 ];
 
-const FORM_INICIAL = { email: "", role: "member" };
+const FORM_INICIAL = { user_id: "", role: "member" };
 
 export function TenantMembersModal({ aberto, tenant, onClose }) {
   const [membros, setMembros] = useState([]);
+  const [usuariosSistema, setUsuariosSistema] = useState([]);
   const [carregando, setCarregando] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [editando, setEditando] = useState(null);
@@ -22,6 +23,7 @@ export function TenantMembersModal({ aberto, tenant, onClose }) {
   useEffect(() => {
     if (aberto && tenant) {
       carregarMembros();
+      carregarUsuariosSistema();
       setEditando(null);
       setForm(FORM_INICIAL);
       setMostrarForm(false);
@@ -43,6 +45,16 @@ export function TenantMembersModal({ aberto, tenant, onClose }) {
     }
   };
 
+  const carregarUsuariosSistema = async () => {
+    const { data } = await supabase.rpc("get_all_system_users_for_owner");
+    if (data) setUsuariosSistema(data);
+  };
+
+  // Usuários disponíveis = todos do sistema que ainda não são membros deste tenant
+  const usuariosDisponiveis = usuariosSistema.filter(
+    (u) => !membros.some((m) => m.user_id === u.user_id)
+  );
+
   const abrirNovoMembro = () => {
     setEditando(null);
     setForm(FORM_INICIAL);
@@ -52,7 +64,7 @@ export function TenantMembersModal({ aberto, tenant, onClose }) {
 
   const abrirEditarMembro = (membro) => {
     setEditando(membro);
-    setForm({ email: membro.email || "", role: membro.role || "member" });
+    setForm({ user_id: membro.user_id || "", role: membro.role || "member" });
     setErro("");
     setMostrarForm(true);
   };
@@ -66,8 +78,8 @@ export function TenantMembersModal({ aberto, tenant, onClose }) {
 
   const salvar = async () => {
     setErro("");
-    if (!editando && !form.email.trim()) {
-      setErro("Email é obrigatório.");
+    if (!editando && !form.user_id) {
+      setErro("Selecione um usuário.");
       return;
     }
     setSalvando(true);
@@ -89,9 +101,9 @@ export function TenantMembersModal({ aberto, tenant, onClose }) {
         await carregarMembros();
       }
     } else {
-      const { data, error } = await supabase.rpc("add_tenant_member_for_owner", {
+      const { data, error } = await supabase.rpc("add_tenant_member_by_userid_for_owner", {
         p_tenant_id: tenant.id,
-        p_email: form.email.trim(),
+        p_user_id: form.user_id,
         p_role: form.role,
       });
       setSalvando(false);
@@ -146,7 +158,7 @@ export function TenantMembersModal({ aberto, tenant, onClose }) {
               Membros — {tenant.nome}
             </h3>
             <p className="text-[11px] text-gray-400 mt-0.5">
-              Gerencie os usuários vinculados a este tenant
+              Vincule usuários cadastrados no sistema a este tenant
             </p>
           </div>
           <button
@@ -163,21 +175,32 @@ export function TenantMembersModal({ aberto, tenant, onClose }) {
           {mostrarForm ? (
             <div className="border border-gray-200 rounded-lg p-3 bg-gray-50 space-y-2.5">
               <h4 className="text-xs font-semibold text-gray-700">
-                {editando ? "Editar Perfil do Membro" : "Adicionar Membro"}
+                {editando ? "Editar Perfil do Membro" : "Vincular Usuário"}
               </h4>
 
               {!editando && (
                 <div>
                   <label className="block text-xs text-gray-600 mb-0.5">
-                    Email *
+                    Usuário *
                   </label>
-                  <input
-                    type="email"
-                    value={form.email}
-                    onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    placeholder="email@exemplo.com"
-                    className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none bg-white"
-                  />
+                  {usuariosDisponiveis.length === 0 ? (
+                    <p className="text-xs text-gray-400 italic">
+                      Todos os usuários do sistema já são membros deste tenant.
+                    </p>
+                  ) : (
+                    <select
+                      value={form.user_id}
+                      onChange={(e) => setForm({ ...form, user_id: e.target.value })}
+                      className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none bg-white"
+                    >
+                      <option value="">Selecione um usuário...</option>
+                      {usuariosDisponiveis.map((u) => (
+                        <option key={u.user_id} value={u.user_id}>
+                          {u.email}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </div>
               )}
 
@@ -219,10 +242,10 @@ export function TenantMembersModal({ aberto, tenant, onClose }) {
                 </button>
                 <button
                   onClick={salvar}
-                  disabled={salvando}
+                  disabled={salvando || (!editando && !form.user_id)}
                   className="flex-1 px-3 py-1.5 bg-gray-800 text-white rounded text-xs hover:bg-gray-700 disabled:opacity-50"
                 >
-                  {salvando ? "Salvando..." : editando ? "Salvar" : "Adicionar"}
+                  {salvando ? "Salvando..." : editando ? "Salvar" : "Vincular"}
                 </button>
               </div>
             </div>
@@ -232,7 +255,7 @@ export function TenantMembersModal({ aberto, tenant, onClose }) {
               className="w-full inline-flex items-center justify-center gap-1 border border-dashed border-gray-300 rounded-lg px-3 py-2 text-xs text-gray-500 hover:border-gray-400 hover:text-gray-700 hover:bg-gray-50 transition-colors"
             >
               <Icons.Plus />
-              Adicionar membro
+              Vincular usuário
             </button>
           )}
 
@@ -243,7 +266,7 @@ export function TenantMembersModal({ aberto, tenant, onClose }) {
             </div>
           ) : membros.length === 0 ? (
             <div className="text-center py-6">
-              <p className="text-xs text-gray-400">Nenhum membro vinculado a este tenant.</p>
+              <p className="text-xs text-gray-400">Nenhum usuário vinculado a este tenant.</p>
             </div>
           ) : (
             <div className="divide-y divide-gray-100 border border-gray-200 rounded-lg overflow-hidden">
@@ -274,7 +297,7 @@ export function TenantMembersModal({ aberto, tenant, onClose }) {
                     <button
                       onClick={() => remover(membro)}
                       className="text-gray-400 hover:text-red-600 hover:bg-red-50 p-1 rounded"
-                      title="Remover membro"
+                      title="Remover vínculo"
                     >
                       <Icons.Trash />
                     </button>

@@ -58,7 +58,8 @@ function App() {
   const [formVenda, setFormVenda] = useState({ cliente_id: "", descricao: "", valor: "", data_venda: new Date().toISOString().split("T")[0], forma_pagamento: "à vista", observacoes: "", desconto: "", itens: [] });
   const [formTitulo, setFormTitulo] = useState({ venda_id: "", descricao: "", valor: "", data_emissao: new Date().toISOString().split("T")[0], data_vencimento: "", status: "pendente" });
   const [formProduto, setFormProduto] = useState({ nome: "", tipo: "produto", descricao: "", categoria: "", preco_base: "", custo: "", unidade_medida: "", ativo: true, observacoes: "" });
-  const [formUsuario, setFormUsuario] = useState({ email: "", role: "member" });
+  const [formUsuario, setFormUsuario] = useState({ user_id: "", role: "member" });
+  const [usuariosSistema, setUsuariosSistema] = useState([]);
   const [ordensServico, setOrdensServico] = useState([]);
   const [modalEncaminhar, setModalEncaminhar] = useState(false);
   const [osEncaminhar, setOsEncaminhar] = useState(null);
@@ -235,7 +236,7 @@ function App() {
 
   const handleSignUp = async (e) => { e.preventDefault(); setAuthMessage(""); const { error } = await supabase.auth.signUp({ email, password }); setAuthMessage(error ? "Erro: " + error.message : "Conta criada! Verifique seu email."); };
   const handleSignIn = async (e) => { e.preventDefault(); setAuthMessage(""); const { error } = await supabase.auth.signInWithPassword({ email, password }); if (error) setAuthMessage("Erro: " + error.message); };
-  const handleSignOut = async () => { await supabase.auth.signOut(); setClientes([]); setUsuarios([]); setOportunidades([]); setVendas([]); setTitulos([]); setProdutos([]); setTecnicos([]); setOrdensServico([]); setComissoes([]); setEstoqueItens([]); setEstoqueMovimentacoes([]); setProdutoEstoqueVinculos([]); setContasBancarias([]); setMovimentosBancarios([]); setConciliacoesBancarias([]); setTenants([]); setTenantId(null); setTenantNome(""); setSelectedTenantId(""); setUserRole(null); };
+  const handleSignOut = async () => { await supabase.auth.signOut(); setClientes([]); setUsuarios([]); setUsuariosSistema([]); setOportunidades([]); setVendas([]); setTitulos([]); setProdutos([]); setTecnicos([]); setOrdensServico([]); setComissoes([]); setEstoqueItens([]); setEstoqueMovimentacoes([]); setProdutoEstoqueVinculos([]); setContasBancarias([]); setMovimentosBancarios([]); setConciliacoesBancarias([]); setTenants([]); setTenantId(null); setTenantNome(""); setSelectedTenantId(""); setUserRole(null); };
 
   const salvarOportunidade = async () => {
     if (!formOportunidade.titulo.trim()) return alert("Título é obrigatório!");
@@ -326,14 +327,14 @@ function App() {
   const excluirOrdemServico = async (id) => { if (!confirm("Excluir ordem de serviço?")) return; await supabase.from("ordens_servico").delete().eq("id", id); setOrdensServico(ordensServico.filter((o) => o.id !== id)); };
 
   const salvarUsuario = async () => {
-    if (!formUsuario.email.trim()) return alert("Email é obrigatório!");
     if (editandoUsuario) {
       const { data, error } = await supabase.rpc("update_tenant_member_role", { p_member_id: editandoUsuario.id, p_tenant_id: tenantId, p_role: formUsuario.role || "member" });
       if (error) return alert(`Erro ao atualizar membro: ${error.message}`);
       if (data && data.length > 0) { setUsuarios(usuarios.map((u) => (u.id === editandoUsuario.id ? data[0] : u))); } else { await carregarUsuarios(); }
     } else {
-      const { data, error } = await supabase.rpc("add_tenant_member_by_email", { p_tenant_id: tenantId, p_email: formUsuario.email.trim(), p_role: formUsuario.role || "member" });
-      if (error) return alert(`Erro ao adicionar membro: ${error.message}`);
+      if (!formUsuario.user_id) return alert("Selecione um usuário!");
+      const { data, error } = await supabase.rpc("add_tenant_member_by_userid", { p_tenant_id: tenantId, p_user_id: formUsuario.user_id, p_role: formUsuario.role || "member" });
+      if (error) return alert(`Erro ao vincular usuário: ${error.message}`);
       if (data && data.length > 0) { setUsuarios([data[0], ...usuarios]); } else { await carregarUsuarios(); }
     }
     fecharModalUsuario();
@@ -354,8 +355,19 @@ function App() {
   const abrirModalProduto = (p = null) => { if (p) { setEditandoProduto(p); setFormProduto({ nome: p.nome || "", tipo: p.tipo || "produto", descricao: p.descricao || "", categoria: p.categoria || "", preco_base: (p.preco_base ?? 0).toString(), custo: (p.custo ?? 0).toString(), unidade_medida: p.unidade_medida || "", ativo: p.ativo ?? true, observacoes: p.observacoes || "" }); } setModalProduto(true); };
   const fecharModalProduto = () => { setModalProduto(false); setEditandoProduto(null); setFormProduto({ nome: "", tipo: "produto", descricao: "", categoria: "", preco_base: "", custo: "", unidade_medida: "", ativo: true, observacoes: "" }); };
 
-  const abrirModalUsuario = (u = null) => { if (u) { setEditandoUsuario(u); setFormUsuario({ email: u.email || "", role: u.role || "member" }); } setModalUsuario(true); };
-  const fecharModalUsuario = () => { setModalUsuario(false); setEditandoUsuario(null); setFormUsuario({ email: "", role: "member" }); };
+  const abrirModalUsuario = async (u = null) => {
+    if (u) {
+      setEditandoUsuario(u);
+      setFormUsuario({ user_id: u.user_id || "", role: u.role || "member" });
+    } else {
+      setEditandoUsuario(null);
+      setFormUsuario({ user_id: "", role: "member" });
+      const { data } = await supabase.rpc("get_system_users_for_tenant", { p_tenant_id: tenantId });
+      if (data) setUsuariosSistema(data);
+    }
+    setModalUsuario(true);
+  };
+  const fecharModalUsuario = () => { setModalUsuario(false); setEditandoUsuario(null); setFormUsuario({ user_id: "", role: "member" }); setUsuariosSistema([]); };
 
   const abrirModalEncaminhar = (os) => { setOsEncaminhar(os); setModalEncaminhar(true); };
   const fecharModalEncaminhar = () => { setModalEncaminhar(false); setOsEncaminhar(null); };
@@ -810,11 +822,12 @@ function App() {
       <div><label className="block text-xs text-gray-600 mb-0.5">Pagamento</label><select value={formVenda.forma_pagamento} onChange={(e) => setFormVenda({...formVenda, forma_pagamento: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none">{["à vista","parcelado","boleto","cartão","pix"].map((f) => <option key={f} value={f}>{f.charAt(0).toUpperCase()+f.slice(1)}</option>)}</select></div>
       <div><label className="block text-xs text-gray-600 mb-0.5">Observações</label><textarea value={formVenda.observacoes} onChange={(e) => setFormVenda({...formVenda, observacoes: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" rows="2" /></div></div><div className="flex gap-2 mt-4"><button onClick={fecharModalVenda} className="flex-1 px-3 py-1.5 border border-gray-200 rounded text-xs hover:bg-gray-50">Cancelar</button><button onClick={salvarVenda} className="flex-1 px-3 py-1.5 bg-gray-800 text-white rounded text-xs hover:bg-gray-700">{editandoVenda ? "Salvar" : "Adicionar"}</button></div></div></div>)}
 
-      {modalUsuario && (<div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50"><div className="bg-white rounded-lg border border-gray-200 max-w-sm w-full p-4 max-h-[90vh] overflow-y-auto"><h3 className="text-sm font-semibold mb-3">{editandoUsuario ? "Editar Usuário" : "Novo Usuário"}</h3><div className="space-y-2.5">
-        <div><label className="block text-xs text-gray-600 mb-0.5">Email *</label><input type="email" value={formUsuario.email} onChange={(e) => setFormUsuario({...formUsuario, email: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" placeholder="email@exemplo.com" disabled={!!editandoUsuario} /></div>
+      {modalUsuario && (<div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50"><div className="bg-white rounded-lg border border-gray-200 max-w-sm w-full p-4 max-h-[90vh] overflow-y-auto"><h3 className="text-sm font-semibold mb-3">{editandoUsuario ? "Editar Usuário" : "Vincular Usuário"}</h3><div className="space-y-2.5">
+        {!editandoUsuario && (<div><label className="block text-xs text-gray-600 mb-0.5">Usuário *</label>{usuariosSistema.length === 0 ? (<p className="text-xs text-gray-400 italic">Todos os usuários já são membros deste tenant.</p>) : (<select value={formUsuario.user_id} onChange={(e) => setFormUsuario({...formUsuario, user_id: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"><option value="">Selecione um usuário...</option>{usuariosSistema.map((u) => <option key={u.user_id} value={u.user_id}>{u.email}</option>)}</select>)}</div>)}
+        {editandoUsuario && (<div className="bg-gray-50 border border-gray-100 rounded px-2.5 py-1.5"><p className="text-xs text-gray-500">Email: <span className="font-medium text-gray-700">{editandoUsuario.email}</span></p></div>)}
         <div><label className="block text-xs text-gray-600 mb-0.5">Perfil</label><select value={formUsuario.role} onChange={(e) => setFormUsuario({...formUsuario, role: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"><option value="owner">Owner</option><option value="admin">Admin</option><option value="member">Member</option></select></div>
         {editandoUsuario && editandoUsuario.created_at && (<div className="bg-gray-50 border border-gray-200 rounded p-2.5"><p className="text-[11px] text-gray-500">Membro desde: <span className="font-medium text-gray-700">{new Date(editandoUsuario.created_at).toLocaleDateString("pt-BR")}</span></p></div>)}
-        </div><div className="flex gap-2 mt-4"><button onClick={fecharModalUsuario} className="flex-1 px-3 py-1.5 border border-gray-200 rounded text-xs hover:bg-gray-50">Cancelar</button><button onClick={salvarUsuario} className="flex-1 px-3 py-1.5 bg-gray-800 text-white rounded text-xs hover:bg-gray-700">{editandoUsuario ? "Salvar" : "Adicionar"}</button></div></div></div>)}
+        </div><div className="flex gap-2 mt-4"><button onClick={fecharModalUsuario} className="flex-1 px-3 py-1.5 border border-gray-200 rounded text-xs hover:bg-gray-50">Cancelar</button><button onClick={salvarUsuario} disabled={!editandoUsuario && !formUsuario.user_id} className="flex-1 px-3 py-1.5 bg-gray-800 text-white rounded text-xs hover:bg-gray-700 disabled:opacity-50">{editandoUsuario ? "Salvar" : "Vincular"}</button></div></div></div>)}
 
       {modalEncaminhar && osEncaminhar && (
         <EncaminharModal
