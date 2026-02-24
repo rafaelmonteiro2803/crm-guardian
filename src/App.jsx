@@ -38,7 +38,7 @@ function App() {
   const [viewMode, setViewMode] = useState("dashboard");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [selectedTenantId, setSelectedTenantId] = useState("");
+  const [selectedTenantId, setSelectedTenantId] = useState(() => localStorage.getItem('crm_selectedTenantId') || "");
   const [tenantsList, setTenantsList] = useState([]);
   const [tenantLocked, setTenantLocked] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
@@ -144,6 +144,11 @@ function App() {
 
   useEffect(() => { carregarTenants(); }, []);
   useEffect(() => {
+    if (selectedTenantId) {
+      localStorage.setItem('crm_selectedTenantId', selectedTenantId);
+    }
+  }, [selectedTenantId]);
+  useEffect(() => {
     if (!openDropdown) return;
     const close = () => setOpenDropdown(null);
     document.addEventListener("click", close);
@@ -240,7 +245,7 @@ function App() {
 
   const handleSignUp = async (e) => { e.preventDefault(); setAuthMessage(""); const { error } = await supabase.auth.signUp({ email, password }); setAuthMessage(error ? "Erro: " + error.message : "Conta criada! Verifique seu email."); };
   const handleSignIn = async (e) => { e.preventDefault(); setAuthMessage(""); const { error } = await supabase.auth.signInWithPassword({ email, password }); if (error) setAuthMessage("Erro: " + error.message); };
-  const handleSignOut = async () => { await supabase.auth.signOut(); setClientes([]); setUsuarios([]); setUsuariosSistema([]); setOportunidades([]); setVendas([]); setTitulos([]); setProdutos([]); setTecnicos([]); setOrdensServico([]); setComissoes([]); setEstoqueItens([]); setEstoqueMovimentacoes([]); setProdutoEstoqueVinculos([]); setContasBancarias([]); setMovimentosBancarios([]); setConciliacoesBancarias([]); setTenants([]); setTenantId(null); setTenantNome(""); setTenantSlogan(""); setSelectedTenantId(""); setUserRole(null); };
+  const handleSignOut = async () => { await supabase.auth.signOut(); localStorage.removeItem('crm_selectedTenantId'); setClientes([]); setUsuarios([]); setUsuariosSistema([]); setOportunidades([]); setVendas([]); setTitulos([]); setProdutos([]); setTecnicos([]); setOrdensServico([]); setComissoes([]); setEstoqueItens([]); setEstoqueMovimentacoes([]); setProdutoEstoqueVinculos([]); setContasBancarias([]); setMovimentosBancarios([]); setConciliacoesBancarias([]); setTenants([]); setTenantId(null); setTenantNome(""); setTenantSlogan(""); setSelectedTenantId(""); setUserRole(null); };
 
   const salvarOportunidade = async () => {
     if (!formOportunidade.titulo.trim()) return alert("Título é obrigatório!");
