@@ -19,6 +19,13 @@ import { ComissoesPage } from "./pages/Comissoes";
 import { EncaminharModal } from "./components/modals/EncaminharModal";
 import { useTenants } from "./hooks/useTenants";
 import { TenantsPage } from "./pages/Tenants";
+import { useFornecedores } from "./hooks/useFornecedores";
+import { FornecedoresPage } from "./pages/Fornecedores";
+import { useCentrosCusto } from "./hooks/useCentrosCusto";
+import { CentrosCustoPage } from "./pages/CentrosCusto";
+import { useContasPagar } from "./hooks/useContasPagar";
+import { ContasPagarPage } from "./pages/ContasPagar";
+import { ContasPagarDashboard } from "./pages/ContasPagarDashboard";
 
 const checkIsMobile = () => {
   const isSmartphone = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -140,6 +147,35 @@ function App() {
     excluir: excluirTenant,
   } = useTenants();
 
+  const {
+    fornecedores,
+    setFornecedores,
+    carregar: carregarFornecedores,
+    salvar: salvarFornecedor,
+    excluir: excluirFornecedor,
+  } = useFornecedores(tenantId, session?.user?.id);
+
+  const {
+    centrosCusto,
+    setCentrosCusto,
+    carregar: carregarCentrosCusto,
+    salvar: salvarCentroCusto,
+    excluir: excluirCentroCusto,
+  } = useCentrosCusto(tenantId, session?.user?.id);
+
+  const {
+    contasPagar,
+    setContasPagar,
+    parcelas: parcelasContasPagar,
+    setParcelas: setParcelasContasPagar,
+    carregarContas: carregarContasPagar,
+    carregarParcelas: carregarParcelasContasPagar,
+    salvarConta: salvarContaPagar,
+    excluirConta: excluirContaPagar,
+    pagarParcela,
+    criarContaDaCompraEstoque,
+  } = useContasPagar(tenantId, session?.user?.id);
+
   useEffect(() => { supabase.auth.getSession().then(({ data: { session } }) => { setSession(session); setLoading(false); }); const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setSession(session)); return () => subscription.unsubscribe(); }, []);
 
   useEffect(() => { carregarTenants(); }, []);
@@ -226,7 +262,7 @@ function App() {
   useEffect(() => { if (session && tenantId) carregarTodosDados(); }, [session, tenantId]);
   useEffect(() => { if (session && tenantId && userRole === "owner") carregarDadosOwner(); }, [session, tenantId, userRole]);
 
-  const carregarTodosDados = async () => { await Promise.all([carregarClientes(), carregarUsuarios(), carregarOportunidades(), carregarVendas(), carregarTitulos(), carregarProdutos(), carregarTecnicos(), carregarOrdensServico(), carregarComissoes(), carregarEstoqueItens(), carregarEstoqueMovimentacoes(), carregarProdutoEstoqueVinculos(), carregarContasBancarias(), carregarMovimentosBancarios(), carregarConciliacoesBancarias()]); };
+  const carregarTodosDados = async () => { await Promise.all([carregarClientes(), carregarUsuarios(), carregarOportunidades(), carregarVendas(), carregarTitulos(), carregarProdutos(), carregarTecnicos(), carregarOrdensServico(), carregarComissoes(), carregarEstoqueItens(), carregarEstoqueMovimentacoes(), carregarProdutoEstoqueVinculos(), carregarContasBancarias(), carregarMovimentosBancarios(), carregarConciliacoesBancarias(), carregarFornecedores(), carregarCentrosCusto(), carregarContasPagar(), carregarParcelasContasPagar()]); };
   const carregarDadosOwner = async () => { try { await carregarTodosTenants(); } catch (e) { /* usuário sem permissão de owner — ignorar */ } };
   const carregarUsuarios = async () => {
     const { data, error } = await supabase.rpc("get_tenant_members_with_email", { p_tenant_id: tenantId });
@@ -245,7 +281,7 @@ function App() {
 
   const handleSignUp = async (e) => { e.preventDefault(); setAuthMessage(""); const { error } = await supabase.auth.signUp({ email, password }); setAuthMessage(error ? "Erro: " + error.message : "Conta criada! Verifique seu email."); };
   const handleSignIn = async (e) => { e.preventDefault(); setAuthMessage(""); const { error } = await supabase.auth.signInWithPassword({ email, password }); if (error) setAuthMessage("Erro: " + error.message); };
-  const handleSignOut = async () => { await supabase.auth.signOut(); localStorage.removeItem('crm_selectedTenantId'); setClientes([]); setUsuarios([]); setUsuariosSistema([]); setOportunidades([]); setVendas([]); setTitulos([]); setProdutos([]); setTecnicos([]); setOrdensServico([]); setComissoes([]); setEstoqueItens([]); setEstoqueMovimentacoes([]); setProdutoEstoqueVinculos([]); setContasBancarias([]); setMovimentosBancarios([]); setConciliacoesBancarias([]); setTenants([]); setTenantId(null); setTenantNome(""); setTenantSlogan(""); setSelectedTenantId(""); setUserRole(null); };
+  const handleSignOut = async () => { await supabase.auth.signOut(); localStorage.removeItem('crm_selectedTenantId'); setClientes([]); setUsuarios([]); setUsuariosSistema([]); setOportunidades([]); setVendas([]); setTitulos([]); setProdutos([]); setTecnicos([]); setOrdensServico([]); setComissoes([]); setEstoqueItens([]); setEstoqueMovimentacoes([]); setProdutoEstoqueVinculos([]); setContasBancarias([]); setMovimentosBancarios([]); setConciliacoesBancarias([]); setTenants([]); setFornecedores([]); setCentrosCusto([]); setContasPagar([]); setParcelasContasPagar([]); setTenantId(null); setTenantNome(""); setTenantSlogan(""); setSelectedTenantId(""); setUserRole(null); };
 
   const salvarOportunidade = async () => {
     if (!formOportunidade.titulo.trim()) return alert("Título é obrigatório!");
@@ -498,7 +534,36 @@ function App() {
         { key: "conciliacao_bancaria", label: "Conciliação Bancária", icon: <Icons.CheckCircle />, count: conciliacoesBancarias.length },
       ],
     },
+    {
+      key: "financeiro_pagar",
+      label: "Contas a Pagar",
+      icon: <Icons.DollarSign />,
+      items: [
+        { key: "contas_pagar_dashboard", label: "Dashboard Financeiro", icon: <Icons.BarChart />, count: undefined },
+        { key: "contas_pagar", label: "Contas a Pagar", icon: <Icons.DollarSign />, count: parcelasContasPagar.filter((p) => p.status === "em_aberto").length },
+        { key: "fornecedores", label: "Fornecedores", icon: <Icons.User />, count: fornecedores.filter((f) => f.ativo).length },
+        { key: "centros_custo", label: "Centros de Custo", icon: <Icons.ClipboardList />, count: centrosCusto.filter((c) => c.ativo).length },
+      ],
+    },
   ];
+  // Wrapper para salvarMovimentacao que auto-cria conta a pagar quando motivo = 'compra'
+  const salvarMovimentacaoComContaPagar = async (form, item) => {
+    await salvarMovimentacao(form, item);
+    if (form.tipo === "entrada" && form.motivo === "compra") {
+      const movimentacaoFake = {
+        id: null, // será null porque não temos o id real aqui ainda
+        custo_unitario: form.custo_unitario || item.custo_unitario || 0,
+        quantidade: form.quantidade,
+        data_movimentacao: form.data_movimentacao || new Date().toISOString().split("T")[0],
+      };
+      try {
+        await criarContaDaCompraEstoque(movimentacaoFake, item);
+      } catch (e) {
+        console.warn("Erro ao criar conta a pagar automática:", e.message);
+      }
+    }
+  };
+
   const actBtns = (onEdit, onDel) => (<div className="flex items-center gap-1"><button onClick={onEdit} className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 p-1 rounded"><Icons.Edit /></button><button onClick={onDel} className="text-gray-400 hover:text-red-600 hover:bg-red-50 p-1 rounded"><Icons.Trash /></button></div>);
 
   return (
@@ -764,7 +829,7 @@ function App() {
             estoqueItens={estoqueItens}
             onSalvarItem={salvarEstoqueItem}
             onExcluirItem={excluirEstoqueItem}
-            onSalvarMovimentacao={salvarMovimentacao}
+            onSalvarMovimentacao={salvarMovimentacaoComContaPagar}
             fmtBRL={fmtBRL}
           />
         )}
@@ -773,7 +838,7 @@ function App() {
           <EstoqueMovimentacoesPage
             estoqueMovimentacoes={estoqueMovimentacoes}
             estoqueItens={estoqueItens}
-            onSalvarMovimentacao={salvarMovimentacao}
+            onSalvarMovimentacao={salvarMovimentacaoComContaPagar}
             onExcluirMovimentacao={excluirMovimentacao}
             fmtBRL={fmtBRL}
           />
@@ -814,6 +879,45 @@ function App() {
             tenants={tenants}
             onSalvar={salvarTenant}
             onExcluir={excluirTenant}
+          />
+        )}
+
+        {viewMode === "contas_pagar_dashboard" && (
+          <ContasPagarDashboard
+            contasPagar={contasPagar}
+            parcelas={parcelasContasPagar}
+            fornecedores={fornecedores}
+            fmtBRL={fmtBRL}
+          />
+        )}
+
+        {viewMode === "contas_pagar" && (
+          <ContasPagarPage
+            contasPagar={contasPagar}
+            parcelas={parcelasContasPagar}
+            fornecedores={fornecedores}
+            centrosCusto={centrosCusto}
+            contasBancarias={contasBancarias}
+            onSalvar={salvarContaPagar}
+            onExcluir={excluirContaPagar}
+            onPagar={(parcela, formPagamento) => pagarParcela(parcela, formPagamento, contasBancarias)}
+            fmtBRL={fmtBRL}
+          />
+        )}
+
+        {viewMode === "fornecedores" && (
+          <FornecedoresPage
+            fornecedores={fornecedores}
+            onSalvar={salvarFornecedor}
+            onExcluir={excluirFornecedor}
+          />
+        )}
+
+        {viewMode === "centros_custo" && (
+          <CentrosCustoPage
+            centrosCusto={centrosCusto}
+            onSalvar={salvarCentroCusto}
+            onExcluir={excluirCentroCusto}
           />
         )}
       </main>
