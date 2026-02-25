@@ -495,6 +495,34 @@ function App() {
       ],
     },
     {
+      key: "financeiro_menu",
+      label: "Financeiro",
+      icon: <Icons.DollarSign />,
+      subgroups: [
+        {
+          key: "bancario",
+          label: "Bancário",
+          icon: <Icons.CreditCard />,
+          items: [
+            { key: "contas_bancarias", label: "Contas Bancárias", icon: <Icons.CreditCard />, count: contasBancarias.filter((c) => c.ativo).length },
+            { key: "movimentos_bancarios", label: "Movimentos Bancários", icon: <Icons.ArrowUpCircle />, count: movimentosBancarios.length },
+            { key: "conciliacao_bancaria", label: "Conciliação Bancária", icon: <Icons.CheckCircle />, count: conciliacoesBancarias.length },
+          ],
+        },
+        {
+          key: "financeiro_pagar",
+          label: "Contas a Pagar",
+          icon: <Icons.DollarSign />,
+          items: [
+            { key: "contas_pagar_dashboard", label: "Dashboard Financeiro", icon: <Icons.BarChart />, count: undefined },
+            { key: "contas_pagar", label: "Contas a Pagar", icon: <Icons.DollarSign />, count: parcelasContasPagar.filter((p) => p.status === "em_aberto").length },
+            { key: "fornecedores", label: "Fornecedores", icon: <Icons.User />, count: fornecedores.filter((f) => f.ativo).length },
+            { key: "centros_custo", label: "Centros de Custo", icon: <Icons.ClipboardList />, count: centrosCusto.filter((c) => c.ativo).length },
+          ],
+        },
+      ],
+    },
+    {
       key: "comercial",
       label: "Vendas",
       icon: <Icons.TrendingUp />,
@@ -522,27 +550,6 @@ function App() {
       items: [
         { key: "estoque_itens", label: "Itens de Estoque", icon: <Icons.Package />, count: estoqueItens.filter((e) => e.ativo).length },
         { key: "estoque_movimentacoes", label: "Movimentações", icon: <Icons.ArrowUpCircle />, count: estoqueMovimentacoes.length },
-      ],
-    },
-    {
-      key: "bancario",
-      label: "Bancário",
-      icon: <Icons.CreditCard />,
-      items: [
-        { key: "contas_bancarias", label: "Contas Bancárias", icon: <Icons.CreditCard />, count: contasBancarias.filter((c) => c.ativo).length },
-        { key: "movimentos_bancarios", label: "Movimentos Bancários", icon: <Icons.ArrowUpCircle />, count: movimentosBancarios.length },
-        { key: "conciliacao_bancaria", label: "Conciliação Bancária", icon: <Icons.CheckCircle />, count: conciliacoesBancarias.length },
-      ],
-    },
-    {
-      key: "financeiro_pagar",
-      label: "Contas a Pagar",
-      icon: <Icons.DollarSign />,
-      items: [
-        { key: "contas_pagar_dashboard", label: "Dashboard Financeiro", icon: <Icons.BarChart />, count: undefined },
-        { key: "contas_pagar", label: "Contas a Pagar", icon: <Icons.DollarSign />, count: parcelasContasPagar.filter((p) => p.status === "em_aberto").length },
-        { key: "fornecedores", label: "Fornecedores", icon: <Icons.User />, count: fornecedores.filter((f) => f.ativo).length },
-        { key: "centros_custo", label: "Centros de Custo", icon: <Icons.ClipboardList />, count: centrosCusto.filter((c) => c.ativo).length },
       ],
     },
   ];
@@ -579,7 +586,8 @@ function App() {
               <Icons.BarChart /><span>Dashboard</span>
             </button>
             {navGroups.map(group => {
-              const isActive = group.items.some(i => i.key === viewMode);
+              const allItems = group.subgroups ? group.subgroups.flatMap(sg => sg.items) : (group.items || []);
+              const isActive = allItems.some(i => i.key === viewMode);
               const isOpen = openDropdown === group.key;
               return (
                 <div key={group.key} className="relative">
@@ -587,12 +595,26 @@ function App() {
                     {group.icon}<span>{group.label}</span><Icons.ChevronDown className={`w-3 h-3 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
                   </button>
                   {isOpen && (
-                    <div className="absolute top-full left-0 mt-1 w-52 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1 overflow-hidden">
-                      {group.items.map(item => (
-                        <button key={item.key} onClick={() => { setViewMode(item.key); setOpenDropdown(null); }} className={`w-full flex items-center gap-2 px-3 py-2 text-xs text-left transition-colors ${viewMode === item.key ? "bg-gray-100 text-gray-900 font-medium" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"}`}>
-                          {item.icon}<span className="flex-1">{item.label}</span>{item.count !== undefined && <span className="text-gray-400 text-[10px] tabular-nums">{item.count}</span>}
-                        </button>
-                      ))}
+                    <div className="absolute top-full left-0 mt-1 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1 overflow-hidden">
+                      {group.subgroups ? (
+                        group.subgroups.map((subgroup, sgIdx) => (
+                          <div key={subgroup.key}>
+                            {sgIdx > 0 && <div className="border-t border-gray-100 my-1" />}
+                            <div className="px-3 py-1.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">{subgroup.icon}<span>{subgroup.label}</span></div>
+                            {subgroup.items.map(item => (
+                              <button key={item.key} onClick={() => { setViewMode(item.key); setOpenDropdown(null); }} className={`w-full flex items-center gap-2 px-5 py-2 text-xs text-left transition-colors ${viewMode === item.key ? "bg-gray-100 text-gray-900 font-medium" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"}`}>
+                                {item.icon}<span className="flex-1">{item.label}</span>{item.count !== undefined && <span className="text-gray-400 text-[10px] tabular-nums">{item.count}</span>}
+                              </button>
+                            ))}
+                          </div>
+                        ))
+                      ) : (
+                        group.items.map(item => (
+                          <button key={item.key} onClick={() => { setViewMode(item.key); setOpenDropdown(null); }} className={`w-full flex items-center gap-2 px-3 py-2 text-xs text-left transition-colors ${viewMode === item.key ? "bg-gray-100 text-gray-900 font-medium" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"}`}>
+                            {item.icon}<span className="flex-1">{item.label}</span>{item.count !== undefined && <span className="text-gray-400 text-[10px] tabular-nums">{item.count}</span>}
+                          </button>
+                        ))
+                      )}
                     </div>
                   )}
                 </div>
@@ -635,11 +657,25 @@ function App() {
             {navGroups.map(group => (
               <div key={group.key} className="mt-1">
                 <div className="px-3 py-1.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">{group.icon}{group.label}</div>
-                {group.items.map(item => (
-                  <button key={item.key} onClick={() => { setViewMode(item.key); setMobileMenuOpen(false); }} className={`w-full flex items-center gap-2 px-5 py-2 text-xs rounded transition-colors ${viewMode === item.key ? "bg-gray-800 text-white" : "text-gray-600 hover:bg-black/5"}`}>
-                    {item.icon}<span className="flex-1">{item.label}</span>{item.count !== undefined && <span className="text-[10px] tabular-nums opacity-60">{item.count}</span>}
-                  </button>
-                ))}
+                {group.subgroups ? (
+                  group.subgroups.map((subgroup, sgIdx) => (
+                    <div key={subgroup.key}>
+                      {sgIdx > 0 && <div className="border-t border-gray-100 mx-3 my-1" />}
+                      <div className="px-5 py-1 text-[10px] font-medium text-gray-400 flex items-center gap-1.5">{subgroup.icon}<span>{subgroup.label}</span></div>
+                      {subgroup.items.map(item => (
+                        <button key={item.key} onClick={() => { setViewMode(item.key); setMobileMenuOpen(false); }} className={`w-full flex items-center gap-2 px-7 py-2 text-xs rounded transition-colors ${viewMode === item.key ? "bg-gray-800 text-white" : "text-gray-600 hover:bg-black/5"}`}>
+                          {item.icon}<span className="flex-1">{item.label}</span>{item.count !== undefined && <span className="text-[10px] tabular-nums opacity-60">{item.count}</span>}
+                        </button>
+                      ))}
+                    </div>
+                  ))
+                ) : (
+                  group.items.map(item => (
+                    <button key={item.key} onClick={() => { setViewMode(item.key); setMobileMenuOpen(false); }} className={`w-full flex items-center gap-2 px-5 py-2 text-xs rounded transition-colors ${viewMode === item.key ? "bg-gray-800 text-white" : "text-gray-600 hover:bg-black/5"}`}>
+                      {item.icon}<span className="flex-1">{item.label}</span>{item.count !== undefined && <span className="text-[10px] tabular-nums opacity-60">{item.count}</span>}
+                    </button>
+                  ))
+                )}
               </div>
             ))}
             <div className="border-t border-gray-100 mt-2 pt-2 px-3">
