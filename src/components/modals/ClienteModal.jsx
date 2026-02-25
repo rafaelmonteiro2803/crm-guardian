@@ -6,6 +6,7 @@ const FORM_INICIAL = {
   email: "",
   telefone: "",
   empresa: "",
+  data_nascimento: "",
   observacoes: "",
 };
 
@@ -20,6 +21,7 @@ export function ClienteModal({ aberto, editando, onClose, onSalvar }) {
         email: editando.email || "",
         telefone: editando.telefone || "",
         empresa: editando.empresa || "",
+        data_nascimento: editando.data_nascimento || "",
         observacoes: editando.observacoes || "",
       });
     } else {
@@ -66,6 +68,15 @@ export function ClienteModal({ aberto, editando, onClose, onSalvar }) {
               value={form.cpf}
               onChange={handleCpf}
               placeholder="000.000.000-00"
+              className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-600 mb-0.5">Data de Nascimento</label>
+            <input
+              type="date"
+              value={form.data_nascimento}
+              onChange={(e) => setForm({ ...form, data_nascimento: e.target.value })}
               className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"
             />
           </div>

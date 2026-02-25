@@ -93,6 +93,15 @@ export function ClientesPage({ clientes, onSalvar, onExcluir }) {
             render: (c) => c.empresa || <span className="text-gray-300">-</span>,
           },
           {
+            key: "data_nascimento",
+            label: "Nascimento",
+            filterValue: (c) => c.data_nascimento ? new Date(c.data_nascimento + "T00:00:00").toLocaleDateString("pt-BR") : "",
+            render: (c) => c.data_nascimento
+              ? <span className="text-gray-500">{new Date(c.data_nascimento + "T00:00:00").toLocaleDateString("pt-BR")}</span>
+              : <span className="text-gray-300">-</span>,
+            sortValue: (c) => c.data_nascimento || "",
+          },
+          {
             key: "data_cadastro",
             label: "Cadastro",
             render: (c) => (
