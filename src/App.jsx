@@ -514,31 +514,37 @@ function App() {
   const isOwner = userRole === "owner";
   const navGroups = [
     {
-      key: "relatorios",
-      label: "Relatórios",
-      icon: <Icons.BarChart />,
-      items: [
-        { key: "dashboard", label: "Dashboard", icon: <Icons.BarChart /> },
-        { key: "atendimentos_relatorio", label: "Atendimentos", icon: <Icons.ClipboardCheck /> },
-      ],
-    },
-    ...(isOwner ? [{
-      key: "sistema",
-      label: "Sistema",
-      icon: <Icons.Cog />,
-      items: [
-        { key: "tenants", label: "Tenants", icon: <Icons.Cog />, count: tenants.length },
-      ],
-    }] : []),
-    {
       key: "admin",
       label: "Administrativo",
       icon: <Icons.Cog />,
-      items: [
-        { key: "usuarios", label: "Usuários", icon: <Icons.User />, count: usuarios.length },
-        { key: "tecnicos", label: "Profissionais / Técnicos", icon: <Icons.Cog />, count: tecnicos.length },
-        { key: "produtos", label: "Produtos", icon: <Icons.ShoppingCart />, count: produtos.length },
-      ],
+      ...(isOwner ? {
+        subgroups: [
+          {
+            key: "sistema",
+            label: "Sistema",
+            icon: <Icons.Cog />,
+            items: [
+              { key: "tenants", label: "Tenants", icon: <Icons.Cog />, count: tenants.length },
+            ],
+          },
+          {
+            key: "admin_geral",
+            label: "Geral",
+            icon: <Icons.User />,
+            items: [
+              { key: "usuarios", label: "Usuários", icon: <Icons.User />, count: usuarios.length },
+              { key: "tecnicos", label: "Profissionais / Técnicos", icon: <Icons.Cog />, count: tecnicos.length },
+              { key: "produtos", label: "Produtos", icon: <Icons.ShoppingCart />, count: produtos.length },
+            ],
+          },
+        ],
+      } : {
+        items: [
+          { key: "usuarios", label: "Usuários", icon: <Icons.User />, count: usuarios.length },
+          { key: "tecnicos", label: "Profissionais / Técnicos", icon: <Icons.Cog />, count: tecnicos.length },
+          { key: "produtos", label: "Produtos", icon: <Icons.ShoppingCart />, count: produtos.length },
+        ],
+      }),
     },
     {
       key: "financeiro_menu",
@@ -583,19 +589,35 @@ function App() {
       key: "operacional",
       label: "Operacional",
       icon: <Icons.ClipboardList />,
-      items: [
-        { key: "financeiro", label: "Financeiro", icon: <Icons.CreditCard />, count: titulos.length },
-        { key: "ordens_servico", label: "Ordens de Serviço", icon: <Icons.ClipboardList />, count: ordensServico.length },
-        { key: "comissoes", label: "Comissões", icon: <Icons.DollarSign />, count: comissoes.filter((c) => c.status !== "pago").length },
+      subgroups: [
+        {
+          key: "operacional_geral",
+          label: "Operacional",
+          icon: <Icons.ClipboardList />,
+          items: [
+            { key: "financeiro", label: "Financeiro", icon: <Icons.CreditCard />, count: titulos.length },
+            { key: "ordens_servico", label: "Ordens de Serviço", icon: <Icons.ClipboardList />, count: ordensServico.length },
+            { key: "comissoes", label: "Comissões", icon: <Icons.DollarSign />, count: comissoes.filter((c) => c.status !== "pago").length },
+          ],
+        },
+        {
+          key: "estoque",
+          label: "Estoque",
+          icon: <Icons.Package />,
+          items: [
+            { key: "estoque_itens", label: "Itens de Estoque", icon: <Icons.Package />, count: estoqueItens.filter((e) => e.ativo).length },
+            { key: "estoque_movimentacoes", label: "Movimentações", icon: <Icons.ArrowUpCircle />, count: estoqueMovimentacoes.length },
+          ],
+        },
       ],
     },
     {
-      key: "estoque",
-      label: "Estoque",
-      icon: <Icons.Package />,
+      key: "relatorios",
+      label: "Relatórios",
+      icon: <Icons.BarChart />,
       items: [
-        { key: "estoque_itens", label: "Itens de Estoque", icon: <Icons.Package />, count: estoqueItens.filter((e) => e.ativo).length },
-        { key: "estoque_movimentacoes", label: "Movimentações", icon: <Icons.ArrowUpCircle />, count: estoqueMovimentacoes.length },
+        { key: "dashboard", label: "Dashboard", icon: <Icons.BarChart /> },
+        { key: "atendimentos_relatorio", label: "Atendimentos", icon: <Icons.ClipboardCheck /> },
       ],
     },
   ];
