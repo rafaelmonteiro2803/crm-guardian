@@ -68,6 +68,8 @@ function App() {
   const [formProduto, setFormProduto] = useState({ nome: "", tipo: "produto", descricao: "", categoria: "", preco_base: "", custo: "", unidade_medida: "", ativo: true, observacoes: "" });
   const [formUsuario, setFormUsuario] = useState({ user_id: "", role: "member" });
   const [usuariosSistema, setUsuariosSistema] = useState([]);
+  const [modoModalUsuario, setModoModalUsuario] = useState("vincular"); // "vincular" | "criar"
+  const [formNovoUsuario, setFormNovoUsuario] = useState({ email: "", role: "member" });
   const [ordensServico, setOrdensServico] = useState([]);
   const [modalEncaminhar, setModalEncaminhar] = useState(false);
   const [osEncaminhar, setOsEncaminhar] = useState(null);
@@ -390,6 +392,28 @@ function App() {
     }
     fecharModalUsuario();
   };
+
+  const criarEVincularUsuario = async () => {
+    if (!formNovoUsuario.email?.trim()) return alert("Digite o email do novo usuário!");
+    const { data: { session: adminSession } } = await supabase.auth.getSession();
+    const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-4).toUpperCase() + "1!";
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({ email: formNovoUsuario.email.trim(), password: tempPassword });
+    if (signUpError) return alert(`Erro ao criar usuário: ${signUpError.message}`);
+    if (!signUpData?.user?.id) return alert("Erro ao criar usuário: dados não retornados.");
+    const newUserId = signUpData.user.id;
+    if (adminSession) {
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      if (!currentSession || currentSession.user.id !== adminSession.user.id) {
+        await supabase.auth.setSession({ access_token: adminSession.access_token, refresh_token: adminSession.refresh_token });
+      }
+    }
+    const { data, error } = await supabase.rpc("add_tenant_member_by_userid", { p_tenant_id: tenantId, p_user_id: newUserId, p_role: formNovoUsuario.role || "member" });
+    if (error) return alert(`Usuário criado mas erro ao vincular ao tenant: ${error.message}`);
+    if (data && data.length > 0) { setUsuarios([data[0], ...usuarios]); } else { await carregarUsuarios(); }
+    fecharModalUsuario();
+    alert(`Usuário criado! Um email de confirmação foi enviado para ${formNovoUsuario.email.trim()}.`);
+  };
+
   const excluirUsuario = async (id) => {
     if (!confirm("Excluir usuário?")) return;
     const { error } = await supabase.rpc("remove_tenant_member", { p_member_id: id, p_tenant_id: tenantId });
@@ -418,7 +442,7 @@ function App() {
     }
     setModalUsuario(true);
   };
-  const fecharModalUsuario = () => { setModalUsuario(false); setEditandoUsuario(null); setFormUsuario({ user_id: "", role: "member" }); setUsuariosSistema([]); };
+  const fecharModalUsuario = () => { setModalUsuario(false); setEditandoUsuario(null); setFormUsuario({ user_id: "", role: "member" }); setUsuariosSistema([]); setModoModalUsuario("vincular"); setFormNovoUsuario({ email: "", role: "member" }); };
 
   const abrirModalEncaminhar = (os) => { setOsEncaminhar(os); setModalEncaminhar(true); };
   const fecharModalEncaminhar = () => { setModalEncaminhar(false); setOsEncaminhar(null); };
@@ -1078,12 +1102,14 @@ function App() {
       <div><label className="block text-xs text-gray-600 mb-0.5">Pagamento</label><select value={formVenda.forma_pagamento} onChange={(e) => setFormVenda({...formVenda, forma_pagamento: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none">{["à vista","parcelado","boleto","cartão","pix"].map((f) => <option key={f} value={f}>{f.charAt(0).toUpperCase()+f.slice(1)}</option>)}</select></div>
       <div><label className="block text-xs text-gray-600 mb-0.5">Observações</label><textarea value={formVenda.observacoes} onChange={(e) => setFormVenda({...formVenda, observacoes: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" rows="2" /></div></div><div className="flex gap-2 mt-4"><button onClick={fecharModalVenda} className="flex-1 px-3 py-1.5 border border-gray-200 rounded text-xs hover:bg-gray-50">Cancelar</button><button onClick={salvarVenda} className="flex-1 px-3 py-1.5 bg-gray-800 text-white rounded text-xs hover:bg-gray-700">{editandoVenda ? "Salvar" : "Adicionar"}</button></div></div></div>)}
 
-      {modalUsuario && (<div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50"><div className="bg-white rounded-lg border border-gray-200 max-w-sm w-full p-4 max-h-[90vh] overflow-y-auto"><h3 className="text-sm font-semibold mb-3">{editandoUsuario ? "Editar Usuário" : "Vincular Usuário"}</h3><div className="space-y-2.5">
-        {!editandoUsuario && (<div><label className="block text-xs text-gray-600 mb-0.5">Usuário *</label>{usuariosSistema.length === 0 ? (<p className="text-xs text-gray-400 italic">Nenhum usuário disponível para vincular.</p>) : (<select value={formUsuario.user_id} onChange={(e) => setFormUsuario({...formUsuario, user_id: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"><option value="">Selecione um usuário...</option>{usuariosSistema.map((u) => <option key={u.user_id} value={u.user_id}>{u.email}</option>)}</select>)}</div>)}
+      {modalUsuario && (<div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50"><div className="bg-white rounded-lg border border-gray-200 max-w-sm w-full p-4 max-h-[90vh] overflow-y-auto"><h3 className="text-sm font-semibold mb-3">{editandoUsuario ? "Editar Usuário" : "Novo Usuário"}</h3><div className="space-y-2.5">
+        {!editandoUsuario && (<div className="flex gap-1 mb-1"><button onClick={() => setModoModalUsuario("vincular")} className={`flex-1 px-2 py-1 text-xs rounded border ${modoModalUsuario === "vincular" ? "bg-gray-800 text-white border-gray-800" : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"}`}>Vincular existente</button><button onClick={() => setModoModalUsuario("criar")} className={`flex-1 px-2 py-1 text-xs rounded border ${modoModalUsuario === "criar" ? "bg-gray-800 text-white border-gray-800" : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"}`}>Criar novo</button></div>)}
+        {!editandoUsuario && modoModalUsuario === "vincular" && (<div><label className="block text-xs text-gray-600 mb-0.5">Usuário *</label>{usuariosSistema.length === 0 ? (<p className="text-xs text-gray-400 italic">Nenhum usuário disponível. Use "Criar novo" para cadastrar.</p>) : (<select value={formUsuario.user_id} onChange={(e) => setFormUsuario({...formUsuario, user_id: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"><option value="">Selecione um usuário...</option>{usuariosSistema.map((u) => <option key={u.user_id} value={u.user_id}>{u.email}</option>)}</select>)}</div>)}
+        {!editandoUsuario && modoModalUsuario === "criar" && (<div className="space-y-2"><div><label className="block text-xs text-gray-600 mb-0.5">Email *</label><input type="email" value={formNovoUsuario.email} onChange={(e) => setFormNovoUsuario({...formNovoUsuario, email: e.target.value})} placeholder="email@exemplo.com" className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" /></div><p className="text-[11px] text-gray-400">Uma senha temporária será gerada e um email de confirmação enviado ao usuário.</p></div>)}
         {editandoUsuario && (<div className="bg-gray-50 border border-gray-100 rounded px-2.5 py-1.5"><p className="text-xs text-gray-500">Email: <span className="font-medium text-gray-700">{editandoUsuario.email}</span></p></div>)}
-        <div><label className="block text-xs text-gray-600 mb-0.5">Perfil</label><select value={formUsuario.role} onChange={(e) => setFormUsuario({...formUsuario, role: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"><option value="owner">Owner</option><option value="admin">Admin</option><option value="member">Member</option></select></div>
+        <div><label className="block text-xs text-gray-600 mb-0.5">Perfil</label><select value={editandoUsuario ? formUsuario.role : (modoModalUsuario === "criar" ? formNovoUsuario.role : formUsuario.role)} onChange={(e) => { if (editandoUsuario) { setFormUsuario({...formUsuario, role: e.target.value}); } else if (modoModalUsuario === "criar") { setFormNovoUsuario({...formNovoUsuario, role: e.target.value}); } else { setFormUsuario({...formUsuario, role: e.target.value}); } }} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"><option value="owner">Owner</option><option value="admin">Admin</option><option value="member">Member</option></select></div>
         {editandoUsuario && editandoUsuario.created_at && (<div className="bg-gray-50 border border-gray-200 rounded p-2.5"><p className="text-[11px] text-gray-500">Membro desde: <span className="font-medium text-gray-700">{new Date(editandoUsuario.created_at).toLocaleDateString("pt-BR")}</span></p></div>)}
-        </div><div className="flex gap-2 mt-4"><button onClick={fecharModalUsuario} className="flex-1 px-3 py-1.5 border border-gray-200 rounded text-xs hover:bg-gray-50">Cancelar</button><button onClick={salvarUsuario} disabled={!editandoUsuario && !formUsuario.user_id} className="flex-1 px-3 py-1.5 bg-gray-800 text-white rounded text-xs hover:bg-gray-700 disabled:opacity-50">{editandoUsuario ? "Salvar" : "Vincular"}</button></div></div></div>)}
+        </div><div className="flex gap-2 mt-4"><button onClick={fecharModalUsuario} className="flex-1 px-3 py-1.5 border border-gray-200 rounded text-xs hover:bg-gray-50">Cancelar</button><button onClick={!editandoUsuario && modoModalUsuario === "criar" ? criarEVincularUsuario : salvarUsuario} disabled={!editandoUsuario && modoModalUsuario === "vincular" && !formUsuario.user_id} className="flex-1 px-3 py-1.5 bg-gray-800 text-white rounded text-xs hover:bg-gray-700 disabled:opacity-50">{editandoUsuario ? "Salvar" : modoModalUsuario === "criar" ? "Criar e Vincular" : "Vincular"}</button></div></div></div>)}
 
       {modalEvolucao && osEvolucao && (
         <EvolucaoModal
