@@ -21,8 +21,8 @@ ALTER TABLE tenants ADD COLUMN IF NOT EXISTS endereco_cidade TEXT;
 ALTER TABLE tenants ADD COLUMN IF NOT EXISTS endereco_estado TEXT;
 
 -- 2. RPC: Listar todos os tenants com novos campos (somente owners)
-DROP FUNCTION IF EXISTS public.get_tenants_for_owner();
-CREATE OR REPLACE FUNCTION public.get_tenants_for_owner()
+DROP FUNCTION IF EXISTS public.get_tenants_for_owner() CASCADE;
+CREATE FUNCTION public.get_tenants_for_owner()
 RETURNS TABLE (
   id UUID,
   nome TEXT,
@@ -69,8 +69,8 @@ $$;
 GRANT EXECUTE ON FUNCTION public.get_tenants_for_owner() TO authenticated;
 
 -- 3. RPC: Criar tenant com novos campos (somente owners)
-DROP FUNCTION IF EXISTS public.create_tenant(TEXT,TEXT,TEXT,TEXT);
-CREATE OR REPLACE FUNCTION public.create_tenant(
+DROP FUNCTION IF EXISTS public.create_tenant(TEXT,TEXT,TEXT,TEXT) CASCADE;
+CREATE FUNCTION public.create_tenant(
   p_nome TEXT,
   p_slogan TEXT DEFAULT NULL,
   p_cor TEXT DEFAULT NULL,
@@ -144,8 +144,8 @@ $$;
 GRANT EXECUTE ON FUNCTION public.create_tenant(TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT) TO authenticated;
 
 -- 4. RPC: Atualizar tenant com novos campos (somente owners)
-DROP FUNCTION IF EXISTS public.update_tenant(UUID,TEXT,TEXT,TEXT,TEXT);
-CREATE OR REPLACE FUNCTION public.update_tenant(
+DROP FUNCTION IF EXISTS public.update_tenant(UUID,TEXT,TEXT,TEXT,TEXT) CASCADE;
+CREATE FUNCTION public.update_tenant(
   p_id UUID,
   p_nome TEXT,
   p_slogan TEXT DEFAULT NULL,
