@@ -20,9 +20,17 @@ ALTER TABLE tenants ADD COLUMN IF NOT EXISTS endereco_bairro TEXT;
 ALTER TABLE tenants ADD COLUMN IF NOT EXISTS endereco_cidade TEXT;
 ALTER TABLE tenants ADD COLUMN IF NOT EXISTS endereco_estado TEXT;
 
--- 2. RPC: Listar todos os tenants com novos campos (somente owners)
-DROP FUNCTION IF EXISTS public.get_tenants_for_owner() CASCADE;
-CREATE FUNCTION public.get_tenants_for_owner()
+-- 2. Remover versões antigas das funções (retorno incompatível)
+--    Usando bloco DO com tag distinta para não conflitar com $$ do runner
+DO $drop_old_funcs$
+BEGIN
+  DROP FUNCTION IF EXISTS public.get_tenants_for_owner() CASCADE;
+  DROP FUNCTION IF EXISTS public.create_tenant(TEXT,TEXT,TEXT,TEXT) CASCADE;
+  DROP FUNCTION IF EXISTS public.update_tenant(UUID,TEXT,TEXT,TEXT,TEXT) CASCADE;
+END $drop_old_funcs$;
+
+-- 3. RPC: Listar todos os tenants com novos campos (somente owners)
+CREATE OR REPLACE FUNCTION public.get_tenants_for_owner()
 RETURNS TABLE (
   id UUID,
   nome TEXT,
@@ -45,7 +53,7 @@ RETURNS TABLE (
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
-AS $$
+AS $get_tenants_fn$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM tenant_members
@@ -64,13 +72,12 @@ BEGIN
   FROM tenants t
   ORDER BY t.nome;
 END;
-$$;
+$get_tenants_fn$;
 
 GRANT EXECUTE ON FUNCTION public.get_tenants_for_owner() TO authenticated;
 
--- 3. RPC: Criar tenant com novos campos (somente owners)
-DROP FUNCTION IF EXISTS public.create_tenant(TEXT,TEXT,TEXT,TEXT) CASCADE;
-CREATE FUNCTION public.create_tenant(
+-- 4. RPC: Criar tenant com novos campos (somente owners)
+CREATE OR REPLACE FUNCTION public.create_tenant(
   p_nome TEXT,
   p_slogan TEXT DEFAULT NULL,
   p_cor TEXT DEFAULT NULL,
@@ -110,7 +117,7 @@ RETURNS TABLE (
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
-AS $$
+AS $create_tenant_fn$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM tenant_members
@@ -139,13 +146,12 @@ BEGIN
     endereco_bairro, endereco_cidade, endereco_estado,
     created_at;
 END;
-$$;
+$create_tenant_fn$;
 
 GRANT EXECUTE ON FUNCTION public.create_tenant(TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT) TO authenticated;
 
--- 4. RPC: Atualizar tenant com novos campos (somente owners)
-DROP FUNCTION IF EXISTS public.update_tenant(UUID,TEXT,TEXT,TEXT,TEXT) CASCADE;
-CREATE FUNCTION public.update_tenant(
+-- 5. RPC: Atualizar tenant com novos campos (somente owners)
+CREATE OR REPLACE FUNCTION public.update_tenant(
   p_id UUID,
   p_nome TEXT,
   p_slogan TEXT DEFAULT NULL,
@@ -186,7 +192,7 @@ RETURNS TABLE (
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
-AS $$
+AS $update_tenant_fn$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM tenant_members
@@ -222,6 +228,6 @@ BEGIN
     endereco_bairro, endereco_cidade, endereco_estado,
     created_at;
 END;
-$$;
+$update_tenant_fn$;
 
 GRANT EXECUTE ON FUNCTION public.update_tenant(UUID,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT) TO authenticated;
