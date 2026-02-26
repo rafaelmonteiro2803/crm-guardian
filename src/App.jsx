@@ -17,6 +17,7 @@ import { useTecnicos } from "./hooks/useTecnicos";
 import { TecnicosPage } from "./pages/Tecnicos";
 import { ComissoesPage } from "./pages/Comissoes";
 import { EncaminharModal } from "./components/modals/EncaminharModal";
+import { EvolucaoModal } from "./components/modals/EvolucaoModal";
 import { useTenants } from "./hooks/useTenants";
 import { TenantsPage } from "./pages/Tenants";
 import { useFornecedores } from "./hooks/useFornecedores";
@@ -70,6 +71,11 @@ function App() {
   const [ordensServico, setOrdensServico] = useState([]);
   const [modalEncaminhar, setModalEncaminhar] = useState(false);
   const [osEncaminhar, setOsEncaminhar] = useState(null);
+  const [modalEvolucao, setModalEvolucao] = useState(false);
+  const [osEvolucao, setOsEvolucao] = useState(null);
+  const [atendimentoBusca, setAtendimentoBusca] = useState("");
+  const [atendimentoClienteSelecionado, setAtendimentoClienteSelecionado] = useState(null);
+  const [atendimentoVendaSelecionada, setAtendimentoVendaSelecionada] = useState(null);
   const [openDropdown, setOpenDropdown] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(checkIsMobile);
@@ -416,6 +422,13 @@ function App() {
 
   const abrirModalEncaminhar = (os) => { setOsEncaminhar(os); setModalEncaminhar(true); };
   const fecharModalEncaminhar = () => { setModalEncaminhar(false); setOsEncaminhar(null); };
+  const abrirModalEvolucao = (os) => { setOsEvolucao(os); setModalEvolucao(true); };
+  const fecharModalEvolucao = () => { setModalEvolucao(false); setOsEvolucao(null); };
+  const salvarEvolucao = async (osId, textoFinal) => {
+    const { data } = await supabase.from("ordens_servico").update({ observacoes: textoFinal }).eq("id", osId).select();
+    if (data) setOrdensServico(ordensServico.map((o) => (o.id === osId ? data[0] : o)));
+    fecharModalEvolucao();
+  };
 
   const getClienteNome = (id) => clientes.find((c) => c.id === id)?.nome || "N/A";
   const getProdutoNome = (id) => produtos.find((p) => p.id === id)?.nome || null;
@@ -476,6 +489,15 @@ function App() {
   const ind = calcularIndicadores();
   const isOwner = userRole === "owner";
   const navGroups = [
+    {
+      key: "relatorios",
+      label: "Relatórios",
+      icon: <Icons.BarChart />,
+      items: [
+        { key: "dashboard", label: "Dashboard", icon: <Icons.BarChart /> },
+        { key: "atendimentos_relatorio", label: "Atendimentos", icon: <Icons.ClipboardCheck /> },
+      ],
+    },
     ...(isOwner ? [{
       key: "sistema",
       label: "Sistema",
@@ -582,9 +604,6 @@ function App() {
 
           {/* Desktop Nav */}
           <nav className="hidden md:flex items-center gap-0.5 flex-1">
-            <button onClick={() => { setViewMode("dashboard"); setOpenDropdown(null); }} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-colors ${viewMode === "dashboard" ? "bg-gray-800 text-white" : "text-gray-600 hover:text-gray-900 hover:bg-black/5"}`}>
-              <Icons.BarChart /><span>Dashboard</span>
-            </button>
             {navGroups.map(group => {
               const allItems = group.subgroups ? group.subgroups.flatMap(sg => sg.items) : (group.items || []);
               const isActive = allItems.some(i => i.key === viewMode);
@@ -651,9 +670,6 @@ function App() {
         {/* Mobile menu panel */}
         {!isMobile && mobileMenuOpen && (
           <div className="md:hidden border-t border-gray-200 mt-2 py-2 max-w-7xl mx-auto">
-            <button onClick={() => { setViewMode("dashboard"); setMobileMenuOpen(false); }} className={`w-full flex items-center gap-2 px-3 py-2 rounded text-xs font-medium transition-colors ${viewMode === "dashboard" ? "bg-gray-800 text-white" : "text-gray-600 hover:bg-black/5"}`}>
-              <Icons.BarChart /><span>Dashboard</span>
-            </button>
             {navGroups.map(group => (
               <div key={group.key} className="mt-1">
                 <div className="px-3 py-1.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">{group.icon}{group.label}</div>
@@ -839,11 +855,102 @@ function App() {
               { key: "status", label: "Status", render: (o) => { if (o.status === "aguardando_atendimento") return <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] bg-gray-100 text-gray-700"><Icons.Clock className="w-3 h-3" />Aguardando</span>; if (o.status === "em_atendimento") return <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] bg-blue-50 text-blue-700"><Icons.ArrowRight className="w-3 h-3" />Em Atendimento</span>; return <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] bg-green-50 text-green-700"><Icons.CheckCircle className="w-3 h-3" />Concluído</span>; }, filterValue: (o) => o.status === "aguardando_atendimento" ? "Aguardando" : o.status === "em_atendimento" ? "Em Atendimento" : "Concluído" },
             ]} data={ordensServico} actions={(o) => (
               <div className="flex items-center gap-1">
+                <button onClick={() => abrirModalEvolucao(o)} title="Evolução do Atendimento" className="text-purple-600 hover:bg-purple-50 p-1 rounded"><Icons.BookOpen /></button>
                 {o.status !== "atendimento_concluido" && <button onClick={() => abrirModalEncaminhar(o)} className="text-blue-600 hover:bg-blue-50 px-1.5 py-0.5 rounded text-[11px] font-medium whitespace-nowrap">Encaminhar</button>}
                 {o.status === "em_atendimento" && <button onClick={() => concluirOrdemServico(o.id)} className="text-green-600 hover:bg-green-50 px-1.5 py-0.5 rounded text-[11px] font-medium whitespace-nowrap">Concluir</button>}
                 <button onClick={() => excluirOrdemServico(o.id)} className="text-gray-400 hover:text-red-600 hover:bg-red-50 p-1 rounded"><Icons.Trash /></button>
               </div>
             )} emptyMessage="Nenhuma ordem de serviço. Registre uma venda para gerar automaticamente." />
+          </div>
+        )}
+
+        {viewMode === "atendimentos_relatorio" && (
+          <div className="space-y-4">
+            <h2 className="text-sm font-semibold text-gray-700">Atendimentos</h2>
+            <div className="bg-white border border-gray-200 rounded p-4 space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Buscar Cliente</label>
+                <div className="relative">
+                  <Icons.Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                  <input
+                    type="text"
+                    value={atendimentoBusca}
+                    onChange={(e) => { setAtendimentoBusca(e.target.value); setAtendimentoClienteSelecionado(null); setAtendimentoVendaSelecionada(null); }}
+                    placeholder="Digite o nome do cliente..."
+                    className="w-full border border-gray-200 rounded pl-8 pr-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"
+                  />
+                </div>
+              </div>
+              {atendimentoBusca.trim().length > 0 && !atendimentoClienteSelecionado && (
+                <div className="border border-gray-200 rounded overflow-hidden">
+                  {clientes.filter((c) => c.nome.toLowerCase().includes(atendimentoBusca.toLowerCase())).length === 0 ? (
+                    <p className="text-xs text-gray-400 p-3 text-center">Nenhum cliente encontrado.</p>
+                  ) : (
+                    clientes.filter((c) => c.nome.toLowerCase().includes(atendimentoBusca.toLowerCase())).map((c) => (
+                      <button key={c.id} onClick={() => { setAtendimentoClienteSelecionado(c); setAtendimentoBusca(c.nome); setAtendimentoVendaSelecionada(null); }} className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left hover:bg-gray-50 border-b border-gray-100 last:border-b-0">
+                        <Icons.User className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                        <span className="font-medium text-gray-800">{c.nome}</span>
+                        {c.telefone && <span className="text-gray-400 ml-auto">{c.telefone}</span>}
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+
+            {atendimentoClienteSelecionado && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-xs font-semibold text-gray-700">Vendas de {atendimentoClienteSelecionado.nome}</h3>
+                  <button onClick={() => { setAtendimentoClienteSelecionado(null); setAtendimentoVendaSelecionada(null); setAtendimentoBusca(""); }} className="text-[11px] text-gray-400 hover:text-gray-600 underline">limpar</button>
+                </div>
+                {vendas.filter((v) => v.cliente_id === atendimentoClienteSelecionado.id).length === 0 ? (
+                  <div className="bg-white border border-gray-200 rounded p-6 text-center text-xs text-gray-400">Nenhuma venda encontrada para este cliente.</div>
+                ) : (
+                  <div className="grid gap-2">
+                    {vendas.filter((v) => v.cliente_id === atendimentoClienteSelecionado.id).map((v) => (
+                      <button key={v.id} onClick={() => setAtendimentoVendaSelecionada(atendimentoVendaSelecionada?.id === v.id ? null : v)} className={`w-full text-left bg-white border rounded p-3 hover:border-gray-400 transition-colors ${atendimentoVendaSelecionada?.id === v.id ? "border-gray-800 ring-1 ring-gray-800" : "border-gray-200"}`}>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-medium text-gray-800">{v.descricao}</span>
+                          <span className="text-xs font-semibold text-green-700">R$ {fmtBRL(v.valor)}</span>
+                        </div>
+                        <div className="flex items-center gap-3 mt-1">
+                          <span className="text-[11px] text-gray-400">{new Date(v.data_venda).toLocaleDateString("pt-BR")}</span>
+                          <span className="text-[11px] text-gray-400 capitalize">{v.forma_pagamento}</span>
+                          {(() => { const os = ordensServico.find((o) => o.venda_id === v.id); return os ? <span className="text-[11px] text-purple-600 font-medium">OS: {os.numero_os}</span> : null; })()}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {atendimentoVendaSelecionada && (
+              <div className="bg-white border border-gray-200 rounded p-4 space-y-3">
+                <h3 className="text-xs font-semibold text-gray-700 flex items-center gap-1.5"><Icons.BookOpen className="w-3.5 h-3.5 text-purple-600" />Evolução do Atendimento</h3>
+                {(() => {
+                  const os = ordensServico.find((o) => o.venda_id === atendimentoVendaSelecionada.id);
+                  if (!os) return <p className="text-xs text-gray-400 italic">Nenhuma ordem de serviço encontrada para esta venda.</p>;
+                  return (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-[11px] text-gray-500">
+                        <span>OS: <span className="font-mono font-medium">{os.numero_os}</span></span>
+                        <span>·</span>
+                        <span className={os.status === "atendimento_concluido" ? "text-green-600 font-medium" : os.status === "em_atendimento" ? "text-blue-600 font-medium" : "text-gray-500"}>{os.status === "atendimento_concluido" ? "Concluído" : os.status === "em_atendimento" ? "Em Atendimento" : "Aguardando"}</span>
+                      </div>
+                      {os.observacoes ? (
+                        <div className="bg-gray-50 border border-gray-200 rounded p-3 text-xs text-gray-700 whitespace-pre-wrap leading-relaxed font-mono">
+                          {os.observacoes}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-gray-400 italic bg-gray-50 border border-gray-100 rounded p-3">Nenhuma evolução registrada para este atendimento.</p>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
           </div>
         )}
 
@@ -977,6 +1084,15 @@ function App() {
         <div><label className="block text-xs text-gray-600 mb-0.5">Perfil</label><select value={formUsuario.role} onChange={(e) => setFormUsuario({...formUsuario, role: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"><option value="owner">Owner</option><option value="admin">Admin</option><option value="member">Member</option></select></div>
         {editandoUsuario && editandoUsuario.created_at && (<div className="bg-gray-50 border border-gray-200 rounded p-2.5"><p className="text-[11px] text-gray-500">Membro desde: <span className="font-medium text-gray-700">{new Date(editandoUsuario.created_at).toLocaleDateString("pt-BR")}</span></p></div>)}
         </div><div className="flex gap-2 mt-4"><button onClick={fecharModalUsuario} className="flex-1 px-3 py-1.5 border border-gray-200 rounded text-xs hover:bg-gray-50">Cancelar</button><button onClick={salvarUsuario} disabled={!editandoUsuario && !formUsuario.user_id} className="flex-1 px-3 py-1.5 bg-gray-800 text-white rounded text-xs hover:bg-gray-700 disabled:opacity-50">{editandoUsuario ? "Salvar" : "Vincular"}</button></div></div></div>)}
+
+      {modalEvolucao && osEvolucao && (
+        <EvolucaoModal
+          aberto={modalEvolucao}
+          os={osEvolucao}
+          onFechar={fecharModalEvolucao}
+          onSalvar={salvarEvolucao}
+        />
+      )}
 
       {modalEncaminhar && osEncaminhar && (
         <EncaminharModal
