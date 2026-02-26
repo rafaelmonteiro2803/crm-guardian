@@ -35,12 +35,15 @@ export function MovimentoBancarioModal({ aberto, editando, contasBancarias, onCl
 
   const contasAtivas = contasBancarias.filter((c) => c.ativo);
 
-  const handleSalvar = () => {
+  const handleSalvar = async () => {
     if (!form.conta_id) return alert("Selecione uma conta!");
     if (!form.descricao.trim()) return alert("Descrição é obrigatória!");
     if (!form.valor || parseFloat(form.valor) <= 0) return alert("Informe um valor válido!");
-    onSalvar(form);
-    onClose();
+    try {
+      await onSalvar(form);
+    } catch (e) {
+      alert("Erro ao salvar movimento: " + (e.message || "Tente novamente."));
+    }
   };
 
   const f = (field) => (e) => setForm({ ...form, [field]: e.target.value });
