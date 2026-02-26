@@ -9,12 +9,14 @@ const FORM_INICIAL = {
   quantidade_atual: "0",
   quantidade_minima: "0",
   custo_unitario: "0",
-  fornecedor: "",
+  fornecedor_id: "",
+  lote: "",
+  validade: "",
   codigo_referencia: "",
   ativo: true,
 };
 
-export function EstoqueItemModal({ aberto, editando, onClose, onSalvar }) {
+export function EstoqueItemModal({ aberto, editando, onClose, onSalvar, fornecedores = [] }) {
   const [form, setForm] = useState(FORM_INICIAL);
 
   useEffect(() => {
@@ -27,7 +29,9 @@ export function EstoqueItemModal({ aberto, editando, onClose, onSalvar }) {
         quantidade_atual: (editando.quantidade_atual ?? 0).toString(),
         quantidade_minima: (editando.quantidade_minima ?? 0).toString(),
         custo_unitario: (editando.custo_unitario ?? 0).toString(),
-        fornecedor: editando.fornecedor || "",
+        fornecedor_id: editando.fornecedor_id || "",
+        lote: editando.lote || "",
+        validade: editando.validade || "",
         codigo_referencia: editando.codigo_referencia || "",
         ativo: editando.ativo ?? true,
       });
@@ -40,11 +44,18 @@ export function EstoqueItemModal({ aberto, editando, onClose, onSalvar }) {
 
   const handleSalvar = () => {
     if (!form.nome.trim()) return alert("Nome é obrigatório!");
-    onSalvar(form);
+    onSalvar({
+      ...form,
+      fornecedor_id: form.fornecedor_id || null,
+      lote: form.lote || null,
+      validade: form.validade || null,
+    });
   };
 
   const f = (field) => (e) => setForm({ ...form, [field]: e.target.value });
   const inputCls = "w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none";
+
+  const fornecedoresAtivos = fornecedores.filter((f) => f.ativo !== false);
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
@@ -122,9 +133,35 @@ export function EstoqueItemModal({ aberto, editando, onClose, onSalvar }) {
               />
             </div>
           </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="block text-xs text-gray-600 mb-0.5">Lote</label>
+              <input
+                type="text"
+                value={form.lote}
+                onChange={f("lote")}
+                placeholder="Ex: L20240115..."
+                className={inputCls}
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-600 mb-0.5">Validade</label>
+              <input
+                type="date"
+                value={form.validade}
+                onChange={f("validade")}
+                className={inputCls}
+              />
+            </div>
+          </div>
           <div>
             <label className="block text-xs text-gray-600 mb-0.5">Fornecedor</label>
-            <input type="text" value={form.fornecedor} onChange={f("fornecedor")} className={inputCls} />
+            <select value={form.fornecedor_id} onChange={f("fornecedor_id")} className={inputCls}>
+              <option value="">— Selecione um fornecedor —</option>
+              {fornecedoresAtivos.map((forn) => (
+                <option key={forn.id} value={forn.id}>{forn.nome}</option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="block text-xs text-gray-600 mb-0.5">Código / Referência</label>

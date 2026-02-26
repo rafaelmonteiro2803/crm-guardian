@@ -1020,6 +1020,7 @@ function App() {
             onExcluirItem={excluirEstoqueItem}
             onSalvarMovimentacao={salvarMovimentacaoComContaPagar}
             fmtBRL={fmtBRL}
+            fornecedores={fornecedores}
           />
         )}
 

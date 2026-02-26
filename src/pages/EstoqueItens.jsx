@@ -5,7 +5,7 @@ import { EstoqueItemModal } from "../components/modals/EstoqueItemModal";
 import { MovimentacaoModal } from "../components/modals/MovimentacaoModal";
 import { CATEGORIAS_ESTOQUE, getCategorialLabel } from "../constants/estoque";
 
-export function EstoqueItensPage({ estoqueItens, onSalvarItem, onExcluirItem, onSalvarMovimentacao, fmtBRL }) {
+export function EstoqueItensPage({ estoqueItens, onSalvarItem, onExcluirItem, onSalvarMovimentacao, fmtBRL, fornecedores = [] }) {
   const [modalItem, setModalItem] = useState(false);
   const [editando, setEditando] = useState(null);
   const [modalMov, setModalMov] = useState(false);
@@ -38,6 +38,12 @@ export function EstoqueItensPage({ estoqueItens, onSalvarItem, onExcluirItem, on
   const categoriaCount = CATEGORIAS_ESTOQUE
     .map((c) => ({ ...c, count: estoqueItens.filter((e) => e.categoria === c.value && e.ativo).length }))
     .filter((c) => c.count > 0);
+
+  const fmtData = (val) => {
+    if (!val) return <span className="text-gray-300">-</span>;
+    const [y, m, d] = val.split("-");
+    return `${d}/${m}/${y}`;
+  };
 
   return (
     <div className="space-y-3">
@@ -100,7 +106,7 @@ export function EstoqueItensPage({ estoqueItens, onSalvarItem, onExcluirItem, on
           },
           {
             key: "quantidade_atual",
-            label: "Qtd Atual",
+            label: "Qtde Atual",
             render: (e) => {
               const qtd = parseFloat(e.quantidade_atual || 0);
               const min = parseFloat(e.quantidade_minima || 0);
@@ -116,33 +122,16 @@ export function EstoqueItensPage({ estoqueItens, onSalvarItem, onExcluirItem, on
           },
           {
             key: "quantidade_minima",
-            label: "Qtd Mínima",
+            label: "Qtde Mínima",
             render: (e) =>
               `${parseFloat(e.quantidade_minima || 0).toLocaleString("pt-BR", { maximumFractionDigits: 3 })} ${e.unidade_medida || "un"}`,
             sortValue: (e) => parseFloat(e.quantidade_minima || 0),
           },
           {
-            key: "custo_unitario",
-            label: "Custo Unit.",
-            render: (e) => `R$ ${fmtBRL(e.custo_unitario)}`,
-            sortValue: (e) => parseFloat(e.custo_unitario || 0),
-          },
-          {
-            key: "fornecedor",
-            label: "Fornecedor",
-            render: (e) => e.fornecedor || <span className="text-gray-300">-</span>,
-            filterValue: (e) => e.fornecedor || "",
-          },
-          {
-            key: "ativo",
-            label: "Status",
-            render: (e) =>
-              e.ativo ? (
-                <span className="px-1.5 py-0.5 rounded text-[11px] bg-green-50 text-green-700">Ativo</span>
-              ) : (
-                <span className="px-1.5 py-0.5 rounded text-[11px] bg-gray-100 text-gray-500">Inativo</span>
-              ),
-            filterValue: (e) => (e.ativo ? "Ativo" : "Inativo"),
+            key: "validade",
+            label: "Validade",
+            render: (e) => fmtData(e.validade),
+            sortValue: (e) => e.validade || "",
           },
         ]}
         data={estoqueItens}
@@ -189,6 +178,7 @@ export function EstoqueItensPage({ estoqueItens, onSalvarItem, onExcluirItem, on
         editando={editando}
         onClose={fecharItem}
         onSalvar={handleSalvarItem}
+        fornecedores={fornecedores}
       />
 
       <MovimentacaoModal
