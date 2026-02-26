@@ -33,7 +33,10 @@ export function ClienteModal({ aberto, editando, onClose, onSalvar }) {
 
   const handleSalvar = () => {
     if (!form.nome.trim()) return alert("Nome é obrigatório!");
-    onSalvar(form);
+    onSalvar({
+      ...form,
+      data_nascimento: form.data_nascimento || null,
+    });
   };
 
   const handleCpf = (e) => {
