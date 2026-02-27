@@ -17,6 +17,11 @@ import { useTecnicos } from "./hooks/useTecnicos";
 import { TecnicosPage } from "./pages/Tecnicos";
 import { ComissoesPage } from "./pages/Comissoes";
 import { EncaminharModal } from "./components/modals/EncaminharModal";
+import { useOportunidades } from "./hooks/useOportunidades";
+import { PipelinePage } from "./pages/Pipeline";
+import { useVendas } from "./hooks/useVendas";
+import { VendasPage } from "./pages/Vendas";
+import { FinanceiroPage } from "./pages/Financeiro";
 import { EvolucaoModal } from "./components/modals/EvolucaoModal";
 import { useTenants } from "./hooks/useTenants";
 import { TenantsPage } from "./pages/Tenants";
@@ -40,9 +45,6 @@ function App() {
   const [tenantId, setTenantId] = useState(null);
   const [tenantNome, setTenantNome] = useState("");
   const [usuarios, setUsuarios] = useState([]);
-  const [oportunidades, setOportunidades] = useState([]);
-  const [vendas, setVendas] = useState([]);
-  const [titulos, setTitulos] = useState([]);
   const [viewMode, setViewMode] = useState("dashboard");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -51,20 +53,11 @@ function App() {
   const [tenantLocked, setTenantLocked] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [authMessage, setAuthMessage] = useState("");
-  const [modalOportunidade, setModalOportunidade] = useState(false);
-  const [modalVenda, setModalVenda] = useState(false);
-  const [modalTitulo, setModalTitulo] = useState(false);
-  const [editandoOportunidade, setEditandoOportunidade] = useState(null);
-  const [editandoVenda, setEditandoVenda] = useState(null);
-  const [editandoTitulo, setEditandoTitulo] = useState(null);
   const [produtos, setProdutos] = useState([]);
   const [modalProduto, setModalProduto] = useState(false);
   const [modalUsuario, setModalUsuario] = useState(false);
   const [editandoProduto, setEditandoProduto] = useState(null);
   const [editandoUsuario, setEditandoUsuario] = useState(null);
-  const [formOportunidade, setFormOportunidade] = useState({ titulo: "", cliente_id: "", produto_id: "", valor: "", estagio: "prospecção", data_inicio: new Date().toISOString().split("T")[0] });
-  const [formVenda, setFormVenda] = useState({ cliente_id: "", descricao: "", valor: "", data_venda: new Date().toISOString().split("T")[0], forma_pagamento: "à vista", observacoes: "", desconto: "", itens: [] });
-  const [formTitulo, setFormTitulo] = useState({ venda_id: "", descricao: "", valor: "", data_emissao: new Date().toISOString().split("T")[0], data_vencimento: "", status: "pendente" });
   const [formProduto, setFormProduto] = useState({ nome: "", tipo: "produto", descricao: "", categoria: "", preco_base: "", custo: "", unidade_medida: "", ativo: true, observacoes: "" });
   const [formUsuario, setFormUsuario] = useState({ user_id: "", role: "member" });
   const [usuariosSistema, setUsuariosSistema] = useState([]);
@@ -130,6 +123,27 @@ function App() {
   } = useTecnicos(tenantId, session?.user?.id);
 
   const {
+    oportunidades,
+    setOportunidades,
+    carregarOportunidades,
+    salvarOportunidade,
+    excluirOportunidade,
+    moverOportunidade,
+  } = useOportunidades(tenantId, session?.user?.id);
+
+  const {
+    vendas,
+    setVendas,
+    titulos,
+    setTitulos,
+    carregarVendas,
+    carregarTitulos,
+    salvarVenda,
+    excluirVenda,
+    salvarTitulo,
+    excluirTitulo,
+    marcarComoPago,
+  } = useVendas(tenantId, session?.user?.id, (os) => setOrdensServico((prev) => [os, ...prev]));
     contasBancarias,
     setContasBancarias,
     movimentosBancarios,
@@ -281,72 +295,12 @@ function App() {
     const { data: fallback } = await supabase.from("tenant_members").select("id, user_id, role, created_at").eq("tenant_id", tenantId).order("created_at", { ascending: false });
     if (fallback) setUsuarios(fallback);
   };
-  const carregarOportunidades = async () => { const { data } = await supabase.from("oportunidades").select("*").eq("tenant_id", tenantId).order("created_at", { ascending: false }); if (data) setOportunidades(data); };
-  const carregarVendas = async () => { const { data } = await supabase.from("vendas").select("*").eq("tenant_id", tenantId).order("data_venda", { ascending: false }); if (data) setVendas(data); };
-  const carregarTitulos = async () => { const { data } = await supabase.from("titulos").select("*").eq("tenant_id", tenantId).order("data_vencimento", { ascending: true }); if (data) setTitulos(data); };
   const carregarProdutos = async () => { const { data } = await supabase.from("produtos").select("*").eq("tenant_id", tenantId).order("created_at", { ascending: false }); if (data) setProdutos(data); };
   const carregarOrdensServico = async () => { const { data } = await supabase.from("ordens_servico").select("*").eq("tenant_id", tenantId).order("created_at", { ascending: false }); if (data) setOrdensServico(data); };
 
   const handleSignUp = async (e) => { e.preventDefault(); setAuthMessage(""); const { error } = await supabase.auth.signUp({ email, password }); setAuthMessage(error ? "Erro: " + error.message : "Conta criada! Verifique seu email."); };
   const handleSignIn = async (e) => { e.preventDefault(); setAuthMessage(""); const { error } = await supabase.auth.signInWithPassword({ email, password }); if (error) setAuthMessage("Erro: " + error.message); };
   const handleSignOut = async () => { await supabase.auth.signOut(); localStorage.removeItem('crm_selectedTenantId'); setClientes([]); setUsuarios([]); setUsuariosSistema([]); setOportunidades([]); setVendas([]); setTitulos([]); setProdutos([]); setTecnicos([]); setOrdensServico([]); setComissoes([]); setEstoqueItens([]); setEstoqueMovimentacoes([]); setProdutoEstoqueVinculos([]); setContasBancarias([]); setMovimentosBancarios([]); setConciliacoesBancarias([]); setTenants([]); setFornecedores([]); setCentrosCusto([]); setContasPagar([]); setParcelasContasPagar([]); setTenantId(null); setTenantNome(""); setTenantSlogan(""); setSelectedTenantId(""); setUserRole(null); };
-
-  const salvarOportunidade = async () => {
-    if (!formOportunidade.titulo.trim()) return alert("Título é obrigatório!");
-    const payload = { ...formOportunidade, produto_id: formOportunidade.produto_id || null };
-    if (editandoOportunidade) { const { data } = await supabase.from("oportunidades").update(payload).eq("id", editandoOportunidade.id).select(); if (data) setOportunidades(oportunidades.map((o) => (o.id === editandoOportunidade.id ? data[0] : o))); }
-    else { const { data } = await supabase.from("oportunidades").insert([{ ...payload, user_id: session.user.id, tenant_id: tenantId }]).select(); if (data) setOportunidades([data[0], ...oportunidades]); }
-    fecharModalOportunidade();
-  };
-  const excluirOportunidade = async (id) => { if (!confirm("Excluir oportunidade?")) return; await supabase.from("oportunidades").delete().eq("id", id); setOportunidades(oportunidades.filter((o) => o.id !== id)); };
-  const moverOportunidade = async (id, estagio) => { const { data } = await supabase.from("oportunidades").update({ estagio }).eq("id", id).select(); if (data) setOportunidades(oportunidades.map((o) => (o.id === id ? data[0] : o))); };
-
-  const calcularTotalVenda = (itens, desconto) => { const sub = itens.reduce((s, i) => s + parseFloat(i.valor_unitario || 0) * parseFloat(i.quantidade || 1), 0); return Math.max(sub - parseFloat(desconto || 0), 0); };
-
-  const salvarVenda = async () => {
-    if (!formVenda.descricao.trim()) return alert("Descrição é obrigatória!");
-    const valorTotal = formVenda.itens.length > 0 ? calcularTotalVenda(formVenda.itens, formVenda.desconto) : parseFloat(formVenda.valor || 0);
-    const payload = { cliente_id: formVenda.cliente_id, descricao: formVenda.descricao, valor: valorTotal, data_venda: formVenda.data_venda, forma_pagamento: formVenda.forma_pagamento, observacoes: formVenda.observacoes, desconto: formVenda.desconto === "" ? 0 : parseFloat(formVenda.desconto), itens: formVenda.itens };
-    if (editandoVenda) { const { data } = await supabase.from("vendas").update(payload).eq("id", editandoVenda.id).select(); if (data) setVendas(vendas.map((v) => (v.id === editandoVenda.id ? data[0] : v))); }
-    else {
-      const { data } = await supabase.from("vendas").insert([{ ...payload, user_id: session.user.id, tenant_id: tenantId }]).select();
-      if (data) {
-        setVendas([data[0], ...vendas]);
-        const novoTitulo = { venda_id: data[0].id, descricao: data[0].descricao, valor: data[0].valor, data_emissao: new Date().toISOString().split("T")[0], data_vencimento: data[0].data_venda || new Date().toISOString().split("T")[0], status: "pendente", user_id: session.user.id, tenant_id: tenantId };
-        const { data: tituloData } = await supabase.from("titulos").insert([novoTitulo]).select(); if (tituloData) setTitulos([...titulos, tituloData[0]]);
-        const novaOS = { numero_os: "OS" + new Date().getFullYear() + "-" + String(Date.now()).slice(-6), venda_id: data[0].id, cliente_id: data[0].cliente_id, descricao: data[0].descricao, itens: data[0].itens || [], valor_total: data[0].valor, status: "aguardando_atendimento", data_abertura: data[0].data_venda || new Date().toISOString().split("T")[0], user_id: session.user.id, tenant_id: tenantId };
-        const { data: osData } = await supabase.from("ordens_servico").insert([novaOS]).select(); if (osData) setOrdensServico((prev) => [osData[0], ...prev]);
-      }
-    }
-    fecharModalVenda();
-  };
-  const excluirVenda = async (id) => { if (!confirm("Excluir venda?")) return; await supabase.from("vendas").delete().eq("id", id); setVendas(vendas.filter((v) => v.id !== id)); };
-
-  const salvarTitulo = async () => {
-    if (!formTitulo.descricao.trim()) return alert("Descrição é obrigatória!");
-    const dadosTitulo = { ...formTitulo, user_id: session.user.id, tenant_id: tenantId, data_pagamento: formTitulo.status === "pago" ? new Date().toISOString().split("T")[0] : null };
-    let novosTitulos = [...titulos];
-    if (editandoTitulo) { const { data } = await supabase.from("titulos").update(dadosTitulo).eq("id", editandoTitulo.id).select(); if (data) novosTitulos = novosTitulos.map((t) => (t.id === editandoTitulo.id ? data[0] : t)); }
-    else { const { data } = await supabase.from("titulos").insert([dadosTitulo]).select(); if (data) novosTitulos = [...novosTitulos, data[0]]; }
-    if (formTitulo.status === "pago" && formTitulo.venda_id) {
-      const vendaRel = vendas.find((v) => v.id === formTitulo.venda_id);
-      if (vendaRel) { const totalPago = novosTitulos.filter((t) => t.venda_id === vendaRel.id && t.status === "pago").reduce((a, t) => a + Number(t.valor), 0); const saldo = Number(vendaRel.valor) - totalPago;
-        if (saldo > 0.01) { const ts = { venda_id: vendaRel.id, descricao: `${vendaRel.descricao} (saldo)`, valor: saldo.toFixed(2), data_emissao: new Date().toISOString().split("T")[0], data_vencimento: formTitulo.data_vencimento || new Date().toISOString().split("T")[0], status: "pendente", user_id: session.user.id, tenant_id: tenantId }; const { data: sd } = await supabase.from("titulos").insert([ts]).select(); if (sd) novosTitulos = [...novosTitulos, sd[0]]; } }
-    }
-    setTitulos(novosTitulos); fecharModalTitulo();
-  };
-  const excluirTitulo = async (id) => { if (!confirm("Excluir título?")) return; await supabase.from("titulos").delete().eq("id", id); setTitulos(titulos.filter((t) => t.id !== id)); };
-
-  const marcarComoPago = async (id) => {
-    const { data } = await supabase.from("titulos").update({ status: "pago", data_pagamento: new Date().toISOString().split("T")[0] }).eq("id", id).select();
-    if (data) {
-      let nt = titulos.map((t) => (t.id === id ? data[0] : t)); const tp = data[0];
-      if (tp.venda_id) { const vr = vendas.find((v) => v.id === tp.venda_id);
-        if (vr) { const totalP = nt.filter((t) => t.venda_id === vr.id && t.status === "pago").reduce((a, t) => a + Number(t.valor), 0); const saldo = Number(vr.valor) - totalP;
-          if (saldo > 0.01) { const ts = { venda_id: vr.id, descricao: `${vr.descricao} (saldo)`, valor: saldo.toFixed(2), data_emissao: new Date().toISOString().split("T")[0], data_vencimento: tp.data_vencimento || new Date().toISOString().split("T")[0], status: "pendente", user_id: session.user.id, tenant_id: tenantId }; const { data: sd } = await supabase.from("titulos").insert([ts]).select(); if (sd) nt = [...nt, sd[0]]; } } }
-      setTitulos(nt);
-    }
-  };
 
   const salvarProduto = async () => {
     if (!formProduto.nome.trim()) return alert("Nome é obrigatório!");
@@ -421,12 +375,6 @@ function App() {
     setUsuarios(usuarios.filter((u) => u.id !== id));
   };
 
-  const abrirModalOportunidade = (o = null) => { if (o) { setEditandoOportunidade(o); setFormOportunidade({ titulo: o.titulo, cliente_id: o.cliente_id, produto_id: o.produto_id || "", valor: o.valor.toString(), estagio: o.estagio, data_inicio: o.data_inicio }); } setModalOportunidade(true); };
-  const fecharModalOportunidade = () => { setModalOportunidade(false); setEditandoOportunidade(null); setFormOportunidade({ titulo: "", cliente_id: "", produto_id: "", valor: "", estagio: "prospecção", data_inicio: new Date().toISOString().split("T")[0] }); };
-  const abrirModalVenda = (v = null) => { if (v) { setEditandoVenda(v); setFormVenda({ cliente_id: v.cliente_id, descricao: v.descricao, valor: v.valor.toString(), data_venda: v.data_venda, forma_pagamento: v.forma_pagamento, observacoes: v.observacoes || "", desconto: (v.desconto ?? 0).toString(), itens: v.itens || [] }); } setModalVenda(true); };
-  const fecharModalVenda = () => { setModalVenda(false); setEditandoVenda(null); setFormVenda({ cliente_id: "", descricao: "", valor: "", data_venda: new Date().toISOString().split("T")[0], forma_pagamento: "à vista", observacoes: "", desconto: "", itens: [] }); };
-  const abrirModalTitulo = (t = null) => { if (t) { setEditandoTitulo(t); setFormTitulo({ venda_id: t.venda_id || "", descricao: t.descricao, valor: t.valor.toString(), data_emissao: t.data_emissao, data_vencimento: t.data_vencimento, status: t.status }); } setModalTitulo(true); };
-  const fecharModalTitulo = () => { setModalTitulo(false); setEditandoTitulo(null); setFormTitulo({ venda_id: "", descricao: "", valor: "", data_emissao: new Date().toISOString().split("T")[0], data_vencimento: "", status: "pendente" }); };
   const abrirModalProduto = (p = null) => { if (p) { setEditandoProduto(p); setFormProduto({ nome: p.nome || "", tipo: p.tipo || "produto", descricao: p.descricao || "", categoria: p.categoria || "", preco_base: (p.preco_base ?? 0).toString(), custo: (p.custo ?? 0).toString(), unidade_medida: p.unidade_medida || "", ativo: p.ativo ?? true, observacoes: p.observacoes || "" }); } setModalProduto(true); };
   const fecharModalProduto = () => { setModalProduto(false); setEditandoProduto(null); setFormProduto({ nome: "", tipo: "produto", descricao: "", categoria: "", preco_base: "", custo: "", unidade_medida: "", ativo: true, observacoes: "" }); };
 
@@ -816,40 +764,29 @@ function App() {
         )}
 
         {viewMode === "pipeline" && (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between"><h2 className="text-sm font-semibold text-gray-700">Pipeline</h2><button onClick={() => abrirModalOportunidade()} className="inline-flex items-center gap-1 bg-gray-800 hover:bg-gray-700 text-white px-3 py-1.5 rounded text-xs font-medium" disabled={!clientes.length}><Icons.Plus />Nova Oportunidade</button></div>
-            {!clientes.length ? <div className="bg-white border border-gray-200 rounded p-8 text-center"><p className="text-gray-400 text-xs">Cadastre clientes primeiro.</p></div> : (
-              <div className="flex gap-2 overflow-x-auto pb-2">{estagios.map((est) => { const ops = oportunidades.filter((o) => o.estagio === est); const tot = ops.reduce((s, o) => s + parseFloat(o.valor || 0), 0); return (
-                <div key={est} className="flex-shrink-0 w-56">
-                  <div className={`rounded p-2 mb-2 ${est === "cancelado" ? "bg-red-50 border border-red-200" : "bg-gray-100 border border-gray-200"}`}><h3 className={`text-xs font-semibold capitalize ${est === "cancelado" ? "text-red-700" : "text-gray-700"}`}>{est}</h3><p className="text-[11px] text-gray-500">{ops.length} · R$ {fmtBRL(tot)}</p></div>
-                  <div className="space-y-1.5">{ops.map((op) => (
-                    <div key={op.id} className="bg-white border border-gray-200 rounded p-2">
-                      <div className="flex justify-between items-start mb-1"><h4 className="text-xs font-semibold text-gray-800 leading-tight">{op.titulo}</h4><div className="flex gap-0.5 ml-1"><button onClick={() => abrirModalOportunidade(op)} className="text-gray-400 hover:text-gray-600 p-0.5"><Icons.Edit className="w-3 h-3" /></button><button onClick={() => excluirOportunidade(op.id)} className="text-gray-400 hover:text-red-600 p-0.5"><Icons.Trash className="w-3 h-3" /></button></div></div>
-                      <p className="text-[11px] text-gray-500">{getClienteNome(op.cliente_id)}</p>
-                      {getProdutoNome(op.produto_id) && <p className="text-[11px] text-gray-400">{getProdutoNome(op.produto_id)}</p>}
-                      <p className="text-sm font-semibold text-green-700 my-1">R$ {fmtBRL(op.valor)}</p>
-                      <div className="flex gap-1">{estagios.map((e2, idx) => { const at = estagios.indexOf(op.estagio); if (idx !== at + 1 && idx !== at - 1) return null; const av = idx === at + 1; return <button key={e2} onClick={() => moverOportunidade(op.id, e2)} className="flex-1 px-1 py-0.5 text-[10px] rounded bg-gray-50 text-gray-600 hover:bg-gray-100">{av ? "→ Avançar" : "← Voltar"}</button>; })}</div>
-                    </div>
-                  ))}</div>
-                </div>
-              ); })}</div>
-            )}
-          </div>
+          <PipelinePage
+            oportunidades={oportunidades}
+            clientes={clientes}
+            produtos={produtos}
+            fmtBRL={fmtBRL}
+            getClienteNome={getClienteNome}
+            getProdutoNome={getProdutoNome}
+            onSalvar={salvarOportunidade}
+            onExcluir={excluirOportunidade}
+            onMover={moverOportunidade}
+          />
         )}
 
         {viewMode === "vendas" && (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between"><h2 className="text-sm font-semibold text-gray-700">Vendas</h2><button onClick={() => abrirModalVenda()} className="inline-flex items-center gap-1 bg-gray-800 hover:bg-gray-700 text-white px-3 py-1.5 rounded text-xs font-medium" disabled={!clientes.length}><Icons.Plus />Nova Venda</button></div>
-            <DataGrid columns={[
-              { key: "data_venda", label: "Data", render: (v) => new Date(v.data_venda).toLocaleDateString("pt-BR"), filterValue: (v) => new Date(v.data_venda).toLocaleDateString("pt-BR"), sortValue: (v) => v.data_venda },
-              { key: "cliente_id", label: "Cliente", render: (v) => <span className="font-medium">{getClienteNome(v.cliente_id)}</span>, filterValue: (v) => getClienteNome(v.cliente_id) },
-              { key: "descricao", label: "Descrição", filterValue: (v) => v.descricao || "" },
-              { key: "itens", label: "Produtos", filterable: false, render: (v) => v.itens && v.itens.length > 0 ? v.itens.map((it, i) => <div key={i} className="text-[11px]"><span className="font-medium">{it.nome}</span> <span className="text-gray-400">x{it.quantidade}</span></div>) : <span className="text-gray-300">-</span> },
-              { key: "desconto", label: "Desconto", render: (v) => parseFloat(v.desconto||0) > 0 ? <span className="text-red-600">-R$ {fmtBRL(v.desconto)}</span> : <span className="text-gray-300">-</span>, sortValue: (v) => parseFloat(v.desconto||0) },
-              { key: "forma_pagamento", label: "Pgto", render: (v) => <span className="capitalize">{v.forma_pagamento}</span>, filterValue: (v) => v.forma_pagamento || "" },
-              { key: "valor", label: "Valor", render: (v) => <span className="font-medium text-green-700">R$ {fmtBRL(v.valor)}</span>, sortValue: (v) => parseFloat(v.valor||0) },
-            ]} data={vendas} actions={(v) => actBtns(() => abrirModalVenda(v), () => excluirVenda(v.id))} emptyMessage="Nenhuma venda registrada." />
-          </div>
+          <VendasPage
+            vendas={vendas}
+            clientes={clientes}
+            produtos={produtos}
+            fmtBRL={fmtBRL}
+            onSalvar={salvarVenda}
+            onExcluir={excluirVenda}
+            getClienteNome={getClienteNome}
+          />
         )}
 
         {viewMode === "documentos" && (
@@ -861,21 +798,14 @@ function App() {
         )}
 
         {viewMode === "financeiro" && (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between"><h2 className="text-sm font-semibold text-gray-700">Financeiro</h2><button onClick={() => abrirModalTitulo()} className="inline-flex items-center gap-1 bg-gray-800 hover:bg-gray-700 text-white px-3 py-1.5 rounded text-xs font-medium"><Icons.Plus />Novo Título</button></div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div className="bg-white border border-green-200 rounded p-3"><span className="text-xs font-medium text-green-700">Pagos</span><p className="text-lg font-semibold text-green-700">R$ {fmtBRL(ind.totalRecebido)}</p><p className="text-[11px] text-green-600">{ind.numPagos} títulos</p></div>
-              <div className="bg-white border border-yellow-200 rounded p-3"><span className="text-xs font-medium text-yellow-700">Pendentes</span><p className="text-lg font-semibold text-yellow-700">R$ {fmtBRL(ind.totalReceber)}</p><p className="text-[11px] text-yellow-600">{ind.numPendentes} títulos</p></div>
-              <div className="bg-white border border-red-200 rounded p-3"><span className="text-xs font-medium text-red-700">Vencidos</span><p className="text-lg font-semibold text-red-700">R$ {fmtBRL(ind.totalVencido)}</p><p className="text-[11px] text-red-600">{ind.numVencidos} títulos</p></div>
-            </div>
-            <DataGrid columns={[
-              { key: "descricao", label: "Descrição", filterValue: (t) => t.descricao || "" },
-              { key: "data_emissao", label: "Emissão", render: (t) => new Date(t.data_emissao).toLocaleDateString("pt-BR"), filterValue: (t) => new Date(t.data_emissao).toLocaleDateString("pt-BR"), sortValue: (t) => t.data_emissao },
-              { key: "data_vencimento", label: "Vencimento", render: (t) => new Date(t.data_vencimento).toLocaleDateString("pt-BR"), filterValue: (t) => new Date(t.data_vencimento).toLocaleDateString("pt-BR"), sortValue: (t) => t.data_vencimento },
-              { key: "valor", label: "Valor", render: (t) => <span className="font-medium">R$ {fmtBRL(t.valor)}</span>, sortValue: (t) => parseFloat(t.valor||0) },
-              { key: "status", label: "Status", render: (t) => { const vc = t.status === "pendente" && new Date(t.data_vencimento) < new Date(); return t.status === "pago" ? <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] bg-green-50 text-green-700"><Icons.CheckCircle className="w-3 h-3" />Pago</span> : vc ? <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] bg-red-50 text-red-700"><Icons.XCircle className="w-3 h-3" />Vencido</span> : <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] bg-yellow-50 text-yellow-700"><Icons.Clock className="w-3 h-3" />Pendente</span>; }, filterValue: (t) => { const vc = t.status === "pendente" && new Date(t.data_vencimento) < new Date(); return t.status === "pago" ? "Pago" : vc ? "Vencido" : "Pendente"; } },
-            ]} data={titulos} actions={(t) => (<div className="flex items-center gap-1">{t.status === "pendente" && <button onClick={() => marcarComoPago(t.id)} className="text-green-600 hover:bg-green-50 px-1.5 py-0.5 rounded text-[11px] font-medium">Pagar</button>}<button onClick={() => abrirModalTitulo(t)} className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 p-1 rounded"><Icons.Edit /></button><button onClick={() => excluirTitulo(t.id)} className="text-gray-400 hover:text-red-600 hover:bg-red-50 p-1 rounded"><Icons.Trash /></button></div>)} rowClassName={(t) => t.status === "pendente" && new Date(t.data_vencimento) < new Date() ? "bg-red-50/50" : ""} emptyMessage="Nenhum título cadastrado." />
-          </div>
+          <FinanceiroPage
+            titulos={titulos}
+            vendas={vendas}
+            fmtBRL={fmtBRL}
+            onSalvar={salvarTitulo}
+            onExcluir={excluirTitulo}
+            onMarcarPago={marcarComoPago}
+          />
         )}
 
         {viewMode === "tecnicos" && (
@@ -1114,17 +1044,6 @@ function App() {
 
       {modalProduto && (<div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50"><div className="bg-white rounded-lg border border-gray-200 max-w-sm w-full p-4 max-h-[90vh] overflow-y-auto"><h3 className="text-sm font-semibold mb-3">{editandoProduto ? "Editar Produto" : "Novo Produto"}</h3><div className="space-y-2.5"><div><label className="block text-xs text-gray-600 mb-0.5">Nome *</label><input type="text" value={formProduto.nome} onChange={(e) => setFormProduto({...formProduto, nome: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" /></div><div><label className="block text-xs text-gray-600 mb-0.5">Tipo</label><select value={formProduto.tipo} onChange={(e) => setFormProduto({...formProduto, tipo: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"><option value="produto">Produto</option><option value="servico">Serviço</option></select></div><div><label className="block text-xs text-gray-600 mb-0.5">Categoria</label><input type="text" value={formProduto.categoria} onChange={(e) => setFormProduto({...formProduto, categoria: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" /></div><div><label className="block text-xs text-gray-600 mb-0.5">Descrição</label><textarea value={formProduto.descricao} onChange={(e) => setFormProduto({...formProduto, descricao: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" rows="2" /></div><div className="grid grid-cols-2 gap-2"><div><label className="block text-xs text-gray-600 mb-0.5">Preço (R$)</label><input type="number" step="0.01" value={formProduto.preco_base} onChange={(e) => setFormProduto({...formProduto, preco_base: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" /></div><div><label className="block text-xs text-gray-600 mb-0.5">Custo (R$)</label><input type="number" step="0.01" value={formProduto.custo} onChange={(e) => setFormProduto({...formProduto, custo: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" /></div></div><div><label className="block text-xs text-gray-600 mb-0.5">Unidade</label><input type="text" value={formProduto.unidade_medida} onChange={(e) => setFormProduto({...formProduto, unidade_medida: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" placeholder="un, hora, kg..." /></div><div className="flex items-center gap-2"><input id="pa" type="checkbox" checked={!!formProduto.ativo} onChange={(e) => setFormProduto({...formProduto, ativo: e.target.checked})} /><label htmlFor="pa" className="text-xs text-gray-600">Ativo</label></div><div><label className="block text-xs text-gray-600 mb-0.5">Observações</label><textarea value={formProduto.observacoes} onChange={(e) => setFormProduto({...formProduto, observacoes: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" rows="2" /></div></div><div className="flex gap-2 mt-4"><button onClick={fecharModalProduto} className="flex-1 px-3 py-1.5 border border-gray-200 rounded text-xs hover:bg-gray-50">Cancelar</button><button onClick={salvarProduto} className="flex-1 px-3 py-1.5 bg-gray-800 text-white rounded text-xs hover:bg-gray-700">{editandoProduto ? "Salvar" : "Adicionar"}</button></div></div></div>)}
 
-      {modalOportunidade && (<div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50"><div className="bg-white rounded-lg border border-gray-200 max-w-sm w-full p-4"><h3 className="text-sm font-semibold mb-3">{editandoOportunidade ? "Editar Oportunidade" : "Nova Oportunidade"}</h3><div className="space-y-2.5"><div><label className="block text-xs text-gray-600 mb-0.5">Título *</label><input type="text" value={formOportunidade.titulo} onChange={(e) => setFormOportunidade({...formOportunidade, titulo: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" /></div><div><label className="block text-xs text-gray-600 mb-0.5">Cliente *</label><select value={formOportunidade.cliente_id} onChange={(e) => setFormOportunidade({...formOportunidade, cliente_id: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"><option value="">Selecione</option>{clientes.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}</select></div><div><label className="block text-xs text-gray-600 mb-0.5">Produto</label><select value={formOportunidade.produto_id} onChange={(e) => { const pid = e.target.value; const ps = produtos.find((p) => p.id === pid); setFormOportunidade({...formOportunidade, produto_id: pid, valor: ps ? ps.preco_base.toString() : formOportunidade.valor}); }} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"><option value="">Nenhum</option>{produtos.filter((p) => p.ativo !== false).map((p) => <option key={p.id} value={p.id}>{p.nome} — R$ {fmtBRL(p.preco_base)}</option>)}</select></div><div><label className="block text-xs text-gray-600 mb-0.5">Valor (R$)</label><input type="number" step="0.01" value={formOportunidade.valor} onChange={(e) => setFormOportunidade({...formOportunidade, valor: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" /></div><div><label className="block text-xs text-gray-600 mb-0.5">Estágio</label><select value={formOportunidade.estagio} onChange={(e) => setFormOportunidade({...formOportunidade, estagio: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none">{estagios.map((e) => <option key={e} value={e}>{e.charAt(0).toUpperCase()+e.slice(1)}</option>)}</select></div><div><label className="block text-xs text-gray-600 mb-0.5">Data de Início</label><input type="date" value={formOportunidade.data_inicio} onChange={(e) => setFormOportunidade({...formOportunidade, data_inicio: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" /></div></div><div className="flex gap-2 mt-4"><button onClick={fecharModalOportunidade} className="flex-1 px-3 py-1.5 border border-gray-200 rounded text-xs hover:bg-gray-50">Cancelar</button><button onClick={salvarOportunidade} className="flex-1 px-3 py-1.5 bg-gray-800 text-white rounded text-xs hover:bg-gray-700">{editandoOportunidade ? "Salvar" : "Adicionar"}</button></div></div></div>)}
-
-      {modalVenda && (<div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50"><div className="bg-white rounded-lg border border-gray-200 max-w-xl w-full p-4 max-h-[90vh] overflow-y-auto"><h3 className="text-sm font-semibold mb-3">{editandoVenda ? "Editar Venda" : "Nova Venda"}</h3><div className="space-y-2.5"><div><label className="block text-xs text-gray-600 mb-0.5">Cliente *</label><select value={formVenda.cliente_id} onChange={(e) => setFormVenda({...formVenda, cliente_id: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"><option value="">Selecione</option>{clientes.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}</select></div><div><label className="block text-xs text-gray-600 mb-0.5">Descrição *</label><input type="text" value={formVenda.descricao} onChange={(e) => setFormVenda({...formVenda, descricao: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" /></div>
-      <div><label className="block text-xs text-gray-600 mb-1">Produtos</label><div className="flex gap-2 mb-2"><select id="venda-produto-select" className="flex-1 border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" defaultValue=""><option value="">Selecione um produto</option>{produtos.filter((p) => p.ativo !== false).map((p) => <option key={p.id} value={p.id}>{p.nome} — R$ {fmtBRL(p.preco_base)}</option>)}</select><button type="button" onClick={() => { const sel = document.getElementById("venda-produto-select"); const pid = sel.value; if (!pid) return; const prod = produtos.find((p) => p.id === pid); if (!prod) return; setFormVenda({...formVenda, itens: [...formVenda.itens, { produto_id: prod.id, nome: prod.nome, quantidade: 1, valor_unitario: parseFloat(prod.preco_base || 0) }]}); sel.value = ""; }} className="px-2.5 py-1.5 bg-gray-800 text-white rounded text-xs hover:bg-gray-700 flex items-center gap-1"><Icons.Plus className="w-3 h-3" />Add</button></div>
-      {formVenda.itens.length > 0 && (<div className="border border-gray-200 rounded overflow-hidden"><table className="w-full text-sm"><thead className="bg-gray-50 border-b"><tr><th className="px-2 py-1 text-left text-[11px] text-gray-500">Produto</th><th className="px-2 py-1 text-left text-[11px] text-gray-500 w-16">Qtd</th><th className="px-2 py-1 text-left text-[11px] text-gray-500 w-24">Unit.</th><th className="px-2 py-1 text-left text-[11px] text-gray-500 w-24">Subtotal</th><th className="px-2 py-1 w-8"></th></tr></thead><tbody className="divide-y">{formVenda.itens.map((item, idx) => (<tr key={idx}><td className="px-2 py-1 text-xs">{item.nome}</td><td className="px-2 py-1"><input type="number" min="1" value={item.quantidade} onChange={(e) => { const n = [...formVenda.itens]; n[idx] = {...n[idx], quantidade: parseInt(e.target.value)||1}; setFormVenda({...formVenda, itens: n}); }} className="w-14 border rounded px-1.5 py-0.5 text-xs text-center" /></td><td className="px-2 py-1"><input type="number" step="0.01" value={item.valor_unitario} onChange={(e) => { const n = [...formVenda.itens]; n[idx] = {...n[idx], valor_unitario: parseFloat(e.target.value)||0}; setFormVenda({...formVenda, itens: n}); }} className="w-20 border rounded px-1.5 py-0.5 text-xs" /></td><td className="px-2 py-1 text-xs font-medium text-green-700">R$ {fmtBRL(parseFloat(item.valor_unitario||0)*parseFloat(item.quantidade||1))}</td><td className="px-2 py-1"><button type="button" onClick={() => setFormVenda({...formVenda, itens: formVenda.itens.filter((_,i) => i !== idx)})} className="text-gray-400 hover:text-red-600 p-0.5"><Icons.Trash className="w-3 h-3" /></button></td></tr>))}</tbody></table></div>)}</div>
-      <div><label className="block text-xs text-gray-600 mb-0.5">Desconto (R$)</label><input type="number" step="0.01" value={formVenda.desconto} onChange={(e) => setFormVenda({...formVenda, desconto: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" placeholder="0,00" /></div>
-      {formVenda.itens.length > 0 ? (<div className="bg-gray-50 rounded p-3 text-sm"><div className="flex justify-between text-gray-600 text-xs"><span>Subtotal:</span><span>R$ {fmtBRL(formVenda.itens.reduce((s, i) => s + parseFloat(i.valor_unitario||0)*parseFloat(i.quantidade||1), 0))}</span></div>{parseFloat(formVenda.desconto||0) > 0 && <div className="flex justify-between text-red-600 text-xs"><span>Desconto:</span><span>- R$ {fmtBRL(formVenda.desconto)}</span></div>}<div className="flex justify-between font-semibold text-green-700 border-t pt-1.5 mt-1.5"><span>Total:</span><span>R$ {fmtBRL(calcularTotalVenda(formVenda.itens, formVenda.desconto))}</span></div></div>) : (<div><label className="block text-xs text-gray-600 mb-0.5">Valor (R$) *</label><input type="number" step="0.01" value={formVenda.valor} onChange={(e) => setFormVenda({...formVenda, valor: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" /></div>)}
-      <div><label className="block text-xs text-gray-600 mb-0.5">Data</label><input type="date" value={formVenda.data_venda} onChange={(e) => setFormVenda({...formVenda, data_venda: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" /></div>
-      <div><label className="block text-xs text-gray-600 mb-0.5">Pagamento</label><select value={formVenda.forma_pagamento} onChange={(e) => setFormVenda({...formVenda, forma_pagamento: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none">{["à vista","parcelado","boleto","cartão","pix"].map((f) => <option key={f} value={f}>{f.charAt(0).toUpperCase()+f.slice(1)}</option>)}</select></div>
-      <div><label className="block text-xs text-gray-600 mb-0.5">Observações</label><textarea value={formVenda.observacoes} onChange={(e) => setFormVenda({...formVenda, observacoes: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" rows="2" /></div></div><div className="flex gap-2 mt-4"><button onClick={fecharModalVenda} className="flex-1 px-3 py-1.5 border border-gray-200 rounded text-xs hover:bg-gray-50">Cancelar</button><button onClick={salvarVenda} className="flex-1 px-3 py-1.5 bg-gray-800 text-white rounded text-xs hover:bg-gray-700">{editandoVenda ? "Salvar" : "Adicionar"}</button></div></div></div>)}
-
       {modalUsuario && (<div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50"><div className="bg-white rounded-lg border border-gray-200 max-w-sm w-full p-4 max-h-[90vh] overflow-y-auto"><h3 className="text-sm font-semibold mb-3">{editandoUsuario ? "Editar Usuário" : "Novo Usuário"}</h3><div className="space-y-2.5">
         {!editandoUsuario && (<div className="flex gap-1 mb-1"><button onClick={() => setModoModalUsuario("vincular")} className={`flex-1 px-2 py-1 text-xs rounded border ${modoModalUsuario === "vincular" ? "bg-gray-800 text-white border-gray-800" : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"}`}>Vincular existente</button><button onClick={() => setModoModalUsuario("criar")} className={`flex-1 px-2 py-1 text-xs rounded border ${modoModalUsuario === "criar" ? "bg-gray-800 text-white border-gray-800" : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"}`}>Criar novo</button></div>)}
         {!editandoUsuario && modoModalUsuario === "vincular" && (<div><label className="block text-xs text-gray-600 mb-0.5">Usuário *</label>{usuariosSistema.length === 0 ? (<p className="text-xs text-gray-400 italic">Nenhum usuário disponível. Use "Criar novo" para cadastrar.</p>) : (<select value={formUsuario.user_id} onChange={(e) => setFormUsuario({...formUsuario, user_id: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"><option value="">Selecione um usuário...</option>{usuariosSistema.map((u) => <option key={u.user_id} value={u.user_id}>{u.email}</option>)}</select>)}</div>)}
@@ -1153,19 +1072,6 @@ function App() {
           onFechar={fecharModalEncaminhar}
         />
       )}
-
-      {modalTitulo && (() => { const vr = formTitulo.venda_id ? vendas.find((v) => v.id === formTitulo.venda_id) : null; const sv = vr ? vr.valor - titulos.filter((t) => t.venda_id === vr.id && t.status === "pago" && (!editandoTitulo || t.id !== editandoTitulo.id)).reduce((a, t) => a + Number(t.valor), 0) : null; return (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50"><div className="bg-white rounded-lg border border-gray-200 max-w-sm w-full p-4"><h3 className="text-sm font-semibold mb-3">{editandoTitulo ? "Editar Título" : "Novo Título"}</h3><div className="space-y-2.5">
-        {vr && (<div className="bg-gray-50 border border-gray-200 rounded p-2.5 space-y-1"><p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Venda Relacionada</p><div className="flex justify-between text-xs"><span className="text-gray-700">{vr.descricao}</span><span className="font-medium">R$ {Number(vr.valor).toFixed(2)}</span></div><div className="flex justify-between border-t border-gray-200 pt-1 text-xs"><span className="font-medium text-gray-700">Saldo</span><span className={`font-semibold ${sv > 0 ? "text-yellow-600" : "text-green-600"}`}>R$ {sv.toFixed(2)}</span></div></div>)}
-        <div><label className="block text-xs text-gray-600 mb-0.5">Descrição *</label><input type="text" value={formTitulo.descricao} onChange={(e) => setFormTitulo({...formTitulo, descricao: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" /></div>
-        <div><label className="block text-xs text-gray-600 mb-0.5">Valor (R$) *</label><input type="number" step="0.01" value={formTitulo.valor} onChange={(e) => setFormTitulo({...formTitulo, valor: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" /></div>
-        <div><label className="block text-xs text-gray-600 mb-0.5">Emissão</label><input type="date" value={formTitulo.data_emissao} onChange={(e) => setFormTitulo({...formTitulo, data_emissao: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" /></div>
-        <div><label className="block text-xs text-gray-600 mb-0.5">Vencimento *</label><input type="date" value={formTitulo.data_vencimento} onChange={(e) => setFormTitulo({...formTitulo, data_vencimento: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" /></div>
-        <div><label className="block text-xs text-gray-600 mb-0.5">Status</label><select value={formTitulo.status} onChange={(e) => setFormTitulo({...formTitulo, status: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"><option value="pendente">Pendente</option><option value="pago">Pago</option></select></div>
-        </div><div className="flex gap-2 mt-4"><button onClick={fecharModalTitulo} className="flex-1 px-3 py-1.5 border border-gray-200 rounded text-xs hover:bg-gray-50">Cancelar</button><button onClick={salvarTitulo} className="flex-1 px-3 py-1.5 bg-gray-800 text-white rounded text-xs hover:bg-gray-700">{editandoTitulo ? "Salvar" : "Adicionar"}</button></div></div></div>
-      ); })()}
-
-
 
       <VincularEstoqueModal
         aberto={modalVincularEstoque}
