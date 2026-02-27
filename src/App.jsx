@@ -6,6 +6,11 @@ import { useClientes } from "./hooks/useClientes";
 import { ClientesPage } from "./pages/Clientes";
 import { useEstoque } from "./hooks/useEstoque";
 import { EstoqueItensPage } from "./pages/EstoqueItens";
+import { useMovimentosBancarios } from "./hooks/useMovimentosBancarios";
+import { ContasBancariasPage } from "./pages/ContasBancarias";
+import { MovimentosBancariosPage } from "./pages/MovimentosBancarios";
+import { ConciliacaoBancariaPage } from "./pages/ConciliacaoBancaria";
+import { DocumentosPage } from "./pages/Documentos";
 import { EstoqueMovimentacoesPage } from "./pages/EstoqueMovimentacoes";
 import { VincularEstoqueModal } from "./components/modals/VincularEstoqueModal";
 import { useTecnicos } from "./hooks/useTecnicos";
@@ -17,6 +22,16 @@ import { PipelinePage } from "./pages/Pipeline";
 import { useVendas } from "./hooks/useVendas";
 import { VendasPage } from "./pages/Vendas";
 import { FinanceiroPage } from "./pages/Financeiro";
+import { EvolucaoModal } from "./components/modals/EvolucaoModal";
+import { useTenants } from "./hooks/useTenants";
+import { TenantsPage } from "./pages/Tenants";
+import { useFornecedores } from "./hooks/useFornecedores";
+import { FornecedoresPage } from "./pages/Fornecedores";
+import { useCentrosCusto } from "./hooks/useCentrosCusto";
+import { CentrosCustoPage } from "./pages/CentrosCusto";
+import { useContasPagar } from "./hooks/useContasPagar";
+import { ContasPagarPage } from "./pages/ContasPagar";
+import { ContasPagarDashboard } from "./pages/ContasPagarDashboard";
 
 const checkIsMobile = () => {
   const isSmartphone = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -33,7 +48,7 @@ function App() {
   const [viewMode, setViewMode] = useState("dashboard");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [selectedTenantId, setSelectedTenantId] = useState("");
+  const [selectedTenantId, setSelectedTenantId] = useState(() => localStorage.getItem('crm_selectedTenantId') || "");
   const [tenantsList, setTenantsList] = useState([]);
   const [tenantLocked, setTenantLocked] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
@@ -44,14 +59,25 @@ function App() {
   const [editandoProduto, setEditandoProduto] = useState(null);
   const [editandoUsuario, setEditandoUsuario] = useState(null);
   const [formProduto, setFormProduto] = useState({ nome: "", tipo: "produto", descricao: "", categoria: "", preco_base: "", custo: "", unidade_medida: "", ativo: true, observacoes: "" });
-  const [formUsuario, setFormUsuario] = useState({ email: "", role: "member" });
+  const [formUsuario, setFormUsuario] = useState({ user_id: "", role: "member" });
+  const [usuariosSistema, setUsuariosSistema] = useState([]);
+  const [modoModalUsuario, setModoModalUsuario] = useState("vincular"); // "vincular" | "criar"
+  const [formNovoUsuario, setFormNovoUsuario] = useState({ email: "", role: "member" });
   const [ordensServico, setOrdensServico] = useState([]);
   const [modalEncaminhar, setModalEncaminhar] = useState(false);
   const [osEncaminhar, setOsEncaminhar] = useState(null);
+  const [modalEvolucao, setModalEvolucao] = useState(false);
+  const [osEvolucao, setOsEvolucao] = useState(null);
+  const [atendimentoBusca, setAtendimentoBusca] = useState("");
+  const [atendimentoClienteSelecionado, setAtendimentoClienteSelecionado] = useState(null);
+  const [atendimentoVendaSelecionada, setAtendimentoVendaSelecionada] = useState(null);
   const [openDropdown, setOpenDropdown] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(checkIsMobile);
   const [tenantCor, setTenantCor] = useState(null);
+  const [tenantSlogan, setTenantSlogan] = useState("");
+  const [userRole, setUserRole] = useState(null);
+  const estagios = ["prospecção", "qualificação", "proposta", "negociação", "fechado", "cancelado"];
   // VincularEstoqueModal é acionado pela view de Produtos (ainda no App)
   const [modalVincularEstoque, setModalVincularEstoque] = useState(false);
   const [vinculoProduto, setVinculoProduto] = useState(null);
@@ -118,10 +144,68 @@ function App() {
     excluirTitulo,
     marcarComoPago,
   } = useVendas(tenantId, session?.user?.id, (os) => setOrdensServico((prev) => [os, ...prev]));
+    contasBancarias,
+    setContasBancarias,
+    movimentosBancarios,
+    setMovimentosBancarios,
+    conciliacoesBancarias,
+    setConciliacoesBancarias,
+    carregarContas: carregarContasBancarias,
+    salvarConta: salvarContaBancaria,
+    excluirConta: excluirContaBancaria,
+    carregarMovimentos: carregarMovimentosBancarios,
+    salvarMovimento: salvarMovimentoBancario,
+    excluirMovimento: excluirMovimentoBancario,
+    carregarConciliacoes: carregarConciliacoesBancarias,
+    salvarConciliacao: salvarConciliacaoBancaria,
+    excluirConciliacao: excluirConciliacaoBancaria,
+  } = useMovimentosBancarios(tenantId, session?.user?.id);
+
+  const {
+    tenants,
+    setTenants,
+    carregar: carregarTodosTenants,
+    salvar: salvarTenant,
+    excluir: excluirTenant,
+  } = useTenants();
+
+  const {
+    fornecedores,
+    setFornecedores,
+    carregar: carregarFornecedores,
+    salvar: salvarFornecedor,
+    excluir: excluirFornecedor,
+  } = useFornecedores(tenantId, session?.user?.id);
+
+  const {
+    centrosCusto,
+    setCentrosCusto,
+    carregar: carregarCentrosCusto,
+    salvar: salvarCentroCusto,
+    excluir: excluirCentroCusto,
+  } = useCentrosCusto(tenantId, session?.user?.id);
+
+  const {
+    contasPagar,
+    setContasPagar,
+    parcelas: parcelasContasPagar,
+    setParcelas: setParcelasContasPagar,
+    carregarContas: carregarContasPagar,
+    carregarParcelas: carregarParcelasContasPagar,
+    salvarConta: salvarContaPagar,
+    excluirConta: excluirContaPagar,
+    pagarParcela,
+    criarContaDaCompraEstoque,
+  } = useContasPagar(tenantId, session?.user?.id);
 
   useEffect(() => { supabase.auth.getSession().then(({ data: { session } }) => { setSession(session); setLoading(false); }); const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setSession(session)); return () => subscription.unsubscribe(); }, []);
 
   useEffect(() => { carregarTenants(); }, []);
+  useEffect(() => {
+    if (selectedTenantId) {
+      localStorage.setItem('crm_selectedTenantId', selectedTenantId);
+    }
+  }, [selectedTenantId]);
   useEffect(() => {
     if (!openDropdown) return;
     const close = () => setOpenDropdown(null);
@@ -158,6 +242,7 @@ function App() {
     } else {
       setTenantId(null);
       setTenantNome("");
+      setTenantSlogan("");
     }
   }, [session]);
 
@@ -165,14 +250,16 @@ function App() {
     if (selectedTenantId) {
       const { data } = await supabase
         .from("tenant_members")
-        .select("tenant_id, tenants(id, nome, cor)")
+        .select("tenant_id, role, tenants(id, nome, slogan, cor)")
         .eq("user_id", session.user.id)
         .eq("tenant_id", selectedTenantId)
         .single();
       if (data) {
         setTenantId(data.tenant_id);
         setTenantNome(data.tenants?.nome || "");
+        setTenantSlogan(data.tenants?.slogan || "");
         setTenantCor(data.tenants?.cor || null);
+        setUserRole(data.role || "member");
       } else {
         setAuthMessage("Erro: Você não tem acesso a este tenant.");
         await supabase.auth.signOut();
@@ -180,21 +267,25 @@ function App() {
     } else {
       const { data } = await supabase
         .from("tenant_members")
-        .select("tenant_id, tenants(id, nome, cor)")
+        .select("tenant_id, role, tenants(id, nome, slogan, cor)")
         .eq("user_id", session.user.id)
         .limit(1)
         .single();
       if (data) {
         setTenantId(data.tenant_id);
         setTenantNome(data.tenants?.nome || "");
+        setTenantSlogan(data.tenants?.slogan || "");
         setTenantCor(data.tenants?.cor || null);
+        setUserRole(data.role || "member");
       }
     }
   };
 
   useEffect(() => { if (session && tenantId) carregarTodosDados(); }, [session, tenantId]);
+  useEffect(() => { if (session && tenantId && userRole === "owner") carregarDadosOwner(); }, [session, tenantId, userRole]);
 
-  const carregarTodosDados = async () => { await Promise.all([carregarClientes(), carregarUsuarios(), carregarOportunidades(), carregarVendas(), carregarTitulos(), carregarProdutos(), carregarTecnicos(), carregarOrdensServico(), carregarComissoes(), carregarEstoqueItens(), carregarEstoqueMovimentacoes(), carregarProdutoEstoqueVinculos()]); };
+  const carregarTodosDados = async () => { await Promise.all([carregarClientes(), carregarUsuarios(), carregarOportunidades(), carregarVendas(), carregarTitulos(), carregarProdutos(), carregarTecnicos(), carregarOrdensServico(), carregarComissoes(), carregarEstoqueItens(), carregarEstoqueMovimentacoes(), carregarProdutoEstoqueVinculos(), carregarContasBancarias(), carregarMovimentosBancarios(), carregarConciliacoesBancarias(), carregarFornecedores(), carregarCentrosCusto(), carregarContasPagar(), carregarParcelasContasPagar()]); };
+  const carregarDadosOwner = async () => { try { await carregarTodosTenants(); } catch (e) { /* usuário sem permissão de owner — ignorar */ } };
   const carregarUsuarios = async () => {
     const { data, error } = await supabase.rpc("get_tenant_members_with_email", { p_tenant_id: tenantId });
     if (!error && data) {
@@ -209,7 +300,7 @@ function App() {
 
   const handleSignUp = async (e) => { e.preventDefault(); setAuthMessage(""); const { error } = await supabase.auth.signUp({ email, password }); setAuthMessage(error ? "Erro: " + error.message : "Conta criada! Verifique seu email."); };
   const handleSignIn = async (e) => { e.preventDefault(); setAuthMessage(""); const { error } = await supabase.auth.signInWithPassword({ email, password }); if (error) setAuthMessage("Erro: " + error.message); };
-  const handleSignOut = async () => { await supabase.auth.signOut(); setClientes([]); setUsuarios([]); setOportunidades([]); setVendas([]); setTitulos([]); setProdutos([]); setTecnicos([]); setOrdensServico([]); setComissoes([]); setEstoqueItens([]); setEstoqueMovimentacoes([]); setProdutoEstoqueVinculos([]); setTenantId(null); setTenantNome(""); setSelectedTenantId(""); };
+  const handleSignOut = async () => { await supabase.auth.signOut(); localStorage.removeItem('crm_selectedTenantId'); setClientes([]); setUsuarios([]); setUsuariosSistema([]); setOportunidades([]); setVendas([]); setTitulos([]); setProdutos([]); setTecnicos([]); setOrdensServico([]); setComissoes([]); setEstoqueItens([]); setEstoqueMovimentacoes([]); setProdutoEstoqueVinculos([]); setContasBancarias([]); setMovimentosBancarios([]); setConciliacoesBancarias([]); setTenants([]); setFornecedores([]); setCentrosCusto([]); setContasPagar([]); setParcelasContasPagar([]); setTenantId(null); setTenantNome(""); setTenantSlogan(""); setSelectedTenantId(""); setUserRole(null); };
 
   const salvarProduto = async () => {
     if (!formProduto.nome.trim()) return alert("Nome é obrigatório!");
@@ -243,18 +334,40 @@ function App() {
   const excluirOrdemServico = async (id) => { if (!confirm("Excluir ordem de serviço?")) return; await supabase.from("ordens_servico").delete().eq("id", id); setOrdensServico(ordensServico.filter((o) => o.id !== id)); };
 
   const salvarUsuario = async () => {
-    if (!formUsuario.email.trim()) return alert("Email é obrigatório!");
     if (editandoUsuario) {
       const { data, error } = await supabase.rpc("update_tenant_member_role", { p_member_id: editandoUsuario.id, p_tenant_id: tenantId, p_role: formUsuario.role || "member" });
       if (error) return alert(`Erro ao atualizar membro: ${error.message}`);
       if (data && data.length > 0) { setUsuarios(usuarios.map((u) => (u.id === editandoUsuario.id ? data[0] : u))); } else { await carregarUsuarios(); }
     } else {
-      const { data, error } = await supabase.rpc("add_tenant_member_by_email", { p_tenant_id: tenantId, p_email: formUsuario.email.trim(), p_role: formUsuario.role || "member" });
-      if (error) return alert(`Erro ao adicionar membro: ${error.message}`);
+      if (!formUsuario.user_id) return alert("Selecione um usuário!");
+      const { data, error } = await supabase.rpc("add_tenant_member_by_userid", { p_tenant_id: tenantId, p_user_id: formUsuario.user_id, p_role: formUsuario.role || "member" });
+      if (error) return alert(`Erro ao vincular usuário: ${error.message}`);
       if (data && data.length > 0) { setUsuarios([data[0], ...usuarios]); } else { await carregarUsuarios(); }
     }
     fecharModalUsuario();
   };
+
+  const criarEVincularUsuario = async () => {
+    if (!formNovoUsuario.email?.trim()) return alert("Digite o email do novo usuário!");
+    const { data: { session: adminSession } } = await supabase.auth.getSession();
+    const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-4).toUpperCase() + "1!";
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({ email: formNovoUsuario.email.trim(), password: tempPassword });
+    if (signUpError) return alert(`Erro ao criar usuário: ${signUpError.message}`);
+    if (!signUpData?.user?.id) return alert("Erro ao criar usuário: dados não retornados.");
+    const newUserId = signUpData.user.id;
+    if (adminSession) {
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      if (!currentSession || currentSession.user.id !== adminSession.user.id) {
+        await supabase.auth.setSession({ access_token: adminSession.access_token, refresh_token: adminSession.refresh_token });
+      }
+    }
+    const { data, error } = await supabase.rpc("add_tenant_member_by_userid", { p_tenant_id: tenantId, p_user_id: newUserId, p_role: formNovoUsuario.role || "member" });
+    if (error) return alert(`Usuário criado mas erro ao vincular ao tenant: ${error.message}`);
+    if (data && data.length > 0) { setUsuarios([data[0], ...usuarios]); } else { await carregarUsuarios(); }
+    fecharModalUsuario();
+    alert(`Usuário criado! Um email de confirmação foi enviado para ${formNovoUsuario.email.trim()}.`);
+  };
+
   const excluirUsuario = async (id) => {
     if (!confirm("Excluir usuário?")) return;
     const { error } = await supabase.rpc("remove_tenant_member", { p_member_id: id, p_tenant_id: tenantId });
@@ -265,11 +378,29 @@ function App() {
   const abrirModalProduto = (p = null) => { if (p) { setEditandoProduto(p); setFormProduto({ nome: p.nome || "", tipo: p.tipo || "produto", descricao: p.descricao || "", categoria: p.categoria || "", preco_base: (p.preco_base ?? 0).toString(), custo: (p.custo ?? 0).toString(), unidade_medida: p.unidade_medida || "", ativo: p.ativo ?? true, observacoes: p.observacoes || "" }); } setModalProduto(true); };
   const fecharModalProduto = () => { setModalProduto(false); setEditandoProduto(null); setFormProduto({ nome: "", tipo: "produto", descricao: "", categoria: "", preco_base: "", custo: "", unidade_medida: "", ativo: true, observacoes: "" }); };
 
-  const abrirModalUsuario = (u = null) => { if (u) { setEditandoUsuario(u); setFormUsuario({ email: u.email || "", role: u.role || "member" }); } setModalUsuario(true); };
-  const fecharModalUsuario = () => { setModalUsuario(false); setEditandoUsuario(null); setFormUsuario({ email: "", role: "member" }); };
+  const abrirModalUsuario = async (u = null) => {
+    if (u) {
+      setEditandoUsuario(u);
+      setFormUsuario({ user_id: u.user_id || "", role: u.role || "member" });
+    } else {
+      setEditandoUsuario(null);
+      setFormUsuario({ user_id: "", role: "member" });
+      const { data, error } = await supabase.rpc("get_system_users_for_tenant", { p_tenant_id: tenantId });
+      if (!error && data) setUsuariosSistema(data);
+    }
+    setModalUsuario(true);
+  };
+  const fecharModalUsuario = () => { setModalUsuario(false); setEditandoUsuario(null); setFormUsuario({ user_id: "", role: "member" }); setUsuariosSistema([]); setModoModalUsuario("vincular"); setFormNovoUsuario({ email: "", role: "member" }); };
 
   const abrirModalEncaminhar = (os) => { setOsEncaminhar(os); setModalEncaminhar(true); };
   const fecharModalEncaminhar = () => { setModalEncaminhar(false); setOsEncaminhar(null); };
+  const abrirModalEvolucao = (os) => { setOsEvolucao(os); setModalEvolucao(true); };
+  const fecharModalEvolucao = () => { setModalEvolucao(false); setOsEvolucao(null); };
+  const salvarEvolucao = async (osId, textoFinal) => {
+    const { data } = await supabase.from("ordens_servico").update({ observacoes: textoFinal }).eq("id", osId).select();
+    if (data) setOrdensServico(ordensServico.map((o) => (o.id === osId ? data[0] : o)));
+    fecharModalEvolucao();
+  };
 
   const getClienteNome = (id) => clientes.find((c) => c.id === id)?.nome || "N/A";
   const getProdutoNome = (id) => produtos.find((p) => p.id === id)?.nome || null;
@@ -328,15 +459,67 @@ function App() {
   );
 
   const ind = calcularIndicadores();
+  const isOwner = userRole === "owner";
   const navGroups = [
     {
       key: "admin",
       label: "Administrativo",
       icon: <Icons.Cog />,
-      items: [
-        { key: "usuarios", label: "Usuários", icon: <Icons.User />, count: usuarios.length },
-        { key: "tecnicos", label: "Profissionais / Técnicos", icon: <Icons.Cog />, count: tecnicos.length },
-        { key: "produtos", label: "Produtos", icon: <Icons.ShoppingCart />, count: produtos.length },
+      ...(isOwner ? {
+        subgroups: [
+          {
+            key: "sistema",
+            label: "Sistema",
+            icon: <Icons.Cog />,
+            items: [
+              { key: "tenants", label: "Tenants", icon: <Icons.Cog />, count: tenants.length },
+            ],
+          },
+          {
+            key: "admin_geral",
+            label: "Geral",
+            icon: <Icons.User />,
+            items: [
+              { key: "usuarios", label: "Usuários", icon: <Icons.User />, count: usuarios.length },
+              { key: "tecnicos", label: "Profissionais / Técnicos", icon: <Icons.Cog />, count: tecnicos.length },
+              { key: "produtos", label: "Produtos", icon: <Icons.ShoppingCart />, count: produtos.length },
+            ],
+          },
+        ],
+      } : {
+        items: [
+          { key: "usuarios", label: "Usuários", icon: <Icons.User />, count: usuarios.length },
+          { key: "tecnicos", label: "Profissionais / Técnicos", icon: <Icons.Cog />, count: tecnicos.length },
+          { key: "produtos", label: "Produtos", icon: <Icons.ShoppingCart />, count: produtos.length },
+        ],
+      }),
+    },
+    {
+      key: "financeiro_menu",
+      label: "Financeiro",
+      icon: <Icons.DollarSign />,
+      subgroups: [
+        {
+          key: "bancario",
+          label: "Bancário",
+          icon: <Icons.CreditCard />,
+          items: [
+            { key: "contas_bancarias", label: "Contas Bancárias", icon: <Icons.CreditCard />, count: contasBancarias.filter((c) => c.ativo).length },
+            { key: "movimentos_bancarios", label: "Movimentos Bancários", icon: <Icons.ArrowUpCircle />, count: movimentosBancarios.length },
+            { key: "conciliacao_bancaria", label: "Conciliação Bancária", icon: <Icons.CheckCircle />, count: conciliacoesBancarias.length },
+          ],
+        },
+        {
+          key: "financeiro_pagar",
+          label: "Contas a Pagar",
+          icon: <Icons.DollarSign />,
+          items: [
+            { key: "contas_pagar_dashboard", label: "Dashboard Financeiro", icon: <Icons.BarChart />, count: undefined },
+            { key: "contas_pagar", label: "Contas a Pagar", icon: <Icons.DollarSign />, count: parcelasContasPagar.filter((p) => p.status === "em_aberto").length },
+            { key: "fornecedores", label: "Fornecedores", icon: <Icons.User />, count: fornecedores.filter((f) => f.ativo).length },
+            { key: "centros_custo", label: "Centros de Custo", icon: <Icons.ClipboardList />, count: centrosCusto.filter((c) => c.ativo).length },
+          ],
+        },
       ],
     },
     {
@@ -347,28 +530,63 @@ function App() {
         { key: "clientes", label: "Clientes", icon: <Icons.User />, count: clientes.length },
         { key: "pipeline", label: "Pipeline", icon: <Icons.TrendingUp />, count: oportunidades.length },
         { key: "vendas", label: "Vendas", icon: <Icons.ShoppingCart />, count: vendas.length },
+        { key: "documentos", label: "Documentos", icon: <Icons.FileText />, count: undefined },
       ],
     },
     {
       key: "operacional",
       label: "Operacional",
       icon: <Icons.ClipboardList />,
-      items: [
-        { key: "financeiro", label: "Financeiro", icon: <Icons.CreditCard />, count: titulos.length },
-        { key: "ordens_servico", label: "Ordens de Serviço", icon: <Icons.ClipboardList />, count: ordensServico.length },
-        { key: "comissoes", label: "Comissões", icon: <Icons.DollarSign />, count: comissoes.filter((c) => c.status !== "pago").length },
+      subgroups: [
+        {
+          key: "operacional_geral",
+          label: "Operacional",
+          icon: <Icons.ClipboardList />,
+          items: [
+            { key: "financeiro", label: "Financeiro", icon: <Icons.CreditCard />, count: titulos.length },
+            { key: "ordens_servico", label: "Ordens de Serviço", icon: <Icons.ClipboardList />, count: ordensServico.length },
+            { key: "comissoes", label: "Comissões", icon: <Icons.DollarSign />, count: comissoes.filter((c) => c.status !== "pago").length },
+          ],
+        },
+        {
+          key: "estoque",
+          label: "Estoque",
+          icon: <Icons.Package />,
+          items: [
+            { key: "estoque_itens", label: "Itens de Estoque", icon: <Icons.Package />, count: estoqueItens.filter((e) => e.ativo).length },
+            { key: "estoque_movimentacoes", label: "Movimentações", icon: <Icons.ArrowUpCircle />, count: estoqueMovimentacoes.length },
+          ],
+        },
       ],
     },
     {
-      key: "estoque",
-      label: "Estoque",
-      icon: <Icons.Package />,
+      key: "relatorios",
+      label: "Relatórios",
+      icon: <Icons.BarChart />,
       items: [
-        { key: "estoque_itens", label: "Itens de Estoque", icon: <Icons.Package />, count: estoqueItens.filter((e) => e.ativo).length },
-        { key: "estoque_movimentacoes", label: "Movimentações", icon: <Icons.ArrowUpCircle />, count: estoqueMovimentacoes.length },
+        { key: "dashboard", label: "Dashboard", icon: <Icons.BarChart /> },
+        { key: "atendimentos_relatorio", label: "Atendimentos", icon: <Icons.ClipboardCheck /> },
       ],
     },
   ];
+  // Wrapper para salvarMovimentacao que auto-cria conta a pagar quando motivo = 'compra'
+  const salvarMovimentacaoComContaPagar = async (form, item) => {
+    await salvarMovimentacao(form, item);
+    if (form.tipo === "entrada" && form.motivo === "compra") {
+      const movimentacaoFake = {
+        id: null, // será null porque não temos o id real aqui ainda
+        custo_unitario: form.custo_unitario || item.custo_unitario || 0,
+        quantidade: form.quantidade,
+        data_movimentacao: form.data_movimentacao || new Date().toISOString().split("T")[0],
+      };
+      try {
+        await criarContaDaCompraEstoque(movimentacaoFake, item);
+      } catch (e) {
+        console.warn("Erro ao criar conta a pagar automática:", e.message);
+      }
+    }
+  };
+
   const actBtns = (onEdit, onDel) => (<div className="flex items-center gap-1"><button onClick={onEdit} className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 p-1 rounded"><Icons.Edit /></button><button onClick={onDel} className="text-gray-400 hover:text-red-600 hover:bg-red-50 p-1 rounded"><Icons.Trash /></button></div>);
 
   return (
@@ -376,15 +594,13 @@ function App() {
       <header style={tenantCor ? { backgroundColor: tenantCor } : {}} className={`${tenantCor ? "" : "bg-white"} border-b border-gray-200 px-4 py-2`}>
         <div className="max-w-7xl mx-auto flex items-center gap-3">
           {/* Logo */}
-          <h1 className="text-sm font-semibold text-gray-800 tracking-wide whitespace-nowrap flex-shrink-0">CRM GuardIAn</h1>
+          <h1 className="text-sm font-semibold text-gray-800 tracking-wide whitespace-nowrap flex-shrink-0">{tenantNome || "CRM GuardIAn"}</h1>
 
           {/* Desktop Nav */}
           <nav className="hidden md:flex items-center gap-0.5 flex-1">
-            <button onClick={() => { setViewMode("dashboard"); setOpenDropdown(null); }} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-colors ${viewMode === "dashboard" ? "bg-gray-800 text-white" : "text-gray-600 hover:text-gray-900 hover:bg-black/5"}`}>
-              <Icons.BarChart /><span>Dashboard</span>
-            </button>
             {navGroups.map(group => {
-              const isActive = group.items.some(i => i.key === viewMode);
+              const allItems = group.subgroups ? group.subgroups.flatMap(sg => sg.items) : (group.items || []);
+              const isActive = allItems.some(i => i.key === viewMode);
               const isOpen = openDropdown === group.key;
               return (
                 <div key={group.key} className="relative">
@@ -392,12 +608,26 @@ function App() {
                     {group.icon}<span>{group.label}</span><Icons.ChevronDown className={`w-3 h-3 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
                   </button>
                   {isOpen && (
-                    <div className="absolute top-full left-0 mt-1 w-52 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1 overflow-hidden">
-                      {group.items.map(item => (
-                        <button key={item.key} onClick={() => { setViewMode(item.key); setOpenDropdown(null); }} className={`w-full flex items-center gap-2 px-3 py-2 text-xs text-left transition-colors ${viewMode === item.key ? "bg-gray-100 text-gray-900 font-medium" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"}`}>
-                          {item.icon}<span className="flex-1">{item.label}</span>{item.count !== undefined && <span className="text-gray-400 text-[10px] tabular-nums">{item.count}</span>}
-                        </button>
-                      ))}
+                    <div className="absolute top-full left-0 mt-1 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1 overflow-hidden">
+                      {group.subgroups ? (
+                        group.subgroups.map((subgroup, sgIdx) => (
+                          <div key={subgroup.key}>
+                            {sgIdx > 0 && <div className="border-t border-gray-100 my-1" />}
+                            <div className="px-3 py-1.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">{subgroup.icon}<span>{subgroup.label}</span></div>
+                            {subgroup.items.map(item => (
+                              <button key={item.key} onClick={() => { setViewMode(item.key); setOpenDropdown(null); }} className={`w-full flex items-center gap-2 px-5 py-2 text-xs text-left transition-colors ${viewMode === item.key ? "bg-gray-100 text-gray-900 font-medium" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"}`}>
+                                {item.icon}<span className="flex-1">{item.label}</span>{item.count !== undefined && <span className="text-gray-400 text-[10px] tabular-nums">{item.count}</span>}
+                              </button>
+                            ))}
+                          </div>
+                        ))
+                      ) : (
+                        group.items.map(item => (
+                          <button key={item.key} onClick={() => { setViewMode(item.key); setOpenDropdown(null); }} className={`w-full flex items-center gap-2 px-3 py-2 text-xs text-left transition-colors ${viewMode === item.key ? "bg-gray-100 text-gray-900 font-medium" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"}`}>
+                            {item.icon}<span className="flex-1">{item.label}</span>{item.count !== undefined && <span className="text-gray-400 text-[10px] tabular-nums">{item.count}</span>}
+                          </button>
+                        ))
+                      )}
                     </div>
                   )}
                 </div>
@@ -407,8 +637,8 @@ function App() {
 
           {/* Desktop: user info + logout */}
           <div className="hidden md:flex items-center gap-2 flex-shrink-0 ml-auto">
-            {tenantNome && <span className="text-xs font-medium text-gray-600">{tenantNome}</span>}
-            {tenantNome && <span className="text-gray-300">|</span>}
+            {tenantSlogan && <span className="text-xs text-gray-500 italic">{tenantSlogan}</span>}
+            {tenantSlogan && <span className="text-gray-300">|</span>}
             <span className="text-xs text-gray-400">{session.user.email}</span>
             <button onClick={handleSignOut} className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded hover:bg-black/5"><Icons.LogOut />Sair</button>
           </div>
@@ -417,7 +647,7 @@ function App() {
           <div className="md:hidden ml-auto flex items-center gap-1">
             {isMobile ? (
               <>
-                {tenantNome && <span className="text-xs text-gray-500 font-medium mr-1">{tenantNome}</span>}
+                {tenantSlogan && <span className="text-xs text-gray-500 italic mr-1">{tenantSlogan}</span>}
                 <button onClick={handleSignOut} className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded hover:bg-black/5"><Icons.LogOut />Sair</button>
               </>
             ) : (
@@ -434,17 +664,28 @@ function App() {
         {/* Mobile menu panel */}
         {!isMobile && mobileMenuOpen && (
           <div className="md:hidden border-t border-gray-200 mt-2 py-2 max-w-7xl mx-auto">
-            <button onClick={() => { setViewMode("dashboard"); setMobileMenuOpen(false); }} className={`w-full flex items-center gap-2 px-3 py-2 rounded text-xs font-medium transition-colors ${viewMode === "dashboard" ? "bg-gray-800 text-white" : "text-gray-600 hover:bg-black/5"}`}>
-              <Icons.BarChart /><span>Dashboard</span>
-            </button>
             {navGroups.map(group => (
               <div key={group.key} className="mt-1">
                 <div className="px-3 py-1.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">{group.icon}{group.label}</div>
-                {group.items.map(item => (
-                  <button key={item.key} onClick={() => { setViewMode(item.key); setMobileMenuOpen(false); }} className={`w-full flex items-center gap-2 px-5 py-2 text-xs rounded transition-colors ${viewMode === item.key ? "bg-gray-800 text-white" : "text-gray-600 hover:bg-black/5"}`}>
-                    {item.icon}<span className="flex-1">{item.label}</span>{item.count !== undefined && <span className="text-[10px] tabular-nums opacity-60">{item.count}</span>}
-                  </button>
-                ))}
+                {group.subgroups ? (
+                  group.subgroups.map((subgroup, sgIdx) => (
+                    <div key={subgroup.key}>
+                      {sgIdx > 0 && <div className="border-t border-gray-100 mx-3 my-1" />}
+                      <div className="px-5 py-1 text-[10px] font-medium text-gray-400 flex items-center gap-1.5">{subgroup.icon}<span>{subgroup.label}</span></div>
+                      {subgroup.items.map(item => (
+                        <button key={item.key} onClick={() => { setViewMode(item.key); setMobileMenuOpen(false); }} className={`w-full flex items-center gap-2 px-7 py-2 text-xs rounded transition-colors ${viewMode === item.key ? "bg-gray-800 text-white" : "text-gray-600 hover:bg-black/5"}`}>
+                          {item.icon}<span className="flex-1">{item.label}</span>{item.count !== undefined && <span className="text-[10px] tabular-nums opacity-60">{item.count}</span>}
+                        </button>
+                      ))}
+                    </div>
+                  ))
+                ) : (
+                  group.items.map(item => (
+                    <button key={item.key} onClick={() => { setViewMode(item.key); setMobileMenuOpen(false); }} className={`w-full flex items-center gap-2 px-5 py-2 text-xs rounded transition-colors ${viewMode === item.key ? "bg-gray-800 text-white" : "text-gray-600 hover:bg-black/5"}`}>
+                      {item.icon}<span className="flex-1">{item.label}</span>{item.count !== undefined && <span className="text-[10px] tabular-nums opacity-60">{item.count}</span>}
+                    </button>
+                  ))
+                )}
               </div>
             ))}
             <div className="border-t border-gray-100 mt-2 pt-2 px-3">
@@ -548,6 +789,14 @@ function App() {
           />
         )}
 
+        {viewMode === "documentos" && (
+          <DocumentosPage
+            vendas={vendas}
+            clientes={clientes}
+            fmtBRL={fmtBRL}
+          />
+        )}
+
         {viewMode === "financeiro" && (
           <FinanceiroPage
             titulos={titulos}
@@ -582,11 +831,102 @@ function App() {
               { key: "status", label: "Status", render: (o) => { if (o.status === "aguardando_atendimento") return <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] bg-gray-100 text-gray-700"><Icons.Clock className="w-3 h-3" />Aguardando</span>; if (o.status === "em_atendimento") return <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] bg-blue-50 text-blue-700"><Icons.ArrowRight className="w-3 h-3" />Em Atendimento</span>; return <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] bg-green-50 text-green-700"><Icons.CheckCircle className="w-3 h-3" />Concluído</span>; }, filterValue: (o) => o.status === "aguardando_atendimento" ? "Aguardando" : o.status === "em_atendimento" ? "Em Atendimento" : "Concluído" },
             ]} data={ordensServico} actions={(o) => (
               <div className="flex items-center gap-1">
+                <button onClick={() => abrirModalEvolucao(o)} title="Evolução do Atendimento" className="text-purple-600 hover:bg-purple-50 p-1 rounded"><Icons.BookOpen /></button>
                 {o.status !== "atendimento_concluido" && <button onClick={() => abrirModalEncaminhar(o)} className="text-blue-600 hover:bg-blue-50 px-1.5 py-0.5 rounded text-[11px] font-medium whitespace-nowrap">Encaminhar</button>}
                 {o.status === "em_atendimento" && <button onClick={() => concluirOrdemServico(o.id)} className="text-green-600 hover:bg-green-50 px-1.5 py-0.5 rounded text-[11px] font-medium whitespace-nowrap">Concluir</button>}
                 <button onClick={() => excluirOrdemServico(o.id)} className="text-gray-400 hover:text-red-600 hover:bg-red-50 p-1 rounded"><Icons.Trash /></button>
               </div>
             )} emptyMessage="Nenhuma ordem de serviço. Registre uma venda para gerar automaticamente." />
+          </div>
+        )}
+
+        {viewMode === "atendimentos_relatorio" && (
+          <div className="space-y-4">
+            <h2 className="text-sm font-semibold text-gray-700">Atendimentos</h2>
+            <div className="bg-white border border-gray-200 rounded p-4 space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Buscar Cliente</label>
+                <div className="relative">
+                  <Icons.Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                  <input
+                    type="text"
+                    value={atendimentoBusca}
+                    onChange={(e) => { setAtendimentoBusca(e.target.value); setAtendimentoClienteSelecionado(null); setAtendimentoVendaSelecionada(null); }}
+                    placeholder="Digite o nome do cliente..."
+                    className="w-full border border-gray-200 rounded pl-8 pr-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"
+                  />
+                </div>
+              </div>
+              {atendimentoBusca.trim().length > 0 && !atendimentoClienteSelecionado && (
+                <div className="border border-gray-200 rounded overflow-hidden">
+                  {clientes.filter((c) => c.nome.toLowerCase().includes(atendimentoBusca.toLowerCase())).length === 0 ? (
+                    <p className="text-xs text-gray-400 p-3 text-center">Nenhum cliente encontrado.</p>
+                  ) : (
+                    clientes.filter((c) => c.nome.toLowerCase().includes(atendimentoBusca.toLowerCase())).map((c) => (
+                      <button key={c.id} onClick={() => { setAtendimentoClienteSelecionado(c); setAtendimentoBusca(c.nome); setAtendimentoVendaSelecionada(null); }} className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left hover:bg-gray-50 border-b border-gray-100 last:border-b-0">
+                        <Icons.User className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                        <span className="font-medium text-gray-800">{c.nome}</span>
+                        {c.telefone && <span className="text-gray-400 ml-auto">{c.telefone}</span>}
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+
+            {atendimentoClienteSelecionado && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-xs font-semibold text-gray-700">Vendas de {atendimentoClienteSelecionado.nome}</h3>
+                  <button onClick={() => { setAtendimentoClienteSelecionado(null); setAtendimentoVendaSelecionada(null); setAtendimentoBusca(""); }} className="text-[11px] text-gray-400 hover:text-gray-600 underline">limpar</button>
+                </div>
+                {vendas.filter((v) => v.cliente_id === atendimentoClienteSelecionado.id).length === 0 ? (
+                  <div className="bg-white border border-gray-200 rounded p-6 text-center text-xs text-gray-400">Nenhuma venda encontrada para este cliente.</div>
+                ) : (
+                  <div className="grid gap-2">
+                    {vendas.filter((v) => v.cliente_id === atendimentoClienteSelecionado.id).map((v) => (
+                      <button key={v.id} onClick={() => setAtendimentoVendaSelecionada(atendimentoVendaSelecionada?.id === v.id ? null : v)} className={`w-full text-left bg-white border rounded p-3 hover:border-gray-400 transition-colors ${atendimentoVendaSelecionada?.id === v.id ? "border-gray-800 ring-1 ring-gray-800" : "border-gray-200"}`}>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-medium text-gray-800">{v.descricao}</span>
+                          <span className="text-xs font-semibold text-green-700">R$ {fmtBRL(v.valor)}</span>
+                        </div>
+                        <div className="flex items-center gap-3 mt-1">
+                          <span className="text-[11px] text-gray-400">{new Date(v.data_venda).toLocaleDateString("pt-BR")}</span>
+                          <span className="text-[11px] text-gray-400 capitalize">{v.forma_pagamento}</span>
+                          {(() => { const os = ordensServico.find((o) => o.venda_id === v.id); return os ? <span className="text-[11px] text-purple-600 font-medium">OS: {os.numero_os}</span> : null; })()}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {atendimentoVendaSelecionada && (
+              <div className="bg-white border border-gray-200 rounded p-4 space-y-3">
+                <h3 className="text-xs font-semibold text-gray-700 flex items-center gap-1.5"><Icons.BookOpen className="w-3.5 h-3.5 text-purple-600" />Evolução do Atendimento</h3>
+                {(() => {
+                  const os = ordensServico.find((o) => o.venda_id === atendimentoVendaSelecionada.id);
+                  if (!os) return <p className="text-xs text-gray-400 italic">Nenhuma ordem de serviço encontrada para esta venda.</p>;
+                  return (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-[11px] text-gray-500">
+                        <span>OS: <span className="font-mono font-medium">{os.numero_os}</span></span>
+                        <span>·</span>
+                        <span className={os.status === "atendimento_concluido" ? "text-green-600 font-medium" : os.status === "em_atendimento" ? "text-blue-600 font-medium" : "text-gray-500"}>{os.status === "atendimento_concluido" ? "Concluído" : os.status === "em_atendimento" ? "Em Atendimento" : "Aguardando"}</span>
+                      </div>
+                      {os.observacoes ? (
+                        <div className="bg-gray-50 border border-gray-200 rounded p-3 text-xs text-gray-700 whitespace-pre-wrap leading-relaxed font-mono">
+                          {os.observacoes}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-gray-400 italic bg-gray-50 border border-gray-100 rounded p-3">Nenhuma evolução registrada para este atendimento.</p>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
           </div>
         )}
 
@@ -608,8 +948,9 @@ function App() {
             estoqueItens={estoqueItens}
             onSalvarItem={salvarEstoqueItem}
             onExcluirItem={excluirEstoqueItem}
-            onSalvarMovimentacao={salvarMovimentacao}
+            onSalvarMovimentacao={salvarMovimentacaoComContaPagar}
             fmtBRL={fmtBRL}
+            fornecedores={fornecedores}
           />
         )}
 
@@ -617,9 +958,86 @@ function App() {
           <EstoqueMovimentacoesPage
             estoqueMovimentacoes={estoqueMovimentacoes}
             estoqueItens={estoqueItens}
-            onSalvarMovimentacao={salvarMovimentacao}
+            onSalvarMovimentacao={salvarMovimentacaoComContaPagar}
             onExcluirMovimentacao={excluirMovimentacao}
             fmtBRL={fmtBRL}
+          />
+        )}
+
+        {viewMode === "contas_bancarias" && (
+          <ContasBancariasPage
+            contasBancarias={contasBancarias}
+            onSalvar={salvarContaBancaria}
+            onExcluir={excluirContaBancaria}
+          />
+        )}
+
+        {viewMode === "movimentos_bancarios" && (
+          <MovimentosBancariosPage
+            movimentosBancarios={movimentosBancarios}
+            contasBancarias={contasBancarias}
+            onSalvar={salvarMovimentoBancario}
+            onExcluir={excluirMovimentoBancario}
+            fmtBRL={fmtBRL}
+          />
+        )}
+
+        {viewMode === "conciliacao_bancaria" && (
+          <ConciliacaoBancariaPage
+            conciliacoesBancarias={conciliacoesBancarias}
+            titulos={titulos}
+            movimentosBancarios={movimentosBancarios}
+            contasBancarias={contasBancarias}
+            onSalvar={salvarConciliacaoBancaria}
+            onExcluir={excluirConciliacaoBancaria}
+            fmtBRL={fmtBRL}
+          />
+        )}
+
+        {viewMode === "tenants" && isOwner && (
+          <TenantsPage
+            tenants={tenants}
+            onSalvar={salvarTenant}
+            onExcluir={excluirTenant}
+          />
+        )}
+
+        {viewMode === "contas_pagar_dashboard" && (
+          <ContasPagarDashboard
+            contasPagar={contasPagar}
+            parcelas={parcelasContasPagar}
+            fornecedores={fornecedores}
+            fmtBRL={fmtBRL}
+          />
+        )}
+
+        {viewMode === "contas_pagar" && (
+          <ContasPagarPage
+            contasPagar={contasPagar}
+            parcelas={parcelasContasPagar}
+            fornecedores={fornecedores}
+            centrosCusto={centrosCusto}
+            contasBancarias={contasBancarias}
+            onSalvar={salvarContaPagar}
+            onExcluir={excluirContaPagar}
+            onPagar={(parcela, formPagamento) => pagarParcela(parcela, formPagamento, contasBancarias)}
+            fmtBRL={fmtBRL}
+          />
+        )}
+
+        {viewMode === "fornecedores" && (
+          <FornecedoresPage
+            fornecedores={fornecedores}
+            onSalvar={salvarFornecedor}
+            onExcluir={excluirFornecedor}
+          />
+        )}
+
+        {viewMode === "centros_custo" && (
+          <CentrosCustoPage
+            centrosCusto={centrosCusto}
+            onSalvar={salvarCentroCusto}
+            onExcluir={excluirCentroCusto}
           />
         )}
       </main>
@@ -627,10 +1045,22 @@ function App() {
       {modalProduto && (<div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50"><div className="bg-white rounded-lg border border-gray-200 max-w-sm w-full p-4 max-h-[90vh] overflow-y-auto"><h3 className="text-sm font-semibold mb-3">{editandoProduto ? "Editar Produto" : "Novo Produto"}</h3><div className="space-y-2.5"><div><label className="block text-xs text-gray-600 mb-0.5">Nome *</label><input type="text" value={formProduto.nome} onChange={(e) => setFormProduto({...formProduto, nome: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" /></div><div><label className="block text-xs text-gray-600 mb-0.5">Tipo</label><select value={formProduto.tipo} onChange={(e) => setFormProduto({...formProduto, tipo: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"><option value="produto">Produto</option><option value="servico">Serviço</option></select></div><div><label className="block text-xs text-gray-600 mb-0.5">Categoria</label><input type="text" value={formProduto.categoria} onChange={(e) => setFormProduto({...formProduto, categoria: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" /></div><div><label className="block text-xs text-gray-600 mb-0.5">Descrição</label><textarea value={formProduto.descricao} onChange={(e) => setFormProduto({...formProduto, descricao: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" rows="2" /></div><div className="grid grid-cols-2 gap-2"><div><label className="block text-xs text-gray-600 mb-0.5">Preço (R$)</label><input type="number" step="0.01" value={formProduto.preco_base} onChange={(e) => setFormProduto({...formProduto, preco_base: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" /></div><div><label className="block text-xs text-gray-600 mb-0.5">Custo (R$)</label><input type="number" step="0.01" value={formProduto.custo} onChange={(e) => setFormProduto({...formProduto, custo: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" /></div></div><div><label className="block text-xs text-gray-600 mb-0.5">Unidade</label><input type="text" value={formProduto.unidade_medida} onChange={(e) => setFormProduto({...formProduto, unidade_medida: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" placeholder="un, hora, kg..." /></div><div className="flex items-center gap-2"><input id="pa" type="checkbox" checked={!!formProduto.ativo} onChange={(e) => setFormProduto({...formProduto, ativo: e.target.checked})} /><label htmlFor="pa" className="text-xs text-gray-600">Ativo</label></div><div><label className="block text-xs text-gray-600 mb-0.5">Observações</label><textarea value={formProduto.observacoes} onChange={(e) => setFormProduto({...formProduto, observacoes: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" rows="2" /></div></div><div className="flex gap-2 mt-4"><button onClick={fecharModalProduto} className="flex-1 px-3 py-1.5 border border-gray-200 rounded text-xs hover:bg-gray-50">Cancelar</button><button onClick={salvarProduto} className="flex-1 px-3 py-1.5 bg-gray-800 text-white rounded text-xs hover:bg-gray-700">{editandoProduto ? "Salvar" : "Adicionar"}</button></div></div></div>)}
 
       {modalUsuario && (<div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50"><div className="bg-white rounded-lg border border-gray-200 max-w-sm w-full p-4 max-h-[90vh] overflow-y-auto"><h3 className="text-sm font-semibold mb-3">{editandoUsuario ? "Editar Usuário" : "Novo Usuário"}</h3><div className="space-y-2.5">
-        <div><label className="block text-xs text-gray-600 mb-0.5">Email *</label><input type="email" value={formUsuario.email} onChange={(e) => setFormUsuario({...formUsuario, email: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" placeholder="email@exemplo.com" disabled={!!editandoUsuario} /></div>
-        <div><label className="block text-xs text-gray-600 mb-0.5">Perfil</label><select value={formUsuario.role} onChange={(e) => setFormUsuario({...formUsuario, role: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"><option value="owner">Owner</option><option value="admin">Admin</option><option value="member">Member</option></select></div>
+        {!editandoUsuario && (<div className="flex gap-1 mb-1"><button onClick={() => setModoModalUsuario("vincular")} className={`flex-1 px-2 py-1 text-xs rounded border ${modoModalUsuario === "vincular" ? "bg-gray-800 text-white border-gray-800" : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"}`}>Vincular existente</button><button onClick={() => setModoModalUsuario("criar")} className={`flex-1 px-2 py-1 text-xs rounded border ${modoModalUsuario === "criar" ? "bg-gray-800 text-white border-gray-800" : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"}`}>Criar novo</button></div>)}
+        {!editandoUsuario && modoModalUsuario === "vincular" && (<div><label className="block text-xs text-gray-600 mb-0.5">Usuário *</label>{usuariosSistema.length === 0 ? (<p className="text-xs text-gray-400 italic">Nenhum usuário disponível. Use "Criar novo" para cadastrar.</p>) : (<select value={formUsuario.user_id} onChange={(e) => setFormUsuario({...formUsuario, user_id: e.target.value})} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"><option value="">Selecione um usuário...</option>{usuariosSistema.map((u) => <option key={u.user_id} value={u.user_id}>{u.email}</option>)}</select>)}</div>)}
+        {!editandoUsuario && modoModalUsuario === "criar" && (<div className="space-y-2"><div><label className="block text-xs text-gray-600 mb-0.5">Email *</label><input type="email" value={formNovoUsuario.email} onChange={(e) => setFormNovoUsuario({...formNovoUsuario, email: e.target.value})} placeholder="email@exemplo.com" className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" /></div><p className="text-[11px] text-gray-400">Uma senha temporária será gerada e um email de confirmação enviado ao usuário.</p></div>)}
+        {editandoUsuario && (<div className="bg-gray-50 border border-gray-100 rounded px-2.5 py-1.5"><p className="text-xs text-gray-500">Email: <span className="font-medium text-gray-700">{editandoUsuario.email}</span></p></div>)}
+        <div><label className="block text-xs text-gray-600 mb-0.5">Perfil</label><select value={editandoUsuario ? formUsuario.role : (modoModalUsuario === "criar" ? formNovoUsuario.role : formUsuario.role)} onChange={(e) => { if (editandoUsuario) { setFormUsuario({...formUsuario, role: e.target.value}); } else if (modoModalUsuario === "criar") { setFormNovoUsuario({...formNovoUsuario, role: e.target.value}); } else { setFormUsuario({...formUsuario, role: e.target.value}); } }} className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"><option value="owner">Owner</option><option value="admin">Admin</option><option value="member">Member</option></select></div>
         {editandoUsuario && editandoUsuario.created_at && (<div className="bg-gray-50 border border-gray-200 rounded p-2.5"><p className="text-[11px] text-gray-500">Membro desde: <span className="font-medium text-gray-700">{new Date(editandoUsuario.created_at).toLocaleDateString("pt-BR")}</span></p></div>)}
-        </div><div className="flex gap-2 mt-4"><button onClick={fecharModalUsuario} className="flex-1 px-3 py-1.5 border border-gray-200 rounded text-xs hover:bg-gray-50">Cancelar</button><button onClick={salvarUsuario} className="flex-1 px-3 py-1.5 bg-gray-800 text-white rounded text-xs hover:bg-gray-700">{editandoUsuario ? "Salvar" : "Adicionar"}</button></div></div></div>)}
+        </div><div className="flex gap-2 mt-4"><button onClick={fecharModalUsuario} className="flex-1 px-3 py-1.5 border border-gray-200 rounded text-xs hover:bg-gray-50">Cancelar</button><button onClick={!editandoUsuario && modoModalUsuario === "criar" ? criarEVincularUsuario : salvarUsuario} disabled={!editandoUsuario && modoModalUsuario === "vincular" && !formUsuario.user_id} className="flex-1 px-3 py-1.5 bg-gray-800 text-white rounded text-xs hover:bg-gray-700 disabled:opacity-50">{editandoUsuario ? "Salvar" : modoModalUsuario === "criar" ? "Criar e Vincular" : "Vincular"}</button></div></div></div>)}
+
+      {modalEvolucao && osEvolucao && (
+        <EvolucaoModal
+          aberto={modalEvolucao}
+          os={osEvolucao}
+          onFechar={fecharModalEvolucao}
+          onSalvar={salvarEvolucao}
+        />
+      )}
 
       {modalEncaminhar && osEncaminhar && (
         <EncaminharModal
@@ -652,6 +1082,13 @@ function App() {
         onExcluir={excluirVinculo}
         onClose={() => { setModalVincularEstoque(false); setVinculoProduto(null); }}
       />
+
+      {/* Rodapé */}
+      <footer className="border-t border-gray-200 bg-white mt-6">
+        <div className="max-w-7xl mx-auto px-4 py-3 text-center">
+          <p className="text-xs text-gray-400">© 2026 Guardian Tech. Todos os direitos reservados.</p>
+        </div>
+      </footer>
 
       {/* Barra fixa de acesso à versão completa — visível apenas em smartphones */}
       {isMobile && (
