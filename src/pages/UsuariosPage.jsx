@@ -1,23 +1,29 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 import { DataGrid } from "../components/DataGrid";
 import { Icons } from "../components/Icons";
 import { useTenant } from "../contexts/TenantContext";
+import { useAuth } from "../contexts/AuthContext";
 
-export function UsuariosPage() {
+export function UsuariosPage({ initialEditUserId, onClearInitialEdit }) {
   const { tenantId, usuarios, salvarUsuario, criarEVincularUsuario, excluirUsuario } = useTenant();
+  const { session } = useAuth();
 
   const [modalUsuario, setModalUsuario] = useState(false);
   const [editandoUsuario, setEditandoUsuario] = useState(null);
   const [formUsuario, setFormUsuario] = useState({ user_id: "", role: "member" });
+  const [formNome, setFormNome] = useState("");
   const [usuariosSistema, setUsuariosSistema] = useState([]);
   const [modoModalUsuario, setModoModalUsuario] = useState("vincular");
-  const [formNovoUsuario, setFormNovoUsuario] = useState({ email: "", role: "member" });
+  const [formNovoUsuario, setFormNovoUsuario] = useState({ email: "", nome: "", senha: "", role: "member" });
 
   const abrirModalUsuario = async (u = null) => {
     if (u) {
       setEditandoUsuario(u);
       setFormUsuario({ user_id: u.user_id || "", role: u.role || "member" });
+      if (u.user_id === session?.user?.id) {
+        setFormNome(session?.user?.user_metadata?.nome || "");
+      }
     } else {
       setEditandoUsuario(null);
       setFormUsuario({ user_id: "", role: "member" });
@@ -33,13 +39,28 @@ export function UsuariosPage() {
     setModalUsuario(false);
     setEditandoUsuario(null);
     setFormUsuario({ user_id: "", role: "member" });
+    setFormNome("");
     setUsuariosSistema([]);
     setModoModalUsuario("vincular");
-    setFormNovoUsuario({ email: "", role: "member" });
+    setFormNovoUsuario({ email: "", nome: "", senha: "", role: "member" });
   };
+
+  useEffect(() => {
+    if (initialEditUserId && usuarios.length > 0 && !modalUsuario) {
+      const user = usuarios.find((u) => u.user_id === initialEditUserId);
+      if (user) {
+        abrirModalUsuario(user);
+        onClearInitialEdit?.();
+      }
+    }
+  }, [initialEditUserId, usuarios]);
 
   const handleSalvar = async () => {
     try {
+      if (editandoUsuario?.user_id === session?.user?.id) {
+        const { error } = await supabase.auth.updateUser({ data: { nome: formNome } });
+        if (error) throw new Error(`Erro ao atualizar nome: ${error.message}`);
+      }
       await salvarUsuario(editandoUsuario, formUsuario);
       fecharModalUsuario();
     } catch (e) {
@@ -48,10 +69,11 @@ export function UsuariosPage() {
   };
 
   const handleCriar = async () => {
+    const nomeUsuario = formNovoUsuario.nome || formNovoUsuario.email;
     try {
-      const email = await criarEVincularUsuario(formNovoUsuario);
+      await criarEVincularUsuario(formNovoUsuario);
       fecharModalUsuario();
-      alert(`Usuário criado! Um email de confirmação foi enviado para ${email}.`);
+      alert(`Usuário ${nomeUsuario} criado com sucesso!`);
     } catch (e) {
       alert(e.message);
     }
@@ -129,16 +151,31 @@ export function UsuariosPage() {
               {!editandoUsuario && modoModalUsuario === "criar" && (
                 <div className="space-y-2">
                   <div>
+                    <label className="block text-xs text-gray-600 mb-0.5">Nome *</label>
+                    <input type="text" value={formNovoUsuario.nome} onChange={(e) => setFormNovoUsuario({ ...formNovoUsuario, nome: e.target.value })} placeholder="Nome completo" className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" />
+                  </div>
+                  <div>
                     <label className="block text-xs text-gray-600 mb-0.5">Email *</label>
                     <input type="email" value={formNovoUsuario.email} onChange={(e) => setFormNovoUsuario({ ...formNovoUsuario, email: e.target.value })} placeholder="email@exemplo.com" className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" />
                   </div>
-                  <p className="text-[11px] text-gray-400">Uma senha temporária será gerada e um email de confirmação enviado ao usuário.</p>
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-0.5">Senha *</label>
+                    <input type="password" value={formNovoUsuario.senha} onChange={(e) => setFormNovoUsuario({ ...formNovoUsuario, senha: e.target.value })} placeholder="Senha de acesso" className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" />
+                  </div>
                 </div>
               )}
 
               {editandoUsuario && (
-                <div className="bg-gray-50 border border-gray-100 rounded px-2.5 py-1.5">
-                  <p className="text-xs text-gray-500">Email: <span className="font-medium text-gray-700">{editandoUsuario.email}</span></p>
+                <div className="space-y-2">
+                  {editandoUsuario.user_id === session?.user?.id && (
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-0.5">Nome</label>
+                      <input type="text" value={formNome} onChange={(e) => setFormNome(e.target.value)} placeholder="Seu nome" className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" />
+                    </div>
+                  )}
+                  <div className="bg-gray-50 border border-gray-100 rounded px-2.5 py-1.5">
+                    <p className="text-xs text-gray-500">Email: <span className="font-medium text-gray-700">{editandoUsuario.email}</span></p>
+                  </div>
                 </div>
               )}
 
@@ -169,7 +206,10 @@ export function UsuariosPage() {
               <button onClick={fecharModalUsuario} className="flex-1 px-3 py-1.5 border border-gray-200 rounded text-xs hover:bg-gray-50">Cancelar</button>
               <button
                 onClick={!editandoUsuario && modoModalUsuario === "criar" ? handleCriar : handleSalvar}
-                disabled={!editandoUsuario && modoModalUsuario === "vincular" && !formUsuario.user_id}
+                disabled={
+                  (!editandoUsuario && modoModalUsuario === "vincular" && !formUsuario.user_id) ||
+                  (!editandoUsuario && modoModalUsuario === "criar" && (!formNovoUsuario.nome?.trim() || !formNovoUsuario.email?.trim() || !formNovoUsuario.senha?.trim()))
+                }
                 className="flex-1 px-3 py-1.5 bg-gray-800 text-white rounded text-xs hover:bg-gray-700 disabled:opacity-50"
               >
                 {editandoUsuario ? "Salvar" : modoModalUsuario === "criar" ? "Criar e Vincular" : "Vincular"}
