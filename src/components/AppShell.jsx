@@ -59,6 +59,7 @@ export function AppShell() {
   const [openDropdown, setOpenDropdown] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(checkIsMobile);
+  const [usuariosEditUserId, setUsuariosEditUserId] = useState(null);
 
   // ── Feature hooks ────────────────────────────────────────────────────────────
 
@@ -313,7 +314,7 @@ export function AppShell() {
       case "clientes":
         return <ClientesPage clientes={clientes} onSalvar={salvarCliente} onExcluir={excluirCliente} />;
       case "usuarios":
-        return <UsuariosPage />;
+        return <UsuariosPage initialEditUserId={usuariosEditUserId} onClearInitialEdit={() => setUsuariosEditUserId(null)} />;
       case "produtos":
         return (
           <ProdutosPage
@@ -448,14 +449,36 @@ export function AppShell() {
             })}
           </nav>
 
-          {/* Desktop: user + logout */}
+          {/* Desktop: user menu */}
           <div className="hidden md:flex items-center gap-2 flex-shrink-0 ml-auto">
             {tenantSlogan && <span className="text-xs text-gray-500 italic">{tenantSlogan}</span>}
             {tenantSlogan && <span className="text-gray-300">|</span>}
-            <span className="text-xs text-gray-400">{session.user.email}</span>
-            <button onClick={onSignOut} className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded hover:bg-black/5">
-              <Icons.LogOut />Sair
-            </button>
+            <div className="relative">
+              <button
+                onClick={(e) => { e.stopPropagation(); setOpenDropdown(openDropdown === "user" ? null : "user"); }}
+                className="inline-flex items-center gap-1 text-xs text-gray-600 hover:text-gray-900 px-2 py-1 rounded hover:bg-black/5"
+              >
+                <Icons.User />{session.user.user_metadata?.nome || session.user.email}
+                <Icons.ChevronDown className={`w-3 h-3 transition-transform duration-200 ${openDropdown === "user" ? "rotate-180" : ""}`} />
+              </button>
+              {openDropdown === "user" && (
+                <div className="absolute top-full right-0 mt-1 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1 overflow-hidden">
+                  <button
+                    onClick={() => { setUsuariosEditUserId(session.user.id); setViewMode("usuarios"); setOpenDropdown(null); }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-600 hover:bg-gray-50 hover:text-gray-900 text-left"
+                  >
+                    <Icons.Edit />Editar Dados
+                  </button>
+                  <div className="border-t border-gray-100 my-1" />
+                  <button
+                    onClick={onSignOut}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs text-red-500 hover:bg-red-50 text-left"
+                  >
+                    <Icons.LogOut />Sair do Sistema
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Mobile: logout + hamburger */}
@@ -466,12 +489,9 @@ export function AppShell() {
                 <button onClick={onSignOut} className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded hover:bg-black/5"><Icons.LogOut />Sair</button>
               </>
             ) : (
-              <>
-                <button onClick={onSignOut} className="inline-flex items-center p-1.5 rounded text-gray-500 hover:text-gray-700 hover:bg-black/5"><Icons.LogOut /></button>
-                <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="inline-flex items-center justify-center p-1.5 rounded text-gray-600 hover:text-gray-900 hover:bg-black/5">
-                  {mobileMenuOpen ? <Icons.X /> : <Icons.Menu />}
-                </button>
-              </>
+              <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="inline-flex items-center justify-center p-1.5 rounded text-gray-600 hover:text-gray-900 hover:bg-black/5">
+                {mobileMenuOpen ? <Icons.X /> : <Icons.Menu />}
+              </button>
             )}
           </div>
         </div>
@@ -497,9 +517,23 @@ export function AppShell() {
                 )}
               </div>
             ))}
-            <div className="border-t border-gray-100 mt-2 pt-2 px-3">
+            <div className="border-t border-gray-100 mt-2 pt-2 px-3 space-y-2">
               <div className="text-xs font-medium text-gray-600">{tenantNome}</div>
-              <div className="text-[11px] text-gray-400">{session.user.email}</div>
+              <div className="text-[11px] text-gray-700 font-medium">{session.user.user_metadata?.nome || session.user.email}</div>
+              <div className="flex flex-col gap-0.5">
+                <button
+                  onClick={() => { setUsuariosEditUserId(session.user.id); setViewMode("usuarios"); setMobileMenuOpen(false); }}
+                  className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-gray-900 py-1 text-left"
+                >
+                  <Icons.Edit />Editar Dados
+                </button>
+                <button
+                  onClick={onSignOut}
+                  className="flex items-center gap-1.5 text-xs text-red-500 hover:text-red-700 py-1 text-left"
+                >
+                  <Icons.LogOut />Sair do Sistema
+                </button>
+              </div>
             </div>
           </div>
         )}

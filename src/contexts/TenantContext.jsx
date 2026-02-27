@@ -120,14 +120,13 @@ export function TenantProvider({ children }) {
 
   const criarEVincularUsuario = async (formNovoUsuario) => {
     if (!formNovoUsuario.email?.trim()) throw new Error("Digite o email do novo usuário!");
+    if (!formNovoUsuario.nome?.trim()) throw new Error("Digite o nome do novo usuário!");
+    if (!formNovoUsuario.senha?.trim()) throw new Error("Digite a senha do novo usuário!");
     const { data: { session: adminSession } } = await supabase.auth.getSession();
-    const tempPassword =
-      Math.random().toString(36).slice(-8) +
-      Math.random().toString(36).slice(-4).toUpperCase() +
-      "1!";
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email: formNovoUsuario.email.trim(),
-      password: tempPassword,
+      password: formNovoUsuario.senha,
+      options: { data: { nome: formNovoUsuario.nome.trim() } },
     });
     if (signUpError) throw new Error(`Erro ao criar usuário: ${signUpError.message}`);
     if (!signUpData?.user?.id) throw new Error("Erro ao criar usuário: dados não retornados.");
