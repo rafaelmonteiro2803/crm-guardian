@@ -62,10 +62,54 @@ export const buildNavGroups = ({
         }),
   },
   {
+    key: "operacional",
+    label: "Operacional",
+    icon: <Icons.ClipboardList />,
+    subgroups: [
+      {
+        key: "operacional_geral",
+        label: "Operacional",
+        icon: <Icons.ClipboardList />,
+        items: [
+          { key: "ordens_servico", label: "Ordens de Serviço", icon: <Icons.ClipboardList />, count: ordensServico.length },
+          { key: "comissoes", label: "Comissões", icon: <Icons.DollarSign />, count: comissoes.filter((c) => c.status !== "pago").length },
+        ],
+      },
+      {
+        key: "estoque",
+        label: "Estoque",
+        icon: <Icons.Package />,
+        items: [
+          { key: "estoque_itens", label: "Itens de Estoque", icon: <Icons.Package />, count: estoqueItens.filter((e) => e.ativo).length },
+          { key: "estoque_movimentacoes", label: "Movimentações", icon: <Icons.ArrowUpCircle />, count: estoqueMovimentacoes.length },
+        ],
+      },
+    ],
+  },
+  {
+    key: "comercial",
+    label: "Vendas",
+    icon: <Icons.TrendingUp />,
+    items: [
+      { key: "clientes", label: "Clientes", icon: <Icons.User />, count: clientes.length },
+      { key: "pipeline", label: "Pipeline", icon: <Icons.TrendingUp />, count: oportunidades.length },
+      { key: "vendas", label: "Vendas", icon: <Icons.ShoppingCart />, count: vendas.length },
+      { key: "documentos", label: "Documentos", icon: <Icons.FileText />, count: undefined },
+    ],
+  },
+  {
     key: "financeiro_menu",
     label: "Financeiro",
     icon: <Icons.DollarSign />,
     subgroups: [
+      {
+        key: "financeiro_geral",
+        label: "Financeiro",
+        icon: <Icons.DollarSign />,
+        items: [
+          { key: "financeiro", label: "Financeiro", icon: <Icons.CreditCard />, count: titulos.length },
+        ],
+      },
       {
         key: "bancario",
         label: "Bancário",
@@ -85,43 +129,6 @@ export const buildNavGroups = ({
           { key: "contas_pagar", label: "Contas a Pagar", icon: <Icons.DollarSign />, count: parcelasContasPagar.filter((p) => p.status === "em_aberto").length },
           { key: "fornecedores", label: "Fornecedores", icon: <Icons.User />, count: fornecedores.filter((f) => f.ativo).length },
           { key: "centros_custo", label: "Centros de Custo", icon: <Icons.ClipboardList />, count: centrosCusto.filter((c) => c.ativo).length },
-        ],
-      },
-    ],
-  },
-  {
-    key: "comercial",
-    label: "Vendas",
-    icon: <Icons.TrendingUp />,
-    items: [
-      { key: "clientes", label: "Clientes", icon: <Icons.User />, count: clientes.length },
-      { key: "pipeline", label: "Pipeline", icon: <Icons.TrendingUp />, count: oportunidades.length },
-      { key: "vendas", label: "Vendas", icon: <Icons.ShoppingCart />, count: vendas.length },
-      { key: "documentos", label: "Documentos", icon: <Icons.FileText />, count: undefined },
-    ],
-  },
-  {
-    key: "operacional",
-    label: "Operacional",
-    icon: <Icons.ClipboardList />,
-    subgroups: [
-      {
-        key: "operacional_geral",
-        label: "Operacional",
-        icon: <Icons.ClipboardList />,
-        items: [
-          { key: "financeiro", label: "Financeiro", icon: <Icons.CreditCard />, count: titulos.length },
-          { key: "ordens_servico", label: "Ordens de Serviço", icon: <Icons.ClipboardList />, count: ordensServico.length },
-          { key: "comissoes", label: "Comissões", icon: <Icons.DollarSign />, count: comissoes.filter((c) => c.status !== "pago").length },
-        ],
-      },
-      {
-        key: "estoque",
-        label: "Estoque",
-        icon: <Icons.Package />,
-        items: [
-          { key: "estoque_itens", label: "Itens de Estoque", icon: <Icons.Package />, count: estoqueItens.filter((e) => e.ativo).length },
-          { key: "estoque_movimentacoes", label: "Movimentações", icon: <Icons.ArrowUpCircle />, count: estoqueMovimentacoes.length },
         ],
       },
     ],
