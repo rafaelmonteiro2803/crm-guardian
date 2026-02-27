@@ -21,6 +21,8 @@ const fmtItens = (itens, desconto) => {
 };
 
 export function VendaModal({ editando, clientes, produtos, fmtBRL, onSalvar, onFechar }) {
+  const clienteInicial = editando ? clientes.find((c) => c.id === editando.cliente_id) : null;
+
   const [form, setForm] = useState(() => {
     if (editando) {
       return {
@@ -37,21 +39,42 @@ export function VendaModal({ editando, clientes, produtos, fmtBRL, onSalvar, onF
     return formInicial();
   });
 
+  const [clienteBusca, setClienteBusca] = useState(clienteInicial?.nome || "");
+  const [clienteSelecionado, setClienteSelecionado] = useState(clienteInicial || null);
+  const [produtoBusca, setProdutoBusca] = useState("");
+  const [produtoSelecionado, setProdutoSelecionado] = useState(null);
+
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
 
+  const clientesFiltrados = clientes.filter((c) =>
+    c.nome.toLowerCase().includes(clienteBusca.toLowerCase())
+  );
+
+  const produtosFiltrados = produtos
+    .filter((p) => p.ativo !== false)
+    .filter((p) => p.nome.toLowerCase().includes(produtoBusca.toLowerCase()));
+
+  const selecionarCliente = (c) => {
+    setClienteSelecionado(c);
+    setClienteBusca(c.nome);
+    set({ cliente_id: c.id });
+  };
+
+  const selecionarProduto = (p) => {
+    setProdutoSelecionado(p);
+    setProdutoBusca(`${p.nome} — R$ ${fmtBRL(p.preco_base)}`);
+  };
+
   const adicionarItem = () => {
-    const sel = document.getElementById("venda-produto-select");
-    const pid = sel?.value;
-    if (!pid) return;
-    const prod = produtos.find((p) => p.id === pid);
-    if (!prod) return;
+    if (!produtoSelecionado) return;
     set({
       itens: [
         ...form.itens,
-        { produto_id: prod.id, nome: prod.nome, quantidade: 1, valor_unitario: parseFloat(prod.preco_base || 0) },
+        { produto_id: produtoSelecionado.id, nome: produtoSelecionado.nome, quantidade: 1, valor_unitario: parseFloat(produtoSelecionado.preco_base || 0) },
       ],
     });
-    if (sel) sel.value = "";
+    setProdutoBusca("");
+    setProdutoSelecionado(null);
   };
 
   const atualizarItem = (idx, patch) => {
@@ -70,14 +93,36 @@ export function VendaModal({ editando, clientes, produtos, fmtBRL, onSalvar, onF
 
           <div>
             <label className="block text-xs text-gray-600 mb-0.5">Cliente *</label>
-            <select
-              value={form.cliente_id}
-              onChange={(e) => set({ cliente_id: e.target.value })}
-              className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"
-            >
-              <option value="">Selecione</option>
-              {clientes.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
-            </select>
+            <div className="relative">
+              <Icons.Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+              <input
+                type="text"
+                value={clienteBusca}
+                onChange={(e) => { setClienteBusca(e.target.value); setClienteSelecionado(null); set({ cliente_id: "" }); }}
+                placeholder="Digite o nome do cliente..."
+                className="w-full border border-gray-200 rounded pl-8 pr-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"
+              />
+            </div>
+            {clienteBusca.trim().length > 0 && !clienteSelecionado && (
+              <div className="border border-gray-200 rounded overflow-hidden mt-1">
+                {clientesFiltrados.length === 0 ? (
+                  <p className="text-xs text-gray-400 p-3 text-center">Nenhum cliente encontrado.</p>
+                ) : (
+                  clientesFiltrados.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => selecionarCliente(c)}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
+                    >
+                      <Icons.User className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                      <span className="font-medium text-gray-800">{c.nome}</span>
+                      {c.telefone && <span className="text-gray-400 ml-auto">{c.telefone}</span>}
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
           </div>
 
           <div>
@@ -93,16 +138,35 @@ export function VendaModal({ editando, clientes, produtos, fmtBRL, onSalvar, onF
           <div>
             <label className="block text-xs text-gray-600 mb-1">Produtos</label>
             <div className="flex gap-2 mb-2">
-              <select
-                id="venda-produto-select"
-                className="flex-1 border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"
-                defaultValue=""
-              >
-                <option value="">Selecione um produto</option>
-                {produtos.filter((p) => p.ativo !== false).map((p) => (
-                  <option key={p.id} value={p.id}>{p.nome} — R$ {fmtBRL(p.preco_base)}</option>
-                ))}
-              </select>
+              <div className="flex-1 relative">
+                <Icons.Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                <input
+                  type="text"
+                  value={produtoBusca}
+                  onChange={(e) => { setProdutoBusca(e.target.value); setProdutoSelecionado(null); }}
+                  placeholder="Digite o nome do produto..."
+                  className="w-full border border-gray-200 rounded pl-8 pr-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"
+                />
+                {produtoBusca.trim().length > 0 && !produtoSelecionado && (
+                  <div className="absolute z-10 w-full border border-gray-200 rounded overflow-hidden mt-1 bg-white shadow-sm">
+                    {produtosFiltrados.length === 0 ? (
+                      <p className="text-xs text-gray-400 p-3 text-center">Nenhum produto encontrado.</p>
+                    ) : (
+                      produtosFiltrados.map((p) => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => selecionarProduto(p)}
+                          className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
+                        >
+                          <span className="font-medium text-gray-800">{p.nome}</span>
+                          <span className="text-gray-400 ml-auto">R$ {fmtBRL(p.preco_base)}</span>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
               <button
                 type="button"
                 onClick={adicionarItem}
