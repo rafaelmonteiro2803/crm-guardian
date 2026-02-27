@@ -144,6 +144,8 @@ function App() {
     excluirTitulo,
     marcarComoPago,
   } = useVendas(tenantId, session?.user?.id, (os) => setOrdensServico((prev) => [os, ...prev]));
+
+  const {
     contasBancarias,
     setContasBancarias,
     movimentosBancarios,
