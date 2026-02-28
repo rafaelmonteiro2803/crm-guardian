@@ -212,6 +212,29 @@ export function AppShell() {
     }
   };
 
+  // Quando um título de venda é marcado como pago, gera conciliação automática (recebido)
+  const marcarComoPagoComConciliacao = async (id) => {
+    const titulo = await marcarComoPago(id);
+    if (titulo) {
+      try {
+        const hoje = new Date().toISOString().split("T")[0];
+        await salvarConciliacaoBancaria({
+          titulo_id: titulo.id,
+          conta_pagar_parcela_id: null,
+          movimento_bancario_id: null,
+          tipo: "recebido",
+          status: "aguardando_confirmacao",
+          valor_titulo: titulo.valor,
+          valor_movimento: titulo.valor,
+          data_conciliacao: titulo.data_pagamento || hoje,
+          observacoes: "Gerado automaticamente ao marcar título como pago",
+        });
+      } catch (e) {
+        console.warn("Erro ao criar conciliação automática (recebido):", e.message);
+      }
+    }
+  };
+
   // ── Navigation ───────────────────────────────────────────────────────────────
 
   const isOwner = userRole === "owner";
@@ -261,7 +284,7 @@ export function AppShell() {
           oportunidades, salvarOportunidade, excluirOportunidade, moverOportunidade,
           getClienteNome, getProdutoNome,
           vendas, salvarVenda, excluirVenda,
-          titulos, salvarTitulo, excluirTitulo, marcarComoPago,
+          titulos, salvarTitulo, excluirTitulo, marcarComoPago: marcarComoPagoComConciliacao,
           tecnicos, salvarTecnico, excluirTecnico,
           ordensServico, getTecnicoNome,
           encaminharParaTecnico, concluirOrdemServico, excluirOrdemServico, salvarEvolucao,

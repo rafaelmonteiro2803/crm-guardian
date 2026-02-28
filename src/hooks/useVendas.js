@@ -178,6 +178,7 @@ export function useVendas(tenantId, userId, onNovaOS) {
       }
       setTitulos(nt);
     }
+    return updated;
   };
 
   return {

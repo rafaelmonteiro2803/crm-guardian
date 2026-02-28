@@ -25,6 +25,7 @@ export const TIPOS_DESPESA = [
 ];
 
 export const STATUS_PARCELA = [
+  { value: "aguardando_pagamento", label: "Aguardando Pagamento" },
   { value: "em_aberto", label: "Em Aberto" },
   { value: "pago", label: "Pago" },
   { value: "vencido", label: "Vencido" },
@@ -75,13 +76,13 @@ export const calcularParcelas = (valorTotal, numeroParcelas, dataPrimeiraParcela
 
 /** Verifica se uma parcela está vencida */
 export const isVencida = (parcela) => {
-  if (parcela.status !== "em_aberto") return false;
+  if (parcela.status !== "em_aberto" && parcela.status !== "aguardando_pagamento") return false;
   return new Date(parcela.data_vencimento + "T23:59:59") < new Date();
 };
 
 /** Verifica se uma parcela vence hoje */
 export const isVencendoHoje = (parcela) => {
-  if (parcela.status !== "em_aberto") return false;
+  if (parcela.status !== "em_aberto" && parcela.status !== "aguardando_pagamento") return false;
   const hoje = new Date().toISOString().split("T")[0];
   return parcela.data_vencimento === hoje;
 };
