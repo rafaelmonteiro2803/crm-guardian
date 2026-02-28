@@ -7,6 +7,8 @@ import { FONTES_PAGAMENTO } from "../components/modals/MovimentoBancarioModal";
 export function ConciliacaoBancariaPage({
   conciliacoesBancarias,
   titulos,
+  parcelas,
+  contasPagar,
   movimentosBancarios,
   contasBancarias,
   onSalvar,
@@ -14,6 +16,7 @@ export function ConciliacaoBancariaPage({
   fmtBRL,
 }) {
   const [modalAberto, setModalAberto] = useState(false);
+  const [filtroTipo, setFiltroTipo] = useState("todos");
 
   const handleSalvar = async (form) => {
     await onSalvar(form);
@@ -25,8 +28,16 @@ export function ConciliacaoBancariaPage({
     await onExcluir(id);
   };
 
-  const getTituloDesc = (tituloId) => {
-    const t = titulos.find((t) => t.id === tituloId);
+  const getTituloRelacionado = (c) => {
+    if (c.tipo === "pago" && c.conta_pagar_parcela_id) {
+      const parcela = (parcelas || []).find((p) => p.id === c.conta_pagar_parcela_id);
+      if (!parcela) return "-";
+      const conta = (contasPagar || []).find((cp) => cp.id === parcela.conta_pagar_id);
+      return conta
+        ? `${conta.descricao} - Parc. ${parcela.numero_parcela}`
+        : `Parcela ${parcela.numero_parcela}`;
+    }
+    const t = titulos.find((t) => t.id === c.titulo_id);
     return t ? t.descricao : "-";
   };
 
@@ -37,26 +48,49 @@ export function ConciliacaoBancariaPage({
 
   const getContaNome = (movId) => {
     const m = movimentosBancarios.find((m) => m.id === movId);
-    if (!m) return "-";
+    if (!m || !m.conta_id) return "-";
     return contasBancarias.find((c) => c.id === m.conta_id)?.nome || "-";
   };
 
   const getFonteLabel = (movId) => {
     const m = movimentosBancarios.find((m) => m.id === movId);
-    if (!m) return "-";
+    if (!m || !m.fonte_pagamento) return "-";
     return FONTES_PAGAMENTO.find((fp) => fp.value === m.fonte_pagamento)?.label || m.fonte_pagamento || "-";
   };
 
-  // Resumo geral das taxas
+  // Filtra conciliações por tipo
+  const conciliacoesFiltradas = filtroTipo === "todos"
+    ? conciliacoesBancarias
+    : conciliacoesBancarias.filter((c) => c.tipo === filtroTipo);
+
+  // Resumo geral das taxas (apenas confirmados e recebido para compatibilidade)
   const totalVendido = conciliacoesBancarias.reduce((s, c) => s + parseFloat(c.valor_titulo || 0), 0);
   const totalRecebido = conciliacoesBancarias.reduce((s, c) => s + parseFloat(c.valor_movimento || 0), 0);
   const totalDiferenca = totalVendido - totalRecebido;
   const percentualMedio =
     totalVendido > 0 ? (totalDiferenca / totalVendido) * 100 : 0;
 
-  const titulosPagosTotal = titulos.filter((t) => t.status === "pago").length;
-  const titulosConciliados = new Set(conciliacoesBancarias.map((c) => c.titulo_id)).size;
-  const titulosPendenteConciliacao = titulosPagosTotal - titulosConciliados;
+  // Contadores para badges
+  const qtdPago = conciliacoesBancarias.filter((c) => c.tipo === "pago").length;
+  const qtdRecebido = conciliacoesBancarias.filter((c) => c.tipo === "recebido").length;
+
+  // Títulos de venda pagos aguardando conciliação
+  const idsTitulosConciliados = new Set(
+    conciliacoesBancarias.filter((c) => c.titulo_id).map((c) => c.titulo_id)
+  );
+  const titulosVendaPendentesConciliacao = titulos.filter(
+    (t) => t.status === "pago" && !idsTitulosConciliados.has(t.id)
+  ).length;
+
+  // Parcelas pagas aguardando conciliação
+  const idsParcelasConciliadas = new Set(
+    conciliacoesBancarias.filter((c) => c.conta_pagar_parcela_id).map((c) => c.conta_pagar_parcela_id)
+  );
+  const parcelasPagosPendentesConciliacao = (parcelas || []).filter(
+    (p) => p.status === "pago" && !idsParcelasConciliadas.has(p.id)
+  ).length;
+
+  const totalPendentes = titulosVendaPendentesConciliacao + parcelasPagosPendentesConciliacao;
 
   return (
     <div className="space-y-3">
@@ -64,9 +98,9 @@ export function ConciliacaoBancariaPage({
         <div>
           <h2 className="text-sm font-semibold text-gray-700">Conciliação Bancária</h2>
           <p className="text-[11px] text-gray-400 mt-0.5">
-            {titulosConciliados} conciliado{titulosConciliados !== 1 ? "s" : ""} ·{" "}
-            {titulosPendenteConciliacao > 0 ? (
-              <span className="text-amber-600 font-medium">{titulosPendenteConciliacao} pendente{titulosPendenteConciliacao !== 1 ? "s" : ""}</span>
+            {conciliacoesBancarias.length} conciliação{conciliacoesBancarias.length !== 1 ? "ões" : ""} ·{" "}
+            {totalPendentes > 0 ? (
+              <span className="text-amber-600 font-medium">{totalPendentes} pendente{totalPendentes !== 1 ? "s" : ""}</span>
             ) : (
               <span className="text-green-600 font-medium">todos conciliados</span>
             )}
@@ -80,17 +114,60 @@ export function ConciliacaoBancariaPage({
         </button>
       </div>
 
+      {/* Filtros PAGO / RECEBIDO */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => setFiltroTipo("todos")}
+          className={`px-3 py-1.5 rounded text-xs font-medium border transition-colors ${
+            filtroTipo === "todos"
+              ? "bg-gray-800 text-white border-gray-800"
+              : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+          }`}
+        >
+          Todos
+          <span className={`ml-1 text-[10px] px-1 rounded-full ${filtroTipo === "todos" ? "bg-white/20" : "bg-gray-100"}`}>
+            {conciliacoesBancarias.length}
+          </span>
+        </button>
+        <button
+          onClick={() => setFiltroTipo("pago")}
+          className={`px-3 py-1.5 rounded text-xs font-medium border transition-colors ${
+            filtroTipo === "pago"
+              ? "bg-red-600 text-white border-red-600"
+              : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+          }`}
+        >
+          Pago
+          <span className={`ml-1 text-[10px] px-1 rounded-full ${filtroTipo === "pago" ? "bg-white/20" : "bg-gray-100"}`}>
+            {qtdPago}
+          </span>
+        </button>
+        <button
+          onClick={() => setFiltroTipo("recebido")}
+          className={`px-3 py-1.5 rounded text-xs font-medium border transition-colors ${
+            filtroTipo === "recebido"
+              ? "bg-green-600 text-white border-green-600"
+              : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+          }`}
+        >
+          Recebido
+          <span className={`ml-1 text-[10px] px-1 rounded-full ${filtroTipo === "recebido" ? "bg-white/20" : "bg-gray-100"}`}>
+            {qtdRecebido}
+          </span>
+        </button>
+      </div>
+
       {conciliacoesBancarias.length > 0 && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <div className="bg-white border border-gray-200 rounded p-3">
-            <span className="text-xs text-gray-500">Total Vendido</span>
+            <span className="text-xs text-gray-500">Total (Títulos)</span>
             <p className="text-base font-semibold text-gray-800 mt-0.5">R$ {fmtBRL(totalVendido)}</p>
             <p className="text-[11px] text-gray-400">{conciliacoesBancarias.length} conciliações</p>
           </div>
           <div className="bg-white border border-green-200 rounded p-3">
-            <span className="text-xs text-gray-500">Total Recebido</span>
+            <span className="text-xs text-gray-500">Total (Movimentos)</span>
             <p className="text-base font-semibold text-green-700 mt-0.5">R$ {fmtBRL(totalRecebido)}</p>
-            <p className="text-[11px] text-green-600">valor creditado</p>
+            <p className="text-[11px] text-green-600">valor efetivo</p>
           </div>
           <div className="bg-white border border-amber-200 rounded p-3">
             <span className="text-xs text-gray-500">Total de Taxas</span>
@@ -109,15 +186,17 @@ export function ConciliacaoBancariaPage({
         </div>
       )}
 
-      {titulosPendenteConciliacao > 0 && (
+      {totalPendentes > 0 && (
         <div className="bg-amber-50 border border-amber-200 rounded p-3 flex items-start gap-2">
           <Icons.AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
           <div>
             <p className="text-xs font-semibold text-amber-700">
-              {titulosPendenteConciliacao} título{titulosPendenteConciliacao !== 1 ? "s" : ""} pago{titulosPendenteConciliacao !== 1 ? "s" : ""} aguardando conciliação
+              {totalPendentes} item{totalPendentes !== 1 ? "s" : ""} aguardando conciliação
             </p>
             <p className="text-[11px] text-amber-600 mt-0.5">
-              Relacione os títulos pagos com os respectivos movimentos bancários para calcular as taxas cobradas.
+              {titulosVendaPendentesConciliacao > 0 && `${titulosVendaPendentesConciliacao} título${titulosVendaPendentesConciliacao !== 1 ? "s" : ""} de venda pago${titulosVendaPendentesConciliacao !== 1 ? "s" : ""}`}
+              {titulosVendaPendentesConciliacao > 0 && parcelasPagosPendentesConciliacao > 0 && " · "}
+              {parcelasPagosPendentesConciliacao > 0 && `${parcelasPagosPendentesConciliacao} conta${parcelasPagosPendentesConciliacao !== 1 ? "s" : ""} a pagar paga${parcelasPagosPendentesConciliacao !== 1 ? "s" : ""}`}
             </p>
           </div>
         </div>
@@ -137,10 +216,24 @@ export function ConciliacaoBancariaPage({
             sortValue: (c) => c.data_conciliacao,
           },
           {
-            key: "titulo_id",
-            label: "Título",
-            render: (c) => <span className="font-medium text-gray-800">{getTituloDesc(c.titulo_id)}</span>,
-            filterValue: (c) => getTituloDesc(c.titulo_id),
+            key: "tipo",
+            label: "Tipo",
+            render: (c) => (
+              <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium ${
+                c.tipo === "pago"
+                  ? "bg-red-50 text-red-700"
+                  : "bg-green-50 text-green-700"
+              }`}>
+                {c.tipo === "pago" ? "Pago" : "Recebido"}
+              </span>
+            ),
+            filterValue: (c) => c.tipo === "pago" ? "Pago" : "Recebido",
+          },
+          {
+            key: "titulo_relacionado",
+            label: "Título Relacionado",
+            render: (c) => <span className="font-medium text-gray-800">{getTituloRelacionado(c)}</span>,
+            filterValue: (c) => getTituloRelacionado(c),
           },
           {
             key: "movimento_bancario_id",
@@ -165,15 +258,33 @@ export function ConciliacaoBancariaPage({
           },
           {
             key: "valor_titulo",
-            label: "Vendido",
+            label: "Valor Título",
             render: (c) => <span className="font-medium text-gray-800">R$ {fmtBRL(c.valor_titulo)}</span>,
             sortValue: (c) => parseFloat(c.valor_titulo || 0),
           },
           {
             key: "valor_movimento",
-            label: "Recebido",
-            render: (c) => <span className="font-medium text-green-700">R$ {fmtBRL(c.valor_movimento)}</span>,
+            label: "Valor Movimento",
+            render: (c) => (
+              <span className={`font-medium ${c.tipo === "pago" ? "text-red-700" : "text-green-700"}`}>
+                R$ {fmtBRL(c.valor_movimento)}
+              </span>
+            ),
             sortValue: (c) => parseFloat(c.valor_movimento || 0),
+          },
+          {
+            key: "status",
+            label: "Status",
+            render: (c) => (
+              <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium ${
+                c.status === "confirmado"
+                  ? "bg-green-50 text-green-700"
+                  : "bg-yellow-50 text-yellow-700"
+              }`}>
+                {c.status === "confirmado" ? "Confirmado" : "Aguard. Confirmação"}
+              </span>
+            ),
+            filterValue: (c) => c.status === "confirmado" ? "Confirmado" : "Aguardando Confirmação",
           },
           {
             key: "diferenca",
@@ -204,7 +315,7 @@ export function ConciliacaoBancariaPage({
             sortValue: (c) => parseFloat(c.percentual_taxa || 0),
           },
         ]}
-        data={conciliacoesBancarias}
+        data={conciliacoesFiltradas}
         actions={(c) => (
           <button
             onClick={() => handleExcluir(c.id)}
@@ -214,10 +325,11 @@ export function ConciliacaoBancariaPage({
           </button>
         )}
         rowClassName={(c) => {
+          if (c.status === "aguardando_confirmacao") return "bg-yellow-50/30";
           const pct = parseFloat(c.percentual_taxa || 0);
           return pct > 3 ? "bg-red-50/30" : pct > 0.005 ? "bg-amber-50/30" : "";
         }}
-        emptyMessage="Nenhuma conciliação registrada. Relacione títulos pagos com movimentos bancários."
+        emptyMessage="Nenhuma conciliação encontrada para o filtro selecionado."
       />
 
       <ConciliacaoModal
@@ -225,6 +337,8 @@ export function ConciliacaoBancariaPage({
         onClose={() => setModalAberto(false)}
         onSalvar={handleSalvar}
         titulos={titulos}
+        parcelas={parcelas}
+        contasPagar={contasPagar}
         movimentosBancarios={movimentosBancarios}
         contasBancarias={contasBancarias}
         conciliacoes={conciliacoesBancarias}

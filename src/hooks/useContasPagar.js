@@ -9,7 +9,10 @@ import {
   updateParcela,
   deleteParcelasByContaPagar,
 } from "../services/contasPagarService";
-import { createMovimentoBancario } from "../services/movimentosBancariosService";
+import {
+  createMovimentoBancario,
+  createConciliacao,
+} from "../services/movimentosBancariosService";
 import { calcularParcelas } from "../constants/contasPagar";
 
 export function useContasPagar(tenantId, userId) {
@@ -80,7 +83,8 @@ export function useContasPagar(tenantId, userId) {
         // Cria a conta
         const created = await createContaPagar(payload);
         setContasPagar((prev) => [created, ...prev]);
-        // Cria as parcelas
+
+        // Cria as parcelas com status aguardando_pagamento
         const novasParcelas = calcularParcelas(
           valorTotal,
           numParcelas,
@@ -88,12 +92,34 @@ export function useContasPagar(tenantId, userId) {
         );
         const parcelasPayload = novasParcelas.map((p) => ({
           ...p,
+          status: "aguardando_pagamento",
           conta_pagar_id: created.id,
           user_id: userId,
           tenant_id: tenantId,
         }));
         const criadas = await createParcelas(parcelasPayload);
         setParcelas((prev) => [...prev, ...criadas]);
+
+        // Cria um movimento bancário pendente para cada parcela
+        for (const parcela of criadas) {
+          try {
+            await createMovimentoBancario({
+              conta_id: null,
+              tipo: "saida",
+              valor: parcela.valor,
+              descricao: `${payload.descricao} - Parc. ${parcela.numero_parcela}/${numParcelas}`,
+              fonte_pagamento: null,
+              data_movimento: parcela.data_vencimento,
+              status: "aguardando_confirmacao",
+              conta_pagar_parcela_id: parcela.id,
+              observacoes: payload.observacoes || null,
+              user_id: userId,
+              tenant_id: tenantId,
+            });
+          } catch (e) {
+            console.warn("Erro ao criar movimento bancário pendente:", e.message);
+          }
+        }
       }
     },
     [tenantId, userId]
@@ -107,8 +133,9 @@ export function useContasPagar(tenantId, userId) {
 
   /**
    * Registra o pagamento de uma parcela:
-   * 1. Cria um movimento bancário de saída
+   * 1. Cria um movimento bancário de saída confirmado
    * 2. Marca a parcela como "pago"
+   * 3. Cria conciliação bancária tipo "pago" com status "aguardando_confirmacao"
    */
   const pagarParcela = useCallback(
     async (parcela, formPagamento, contasBancarias) => {
@@ -124,7 +151,7 @@ export function useContasPagar(tenantId, userId) {
         ? `${contaPagar.descricao} - Parc. ${parcela.numero_parcela}`
         : `Pagamento parcela ${parcela.id}`;
 
-      // Cria movimento bancário de saída
+      // Cria movimento bancário de saída confirmado
       const movPayload = {
         conta_id: formPagamento.conta_bancaria_id,
         tipo: "saida",
@@ -132,6 +159,8 @@ export function useContasPagar(tenantId, userId) {
         descricao: descricaoMov,
         fonte_pagamento: formPagamento.forma_pagamento,
         data_movimento: formPagamento.data_pagamento,
+        status: "confirmado",
+        conta_pagar_parcela_id: parcela.id,
         observacoes: formPagamento.observacoes || null,
         user_id: userId,
         tenant_id: tenantId,
@@ -152,6 +181,25 @@ export function useContasPagar(tenantId, userId) {
       setParcelas((prev) =>
         prev.map((p) => (p.id === parcela.id ? parcelaAtualizada : p))
       );
+
+      // Cria conciliação bancária automática tipo "pago"
+      try {
+        await createConciliacao({
+          conta_pagar_parcela_id: parcela.id,
+          titulo_id: null,
+          movimento_bancario_id: mov.id,
+          tipo: "pago",
+          status: "aguardando_confirmacao",
+          valor_titulo: parcelaAtualizada.valor,
+          valor_movimento: parcelaAtualizada.valor_pago || parcelaAtualizada.valor,
+          data_conciliacao: formPagamento.data_pagamento,
+          observacoes: "Gerado automaticamente ao pagar parcela",
+          user_id: userId,
+          tenant_id: tenantId,
+        });
+      } catch (e) {
+        console.warn("Erro ao criar conciliação automática:", e.message);
+      }
 
       return { mov, parcelaAtualizada };
     },

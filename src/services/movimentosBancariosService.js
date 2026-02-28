@@ -99,6 +99,16 @@ export const createConciliacao = async (payload) => {
   return data[0];
 };
 
+export const updateConciliacao = async (id, payload) => {
+  const { data, error } = await supabase
+    .from("conciliacoes_bancarias")
+    .update(payload)
+    .eq("id", id)
+    .select();
+  if (error) throw error;
+  return data[0];
+};
+
 export const deleteConciliacao = async (id) => {
   const { error } = await supabase
     .from("conciliacoes_bancarias")

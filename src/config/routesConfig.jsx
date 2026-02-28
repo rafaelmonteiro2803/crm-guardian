@@ -155,7 +155,7 @@ export const renderRoute = (viewMode, props) => {
     case "movimentos_bancarios":
       return <MovimentosBancariosPage movimentosBancarios={movimentosBancarios} contasBancarias={contasBancarias} onSalvar={salvarMovimentoBancario} onExcluir={excluirMovimentoBancario} fmtBRL={fmtBRL} />;
     case "conciliacao_bancaria":
-      return <ConciliacaoBancariaPage conciliacoesBancarias={conciliacoesBancarias} titulos={titulos} movimentosBancarios={movimentosBancarios} contasBancarias={contasBancarias} onSalvar={salvarConciliacaoBancaria} onExcluir={excluirConciliacaoBancaria} fmtBRL={fmtBRL} />;
+      return <ConciliacaoBancariaPage conciliacoesBancarias={conciliacoesBancarias} titulos={titulos} parcelas={parcelasContasPagar} contasPagar={contasPagar} movimentosBancarios={movimentosBancarios} contasBancarias={contasBancarias} onSalvar={salvarConciliacaoBancaria} onExcluir={excluirConciliacaoBancaria} fmtBRL={fmtBRL} />;
     case "tenants":
       return isOwner ? <TenantsPage tenants={tenants} onSalvar={salvarTenant} onExcluir={excluirTenant} /> : null;
     case "contas_pagar_dashboard":

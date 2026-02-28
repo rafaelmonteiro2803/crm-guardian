@@ -12,7 +12,7 @@ import {
 
 const FILTROS = [
   { key: "todos", label: "Todos" },
-  { key: "em_aberto", label: "Em Aberto" },
+  { key: "aguardando", label: "Aguardando" },
   { key: "vencendo_hoje", label: "Vencendo Hoje" },
   { key: "vencidas", label: "Vencidas" },
   { key: "pagas", label: "Pagas" },
@@ -33,7 +33,7 @@ export function ContasPagarPage({
   const [editando, setEditando] = useState(null);
   const [modalPagamento, setModalPagamento] = useState(false);
   const [parcelaSelecionada, setParcelaSelecionada] = useState(null);
-  const [filtroAtivo, setFiltroAtivo] = useState("em_aberto");
+  const [filtroAtivo, setFiltroAtivo] = useState("aguardando");
   const [filtroFornecedor, setFiltroFornecedor] = useState("");
   const [filtroCentroCusto, setFiltroCentroCusto] = useState("");
   const [filtroCategoria, setFiltroCategoria] = useState("");
@@ -82,12 +82,16 @@ export function ContasPagarPage({
     });
   }, [parcelas, contasPagar]);
 
+  // Parcela está "pendente" (aguardando_pagamento ou em_aberto, não vencida)
+  const isPendente = (p) =>
+    (p.status === "aguardando_pagamento" || p.status === "em_aberto") && !isVencida(p);
+
   // Aplica filtros
   const parcelasFiltradas = useMemo(() => {
     let lista = parcelasEnriquecidas;
 
-    if (filtroAtivo === "em_aberto") {
-      lista = lista.filter((p) => p.status === "em_aberto" && !isVencida(p));
+    if (filtroAtivo === "aguardando") {
+      lista = lista.filter((p) => isPendente(p));
     } else if (filtroAtivo === "vencendo_hoje") {
       lista = lista.filter((p) => isVencendoHoje(p));
     } else if (filtroAtivo === "vencidas") {
@@ -113,7 +117,7 @@ export function ContasPagarPage({
   const contadores = useMemo(() => {
     return {
       todos: parcelasEnriquecidas.length,
-      em_aberto: parcelasEnriquecidas.filter((p) => p.status === "em_aberto" && !isVencida(p)).length,
+      aguardando: parcelasEnriquecidas.filter((p) => isPendente(p)).length,
       vencendo_hoje: parcelasEnriquecidas.filter((p) => isVencendoHoje(p)).length,
       vencidas: parcelasEnriquecidas.filter((p) => isVencida(p)).length,
       pagas: parcelasEnriquecidas.filter((p) => p.status === "pago").length,
@@ -309,6 +313,15 @@ export function ContasPagarPage({
               if (p.status === "pago") {
                 return <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] bg-green-50 text-green-700"><Icons.CheckCircle className="w-3 h-3" />Pago</span>;
               }
+              if (p.status === "aguardando_pagamento") {
+                if (vencida) {
+                  return <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] bg-red-50 text-red-700"><Icons.AlertCircle className="w-3 h-3" />Vencida</span>;
+                }
+                if (isVencendoHoje(p)) {
+                  return <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] bg-orange-50 text-orange-700"><Icons.Clock className="w-3 h-3" />Hoje</span>;
+                }
+                return <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] bg-blue-50 text-blue-700"><Icons.Clock className="w-3 h-3" />Aguardando Pagamento</span>;
+              }
               if (vencida) {
                 return <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] bg-red-50 text-red-700"><Icons.AlertCircle className="w-3 h-3" />Vencida</span>;
               }
@@ -321,6 +334,7 @@ export function ContasPagarPage({
               if (p.status === "pago") return "Pago";
               if (isVencida(p)) return "Vencida";
               if (isVencendoHoje(p)) return "Hoje";
+              if (p.status === "aguardando_pagamento") return "Aguardando Pagamento";
               return "Em Aberto";
             },
           },
@@ -328,7 +342,7 @@ export function ContasPagarPage({
         data={parcelasFiltradas}
         actions={(p) => (
           <div className="flex items-center gap-1">
-            {p.status === "em_aberto" && (
+            {(p.status === "em_aberto" || p.status === "aguardando_pagamento") && (
               <button
                 onClick={() => abrirPagamento(p)}
                 className="text-green-600 hover:bg-green-50 px-1.5 py-0.5 rounded text-[11px] font-medium flex items-center gap-0.5"
@@ -356,6 +370,7 @@ export function ContasPagarPage({
           if (p.status === "pago") return "opacity-60";
           if (isVencida(p)) return "bg-red-50/40";
           if (isVencendoHoje(p)) return "bg-orange-50/40";
+          if (p.status === "aguardando_pagamento") return "bg-blue-50/20";
           return "";
         }}
         emptyMessage="Nenhuma conta a pagar encontrada para o filtro selecionado."
