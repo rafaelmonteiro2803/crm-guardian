@@ -24,8 +24,8 @@ ALTER TABLE movimentos_bancarios
   ALTER COLUMN fonte_pagamento DROP NOT NULL;
 
 ALTER TABLE movimentos_bancarios
-  ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'confirmado'
-    CHECK (status IN ('aguardando_confirmacao', 'confirmado'));
+  ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'aprovado'
+    CHECK (status IN ('em_aprovacao', 'aprovado'));
 
 ALTER TABLE movimentos_bancarios
   ADD COLUMN IF NOT EXISTS conta_pagar_parcela_id UUID
