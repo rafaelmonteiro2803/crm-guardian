@@ -212,12 +212,22 @@ export function AppShell() {
     }
   };
 
-  // Quando um título de venda é marcado como pago, gera conciliação automática (recebido)
+  // Quando um título de venda é marcado como pago, gera movimento bancário e conciliação automática (recebido)
   const marcarComoPagoComConciliacao = async (id) => {
     const titulo = await marcarComoPago(id);
     if (titulo) {
       try {
         const hoje = new Date().toISOString().split("T")[0];
+        await salvarMovimentoBancario({
+          tipo: "entrada",
+          valor: titulo.valor,
+          descricao: `Recebimento - ${titulo.descricao}`,
+          data_movimento: titulo.data_pagamento || hoje,
+          titulo_id: titulo.id,
+          conta_id: null,
+          fonte_pagamento: null,
+          observacoes: "Gerado automaticamente ao marcar título como pago",
+        }, null);
         await salvarConciliacaoBancaria({
           titulo_id: titulo.id,
           conta_pagar_parcela_id: null,
@@ -230,7 +240,7 @@ export function AppShell() {
           observacoes: "Gerado automaticamente ao marcar título como pago",
         });
       } catch (e) {
-        console.warn("Erro ao criar conciliação automática (recebido):", e.message);
+        console.warn("Erro ao criar movimento/conciliação automática (recebido):", e.message);
       }
     }
   };
