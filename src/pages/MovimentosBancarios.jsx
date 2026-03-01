@@ -3,6 +3,12 @@ import { DataGrid } from "../components/DataGrid";
 import { Icons } from "../components/Icons";
 import { MovimentoBancarioModal, FONTES_PAGAMENTO } from "../components/modals/MovimentoBancarioModal";
 
+const STATUS_MOV = {
+  aguardando_conciliacao: { label: "Aguardando Conciliação", cls: "bg-yellow-50 text-yellow-700" },
+  aguardando_confirmacao: { label: "Aguardando Confirmação", cls: "bg-blue-50 text-blue-700" },
+  confirmado: { label: "Confirmado", cls: "bg-green-50 text-green-700" },
+};
+
 export function MovimentosBancariosPage({
   movimentosBancarios,
   contasBancarias,
@@ -153,6 +159,19 @@ export function MovimentosBancariosPage({
               </span>
             ),
             sortValue: (m) => parseFloat(m.valor || 0),
+          },
+          {
+            key: "status",
+            label: "Status",
+            render: (m) => {
+              const s = STATUS_MOV[m.status] || STATUS_MOV.aguardando_conciliacao;
+              return (
+                <span className={`px-1.5 py-0.5 rounded text-[11px] font-medium ${s.cls}`}>
+                  {s.label}
+                </span>
+              );
+            },
+            filterValue: (m) => (STATUS_MOV[m.status]?.label || "Aguardando Conciliação"),
           },
         ]}
         data={movimentosBancarios}

@@ -20,6 +20,13 @@ const FORM_INICIAL = {
   fonte_pagamento: "pix",
   data_movimento: new Date().toISOString().split("T")[0],
   observacoes: "",
+  status: "aguardando_conciliacao",
+};
+
+const STATUS_LABELS = {
+  aguardando_conciliacao: { label: "Aguardando Conciliação", cls: "bg-yellow-50 text-yellow-700 border-yellow-200" },
+  aguardando_confirmacao: { label: "Aguardando Confirmação", cls: "bg-blue-50 text-blue-700 border-blue-200" },
+  confirmado: { label: "Confirmado", cls: "bg-green-50 text-green-700 border-green-200" },
 };
 
 export function MovimentoBancarioModal({ aberto, editando, contasBancarias, onClose, onSalvar }) {
@@ -146,6 +153,17 @@ export function MovimentoBancarioModal({ aberto, editando, contasBancarias, onCl
               className={inputCls}
               rows="2"
             />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-600 mb-0.5">Status</label>
+            {(() => {
+              const s = STATUS_LABELS[form.status] || STATUS_LABELS.aguardando_conciliacao;
+              return (
+                <span className={`inline-block px-2.5 py-1 rounded border text-xs font-medium ${s.cls}`}>
+                  {s.label}
+                </span>
+              );
+            })()}
           </div>
         </div>
         <div className="flex gap-2 mt-4">
