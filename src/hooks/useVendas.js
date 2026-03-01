@@ -127,11 +127,21 @@ export function useVendas(tenantId, userId, onNovaOS) {
       alert("Descrição é obrigatória!");
       return;
     }
+
+    const pagarParcial = form.pagarParcial && parseFloat(form.valor_parcial) > 0;
+    const valorParcialNum = pagarParcial ? parseFloat(form.valor_parcial) : 0;
+    const saldoValor = pagarParcial ? parseFloat(form.valor) - valorParcialNum : 0;
+
     const dadosTitulo = {
-      ...form,
+      venda_id: form.venda_id || null,
+      descricao: form.descricao,
+      valor: pagarParcial ? valorParcialNum.toFixed(2) : form.valor,
+      data_emissao: form.data_emissao,
+      data_vencimento: form.data_vencimento,
+      status: pagarParcial ? "pago" : form.status,
       user_id: userId,
       tenant_id: tenantId,
-      data_pagamento: form.status === "pago" ? hoje() : null,
+      data_pagamento: (form.status === "pago" || pagarParcial) ? hoje() : null,
     };
 
     let titulosAtualizados = [...titulos];
@@ -144,7 +154,20 @@ export function useVendas(tenantId, userId, onNovaOS) {
       if (created) titulosAtualizados = [...titulosAtualizados, created];
     }
 
-    if (form.status === "pago" && form.venda_id) {
+    if (pagarParcial && saldoValor > 0.01) {
+      const tituloSaldo = {
+        venda_id: form.venda_id || (editando?.venda_id) || null,
+        descricao: `${form.descricao} (saldo)`,
+        valor: saldoValor.toFixed(2),
+        data_emissao: hoje(),
+        data_vencimento: form.data_vencimento || hoje(),
+        status: "pendente",
+        user_id: userId,
+        tenant_id: tenantId,
+      };
+      const saldoCreated = await createTitulo(tituloSaldo);
+      if (saldoCreated) titulosAtualizados = [...titulosAtualizados, saldoCreated];
+    } else if (!pagarParcial && form.status === "pago" && form.venda_id) {
       const vendaRel = vendas.find((v) => v.id === form.venda_id);
       if (vendaRel) {
         const saldoTitulo = await _criarSaldoTitulo(vendaRel, titulosAtualizados, form.data_vencimento);
