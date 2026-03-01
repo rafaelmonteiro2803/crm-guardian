@@ -12,6 +12,64 @@ const FORM_INICIAL = {
   observacoes: "",
 };
 
+const inputCls = "w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none";
+
+function SearchableSelect({ options, value, onChange, placeholder, renderLabel, getId, emptyMsg }) {
+  const [search, setSearch] = useState("");
+  const [open, setOpen] = useState(false);
+
+  const selectedOpt = options.find((o) => getId(o) === value);
+
+  const filtered = search
+    ? options.filter((o) => renderLabel(o).toLowerCase().includes(search.toLowerCase()))
+    : options;
+
+  const handleFocus = () => {
+    setOpen(true);
+    setSearch("");
+  };
+
+  const handleBlur = () => setTimeout(() => setOpen(false), 150);
+
+  const handleSelect = (id) => {
+    onChange(id);
+    setOpen(false);
+    setSearch("");
+  };
+
+  return (
+    <div className="relative">
+      <input
+        type="text"
+        value={open ? search : selectedOpt ? renderLabel(selectedOpt) : ""}
+        onChange={(e) => { setSearch(e.target.value); if (!open) setOpen(true); }}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+        placeholder={placeholder}
+        className={inputCls}
+        autoComplete="off"
+      />
+      {open && (
+        <div className="absolute z-20 w-full bg-white border border-gray-200 rounded shadow-lg mt-1 max-h-48 overflow-y-auto">
+          {filtered.length === 0 ? (
+            <div className="px-2.5 py-1.5 text-[11px] text-yellow-600">{emptyMsg || "Nenhum resultado."}</div>
+          ) : (
+            filtered.map((o) => (
+              <div
+                key={getId(o)}
+                onMouseDown={() => handleSelect(getId(o))}
+                className={`px-2.5 py-1.5 text-sm cursor-pointer hover:bg-gray-100 ${getId(o) === value ? "bg-gray-50 font-medium" : ""}`}
+              >
+                {renderLabel(o)}
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function ConciliacaoModal({
   aberto,
   onClose,
@@ -50,12 +108,13 @@ export function ConciliacaoModal({
     (t) => t.status === "pago" && !idsTitulosConciliados.has(t.id)
   );
 
-  // Movimentos disponíveis baseados no tipo
+  // Movimentos disponíveis baseados no tipo (exclui confirmados)
   const idsMovimentosConciliados = new Set(
     conciliacoes.filter((c) => c.movimento_bancario_id).map((c) => c.movimento_bancario_id)
   );
   const movimentosFiltrados = movimentosBancarios.filter((m) => {
     if (idsMovimentosConciliados.has(m.id)) return false;
+    if (m.status === "confirmado") return false;
     return isPago ? m.tipo === "saida" : m.tipo === "entrada";
   });
 
@@ -64,39 +123,45 @@ export function ConciliacaoModal({
     if (!parcela) return "-";
     const conta = (contasPagar || []).find((c) => c.id === parcela.conta_pagar_id);
     return conta
-      ? `${conta.descricao} - Parc. ${parcela.numero_parcela}`
+      ? `${conta.descricao} - Parc. ${parcela.numero_parcela} — R$ ${fmtBRL(parcela.valor)} — Pago em ${parcela.data_pagamento ? new Date(parcela.data_pagamento + "T00:00:00").toLocaleDateString("pt-BR") : "-"}`
       : `Parcela ${parcela.numero_parcela}`;
   };
+
+  const getTituloLabel = (t) =>
+    `${t.descricao} — R$ ${fmtBRL(t.valor)} — Pago em ${t.data_pagamento ? new Date(t.data_pagamento + "T00:00:00").toLocaleDateString("pt-BR") : "-"}`;
+
+  const getMovimentoLabel = (m) =>
+    `${new Date(m.data_movimento + "T00:00:00").toLocaleDateString("pt-BR")} — ${m.descricao} — ${getContaNome(m.conta_id)} — ${getFonteLabel(m.fonte_pagamento)} — R$ ${fmtBRL(m.valor)}`;
 
   const handleTipoChange = (novoTipo) => {
     setForm({ ...FORM_INICIAL, tipo: novoTipo });
   };
 
-  const handleTituloChange = (e) => {
-    const titulo = titulos.find((t) => t.id === e.target.value);
+  const handleTituloChange = (id) => {
+    const titulo = titulos.find((t) => t.id === id);
     setForm({
       ...form,
-      titulo_id: e.target.value,
+      titulo_id: id,
       conta_pagar_parcela_id: "",
       valor_titulo: titulo ? titulo.valor.toString() : "",
     });
   };
 
-  const handleParcelaChange = (e) => {
-    const parcela = (parcelas || []).find((p) => p.id === e.target.value);
+  const handleParcelaChange = (id) => {
+    const parcela = (parcelas || []).find((p) => p.id === id);
     setForm({
       ...form,
-      conta_pagar_parcela_id: e.target.value,
+      conta_pagar_parcela_id: id,
       titulo_id: "",
       valor_titulo: parcela ? parcela.valor.toString() : "",
     });
   };
 
-  const handleMovimentoChange = (e) => {
-    const mov = movimentosBancarios.find((m) => m.id === e.target.value);
+  const handleMovimentoChange = (id) => {
+    const mov = movimentosBancarios.find((m) => m.id === id);
     setForm({
       ...form,
-      movimento_bancario_id: e.target.value,
+      movimento_bancario_id: id,
       valor_movimento: mov ? mov.valor.toString() : "",
     });
   };
@@ -130,7 +195,6 @@ export function ConciliacaoModal({
   };
 
   const f = (field) => (e) => setForm({ ...form, [field]: e.target.value });
-  const inputCls = "w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none";
 
   const getContaNome = (contaId) =>
     contasBancarias.find((c) => c.id === contaId)?.nome || "-";
@@ -168,19 +232,21 @@ export function ConciliacaoModal({
         </div>
 
         <div className="space-y-2.5">
-          {/* Título Relacionado */}
+          {/* Título Relacionado — campo de busca */}
           <div>
             <label className="block text-xs text-gray-600 mb-0.5">Título Relacionado *</label>
             {isPago ? (
               <>
-                <select value={form.conta_pagar_parcela_id} onChange={handleParcelaChange} className={inputCls}>
-                  <option value="">Selecione a conta a pagar...</option>
-                  {parcelasPagas.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {getContaPagarDescricao(p.id)} — R$ {fmtBRL(p.valor)} — Pago em {p.data_pagamento ? new Date(p.data_pagamento + "T00:00:00").toLocaleDateString("pt-BR") : "-"}
-                    </option>
-                  ))}
-                </select>
+                <SearchableSelect
+                  key={`parcela-${form.tipo}`}
+                  options={parcelasPagas}
+                  value={form.conta_pagar_parcela_id}
+                  onChange={handleParcelaChange}
+                  placeholder="Buscar conta a pagar..."
+                  getId={(p) => p.id}
+                  renderLabel={(p) => getContaPagarDescricao(p.id)}
+                  emptyMsg="Nenhuma conta a pagar disponível para conciliação."
+                />
                 {parcelasPagas.length === 0 && (
                   <p className="text-[11px] text-yellow-600 mt-1">
                     Nenhuma conta a pagar disponível para conciliação.
@@ -189,14 +255,16 @@ export function ConciliacaoModal({
               </>
             ) : (
               <>
-                <select value={form.titulo_id} onChange={handleTituloChange} className={inputCls}>
-                  <option value="">Selecione o título de venda...</option>
-                  {titulosDisponiveis.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.descricao} — R$ {fmtBRL(t.valor)} — Pago em {t.data_pagamento ? new Date(t.data_pagamento + "T00:00:00").toLocaleDateString("pt-BR") : "-"}
-                    </option>
-                  ))}
-                </select>
+                <SearchableSelect
+                  key={`titulo-${form.tipo}`}
+                  options={titulosDisponiveis}
+                  value={form.titulo_id}
+                  onChange={handleTituloChange}
+                  placeholder="Buscar título de venda..."
+                  getId={(t) => t.id}
+                  renderLabel={getTituloLabel}
+                  emptyMsg="Nenhum título de venda disponível para conciliação."
+                />
                 {titulosDisponiveis.length === 0 && (
                   <p className="text-[11px] text-yellow-600 mt-1">
                     Nenhum título de venda disponível para conciliação.
@@ -210,14 +278,16 @@ export function ConciliacaoModal({
             <label className="block text-xs text-gray-600 mb-0.5">
               Movimento Bancário ({isPago ? "Saída" : "Entrada"}) *
             </label>
-            <select value={form.movimento_bancario_id} onChange={handleMovimentoChange} className={inputCls}>
-              <option value="">Selecione o movimento bancário...</option>
-              {movimentosFiltrados.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {new Date(m.data_movimento + "T00:00:00").toLocaleDateString("pt-BR")} — {m.descricao} — {getContaNome(m.conta_id)} — {getFonteLabel(m.fonte_pagamento)} — R$ {fmtBRL(m.valor)}
-                </option>
-              ))}
-            </select>
+            <SearchableSelect
+              key={`movimento-${form.tipo}`}
+              options={movimentosFiltrados}
+              value={form.movimento_bancario_id}
+              onChange={handleMovimentoChange}
+              placeholder={`Buscar movimento de ${isPago ? "saída" : "entrada"}...`}
+              getId={(m) => m.id}
+              renderLabel={getMovimentoLabel}
+              emptyMsg={`Nenhum movimento de ${isPago ? "saída" : "entrada"} disponível.`}
+            />
             {movimentosFiltrados.length === 0 && (
               <p className="text-[11px] text-yellow-600 mt-1">
                 Nenhum movimento de {isPago ? "saída" : "entrada"} disponível.

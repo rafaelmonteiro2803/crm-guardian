@@ -10,6 +10,7 @@ import {
   deleteMovimentoBancario,
   fetchConciliacoesBancarias,
   createConciliacao,
+  updateConciliacao,
   deleteConciliacao,
 } from "../services/movimentosBancariosService";
 
@@ -101,6 +102,19 @@ export function useMovimentosBancarios(tenantId, userId) {
     setConciliacoesBancarias((prev) => [created, ...prev]);
   }, [tenantId, userId]);
 
+  const confirmarConciliacao = useCallback(async (conciliacao) => {
+    const updatedConc = await updateConciliacao(conciliacao.id, { status: "confirmado" });
+    setConciliacoesBancarias((prev) =>
+      prev.map((c) => (c.id === conciliacao.id ? updatedConc : c))
+    );
+    if (conciliacao.movimento_bancario_id) {
+      const updatedMov = await updateMovimentoBancario(conciliacao.movimento_bancario_id, { status: "confirmado" });
+      setMovimentosBancarios((prev) =>
+        prev.map((m) => (m.id === conciliacao.movimento_bancario_id ? updatedMov : m))
+      );
+    }
+  }, []);
+
   const excluirConciliacao = useCallback(async (id) => {
     await deleteConciliacao(id);
     setConciliacoesBancarias((prev) => prev.filter((c) => c.id !== id));
@@ -121,6 +135,7 @@ export function useMovimentosBancarios(tenantId, userId) {
     excluirMovimento,
     carregarConciliacoes,
     salvarConciliacao,
+    confirmarConciliacao,
     excluirConciliacao,
   };
 }

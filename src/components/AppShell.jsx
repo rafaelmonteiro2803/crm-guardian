@@ -108,6 +108,7 @@ export function AppShell() {
     excluirMovimento: excluirMovimentoBancario,
     carregarConciliacoes: carregarConciliacoesBancarias,
     salvarConciliacao: salvarConciliacaoBancaria,
+    confirmarConciliacao: confirmarConciliacaoBancaria,
     excluirConciliacao: excluirConciliacaoBancaria,
   } = useMovimentosBancarios(tenantId, session?.user?.id);
 
@@ -329,7 +330,7 @@ export function AppShell() {
           fornecedores,
           contasBancarias, salvarContaBancaria, excluirContaBancaria,
           movimentosBancarios, salvarMovimentoBancario, excluirMovimentoBancario,
-          conciliacoesBancarias, salvarConciliacaoBancaria, excluirConciliacaoBancaria,
+          conciliacoesBancarias, salvarConciliacaoBancaria, confirmarConciliacaoBancaria, excluirConciliacaoBancaria,
           tenants, salvarTenant, excluirTenant,
           contasPagar, parcelasContasPagar, salvarContaPagar, excluirContaPagar, pagarParcela,
           salvarFornecedor, excluirFornecedor,

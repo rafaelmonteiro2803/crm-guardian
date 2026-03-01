@@ -38,11 +38,14 @@ export function MovimentosBancariosPage({
   const getFonteLabel = (fonte) =>
     FONTES_PAGAMENTO.find((fp) => fp.value === fonte)?.label || fonte;
 
-  const totalEntradas = movimentosBancarios
+  // Exibe apenas movimentos com status diferente de Confirmado
+  const movimentosPendentes = movimentosBancarios.filter((m) => m.status !== "confirmado");
+
+  const totalEntradas = movimentosPendentes
     .filter((m) => m.tipo === "entrada")
     .reduce((s, m) => s + parseFloat(m.valor || 0), 0);
 
-  const totalSaidas = movimentosBancarios
+  const totalSaidas = movimentosPendentes
     .filter((m) => m.tipo === "saida")
     .reduce((s, m) => s + parseFloat(m.valor || 0), 0);
 
@@ -68,7 +71,7 @@ export function MovimentosBancariosPage({
           </div>
           <p className="text-lg font-semibold text-green-700">R$ {fmtBRL(totalEntradas)}</p>
           <p className="text-[11px] text-green-600">
-            {movimentosBancarios.filter((m) => m.tipo === "entrada").length} movimentos
+            {movimentosPendentes.filter((m) => m.tipo === "entrada").length} movimentos
           </p>
         </div>
         <div className="bg-white border border-red-200 rounded p-3">
@@ -78,7 +81,7 @@ export function MovimentosBancariosPage({
           </div>
           <p className="text-lg font-semibold text-red-700">R$ {fmtBRL(totalSaidas)}</p>
           <p className="text-[11px] text-red-600">
-            {movimentosBancarios.filter((m) => m.tipo === "saida").length} movimentos
+            {movimentosPendentes.filter((m) => m.tipo === "saida").length} movimentos
           </p>
         </div>
         <div className={`bg-white border rounded p-3 ${saldo >= 0 ? "border-blue-200" : "border-red-300"}`}>
@@ -90,7 +93,7 @@ export function MovimentosBancariosPage({
             R$ {fmtBRL(saldo)}
           </p>
           <p className={`text-[11px] ${saldo >= 0 ? "text-blue-600" : "text-red-600"}`}>
-            {movimentosBancarios.length} movimentos no total
+            {movimentosPendentes.length} movimentos pendentes
           </p>
         </div>
       </div>
@@ -174,7 +177,7 @@ export function MovimentosBancariosPage({
             filterValue: (m) => (STATUS_MOV[m.status]?.label || "Aguardando Conciliação"),
           },
         ]}
-        data={movimentosBancarios}
+        data={movimentosPendentes}
         actions={(m) => (
           <div className="flex items-center gap-1">
             <button

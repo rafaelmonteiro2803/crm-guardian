@@ -13,6 +13,7 @@ export function ConciliacaoBancariaPage({
   contasBancarias,
   onSalvar,
   onExcluir,
+  onConfirmar,
   fmtBRL,
 }) {
   const [modalAberto, setModalAberto] = useState(false);
@@ -21,6 +22,11 @@ export function ConciliacaoBancariaPage({
   const handleSalvar = async (form) => {
     await onSalvar(form);
     setModalAberto(false);
+  };
+
+  const handleConfirmar = async (c) => {
+    if (!confirm("Confirmar esta conciliação? O movimento bancário será marcado como Confirmado.")) return;
+    await onConfirmar(c);
   };
 
   const handleExcluir = async (id) => {
@@ -317,12 +323,23 @@ export function ConciliacaoBancariaPage({
         ]}
         data={conciliacoesFiltradas}
         actions={(c) => (
-          <button
-            onClick={() => handleExcluir(c.id)}
-            className="text-gray-400 hover:text-red-600 hover:bg-red-50 p-1 rounded"
-          >
-            <Icons.Trash />
-          </button>
+          <div className="flex items-center gap-1">
+            {c.status !== "confirmado" && (
+              <button
+                onClick={() => handleConfirmar(c)}
+                title="Confirmar conciliação"
+                className="text-gray-400 hover:text-green-700 hover:bg-green-50 p-1 rounded"
+              >
+                <Icons.CheckCircle />
+              </button>
+            )}
+            <button
+              onClick={() => handleExcluir(c.id)}
+              className="text-gray-400 hover:text-red-600 hover:bg-red-50 p-1 rounded"
+            >
+              <Icons.Trash />
+            </button>
+          </div>
         )}
         rowClassName={(c) => {
           if (c.status === "aguardando_confirmacao") return "bg-yellow-50/30";
