@@ -145,13 +145,20 @@ export function useVendas(tenantId, userId, onNovaOS) {
     };
 
     let titulosAtualizados = [...titulos];
+    let tituloSalvo = null;
 
     if (editando) {
       const updated = await updateTitulo(editando.id, dadosTitulo);
-      if (updated) titulosAtualizados = titulosAtualizados.map((t) => (t.id === editando.id ? updated : t));
+      if (updated) {
+        titulosAtualizados = titulosAtualizados.map((t) => (t.id === editando.id ? updated : t));
+        tituloSalvo = updated;
+      }
     } else {
       const created = await createTitulo(dadosTitulo);
-      if (created) titulosAtualizados = [...titulosAtualizados, created];
+      if (created) {
+        titulosAtualizados = [...titulosAtualizados, created];
+        tituloSalvo = created;
+      }
     }
 
     if (pagarParcial && saldoValor > 0.01) {
@@ -177,6 +184,9 @@ export function useVendas(tenantId, userId, onNovaOS) {
 
     setTitulos(titulosAtualizados);
     onSuccess?.();
+
+    const isPagamento = dadosTitulo.status === "pago";
+    return isPagamento ? tituloSalvo : null;
   };
 
   const excluirTitulo = async (id) => {

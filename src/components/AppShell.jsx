@@ -212,6 +212,28 @@ export function AppShell() {
     }
   };
 
+  // Ao salvar um título como pago (total ou parcial), gera movimento bancário aguardando conciliação
+  const salvarTituloComMovimento = async (form, editando, onSuccess) => {
+    const tituloSalvo = await salvarTitulo(form, editando, onSuccess);
+    if (tituloSalvo) {
+      try {
+        const hoje = new Date().toISOString().split("T")[0];
+        await salvarMovimentoBancario({
+          tipo: "entrada",
+          valor: tituloSalvo.valor,
+          descricao: tituloSalvo.descricao,
+          data_movimento: tituloSalvo.data_pagamento || hoje,
+          titulo_id: tituloSalvo.id,
+          status: "aguardando_conciliacao",
+          conta_id: null,
+          fonte_pagamento: null,
+        }, null);
+      } catch (e) {
+        console.warn("Erro ao criar movimento bancário automático:", e.message);
+      }
+    }
+  };
+
   // Quando um título de venda é marcado como pago, gera movimento bancário e conciliação automática (recebido)
   const marcarComoPagoComConciliacao = async (id) => {
     const titulo = await marcarComoPago(id);
@@ -294,7 +316,7 @@ export function AppShell() {
           oportunidades, salvarOportunidade, excluirOportunidade, moverOportunidade,
           getClienteNome, getProdutoNome,
           vendas, salvarVenda, excluirVenda,
-          titulos, salvarTitulo, excluirTitulo, marcarComoPago: marcarComoPagoComConciliacao,
+          titulos, salvarTitulo: salvarTituloComMovimento, excluirTitulo, marcarComoPago: marcarComoPagoComConciliacao,
           tecnicos, salvarTecnico, excluirTecnico,
           ordensServico, getTecnicoNome,
           encaminharParaTecnico, concluirOrdemServico, excluirOrdemServico, salvarEvolucao,
