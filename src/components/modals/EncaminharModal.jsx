@@ -2,11 +2,18 @@ import React, { useState } from "react";
 import { Icons } from "../Icons";
 
 export function EncaminharModal({ os, tecnicos, getClienteNome, fmtBRL, onEncaminhar, onFechar }) {
+  const itens = Array.isArray(os.itens) ? os.itens : [];
+  const jasSelecionados = Array.isArray(os.itens_selecionados) ? os.itens_selecionados : [];
+
   const [form, setForm] = useState({
     tecnico_id: os.tecnico_id || "",
     comissao_percentual: os.comissao_percentual?.toString() || "",
     comissao_valor: os.comissao_valor?.toString() || "",
   });
+
+  const [itensSelecionados, setItensSelecionados] = useState(
+    itens.map((_, idx) => jasSelecionados.includes(idx))
+  );
 
   const set = (field, value) => setForm((f) => ({ ...f, [field]: value }));
 
@@ -14,6 +21,28 @@ export function EncaminharModal({ os, tecnicos, getClienteNome, fmtBRL, onEncami
     const pct = parseFloat(v) || 0;
     const val = ((pct / 100) * parseFloat(os.valor_total || 0)).toFixed(2);
     setForm((f) => ({ ...f, comissao_percentual: v, comissao_valor: val }));
+  };
+
+  const toggleItem = (idx) => {
+    setItensSelecionados((prev) => {
+      const next = [...prev];
+      next[idx] = !next[idx];
+      return next;
+    });
+  };
+
+  const todosSelecionados = itens.length > 0 && itensSelecionados.every(Boolean);
+  const algumSelecionado = itensSelecionados.some(Boolean);
+
+  const handleSubmit = () => {
+    if (itens.length > 0 && !algumSelecionado) {
+      alert("Selecione pelo menos 1 produto/serviço para encaminhar!");
+      return;
+    }
+    const indicesSelecionados = itensSelecionados
+      .map((sel, idx) => (sel ? idx : null))
+      .filter((v) => v !== null);
+    onEncaminhar({ ...form, itens_selecionados: indicesSelecionados });
   };
 
   return (
@@ -29,6 +58,38 @@ export function EncaminharModal({ os, tecnicos, getClienteNome, fmtBRL, onEncami
           <p className="text-[11px] text-gray-600">{os.descricao}</p>
           <p className="text-[11px] text-gray-500">Cliente: {getClienteNome(os.cliente_id)}</p>
         </div>
+
+        {itens.length > 0 && (
+          <div className="mb-3">
+            <p className="text-xs font-medium text-gray-700 mb-1.5">
+              Produtos/Serviços contratados *
+              <span className="ml-1 text-[10px] font-normal text-gray-400">(selecione ao menos 1)</span>
+            </p>
+            <div className="border border-gray-200 rounded divide-y divide-gray-100 max-h-36 overflow-y-auto">
+              {itens.map((item, idx) => (
+                <label key={idx} className="flex items-center gap-2 px-2.5 py-1.5 cursor-pointer hover:bg-gray-50">
+                  <input
+                    type="checkbox"
+                    checked={!!itensSelecionados[idx]}
+                    onChange={() => toggleItem(idx)}
+                    className="accent-blue-700 w-3.5 h-3.5 shrink-0"
+                  />
+                  <span className="text-[11px] text-gray-700 flex-1">{item.nome}</span>
+                  {item.quantidade && (
+                    <span className="text-[10px] text-gray-400 shrink-0">x{item.quantidade}</span>
+                  )}
+                </label>
+              ))}
+            </div>
+            {!algumSelecionado && (
+              <p className="text-[10px] text-red-500 mt-1">Nenhum item selecionado — ao menos 1 é obrigatório.</p>
+            )}
+            {!todosSelecionados && algumSelecionado && (
+              <p className="text-[10px] text-orange-500 mt-1">Itens não selecionados permanecerão como atividade pendente.</p>
+            )}
+          </div>
+        )}
+
         <div className="space-y-2.5">
           <div>
             <label className="block text-xs text-gray-600 mb-0.5">Técnico Responsável *</label>
@@ -57,7 +118,7 @@ export function EncaminharModal({ os, tecnicos, getClienteNome, fmtBRL, onEncami
         </div>
         <div className="flex gap-2 mt-4">
           <button onClick={onFechar} className="flex-1 px-3 py-1.5 border border-gray-200 rounded text-xs hover:bg-gray-50">Cancelar</button>
-          <button onClick={() => onEncaminhar(form)}
+          <button onClick={handleSubmit}
             className="flex-1 px-3 py-1.5 bg-blue-700 text-white rounded text-xs hover:bg-blue-800 inline-flex items-center justify-center gap-1">
             <Icons.ArrowRight className="w-3 h-3" />Encaminhar
           </button>

@@ -83,8 +83,10 @@ export function AppShell() {
     ordensServico, setOrdensServico,
     carregarOrdensServico, adicionarOrdemServico,
     encaminharParaTecnico, concluirOrdemServico, excluirOrdemServico, salvarEvolucao,
+    agendarAtendimento,
     modalEncaminhar, osEncaminhar, abrirModalEncaminhar, fecharModalEncaminhar,
     modalEvolucao, osEvolucao, abrirModalEvolucao, fecharModalEvolucao,
+    modalAgendar, osAgendar, abrirModalAgendar, fecharModalAgendar,
   } = useOrdensServico(tenantId, session?.user?.id, adicionarComissao);
 
   const {
@@ -321,8 +323,10 @@ export function AppShell() {
           tecnicos, salvarTecnico, excluirTecnico,
           ordensServico, getTecnicoNome,
           encaminharParaTecnico, concluirOrdemServico, excluirOrdemServico, salvarEvolucao,
+          agendarAtendimento,
           modalEncaminhar, osEncaminhar, abrirModalEncaminhar, fecharModalEncaminhar,
           modalEvolucao, osEvolucao, abrirModalEvolucao, fecharModalEvolucao,
+          modalAgendar, osAgendar, abrirModalAgendar, fecharModalAgendar,
           comissoes, agendarComissao, pagarComissao, excluirComissao,
           estoqueMovimentacoes,
           salvarEstoqueItem, excluirEstoqueItem,
