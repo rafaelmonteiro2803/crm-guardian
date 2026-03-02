@@ -5,6 +5,13 @@ export function EncaminharModal({ os, tecnicos, getClienteNome, fmtBRL, onEncami
   const itens = Array.isArray(os.itens) ? os.itens : [];
   const jasSelecionados = Array.isArray(os.itens_selecionados) ? os.itens_selecionados : [];
 
+  // Expand items by quantity so each unit gets its own checkbox
+  const expandedItems = itens.flatMap((item, itemIdx) => {
+    const qty = parseInt(item.quantidade) || 1;
+    if (qty <= 1) return [{ ...item, itemIdx, unitIdx: null }];
+    return Array.from({ length: qty }, (_, i) => ({ ...item, itemIdx, unitIdx: i + 1 }));
+  });
+
   const [form, setForm] = useState({
     tecnico_id: os.tecnico_id || "",
     comissao_percentual: os.comissao_percentual?.toString() || "",
@@ -12,7 +19,7 @@ export function EncaminharModal({ os, tecnicos, getClienteNome, fmtBRL, onEncami
   });
 
   const [itensSelecionados, setItensSelecionados] = useState(
-    itens.map((_, idx) => jasSelecionados.includes(idx))
+    expandedItems.map((ei) => jasSelecionados.includes(ei.itemIdx))
   );
 
   const set = (field, value) => setForm((f) => ({ ...f, [field]: value }));
@@ -31,17 +38,17 @@ export function EncaminharModal({ os, tecnicos, getClienteNome, fmtBRL, onEncami
     });
   };
 
-  const todosSelecionados = itens.length > 0 && itensSelecionados.every(Boolean);
+  const todosSelecionados = expandedItems.length > 0 && itensSelecionados.every(Boolean);
   const algumSelecionado = itensSelecionados.some(Boolean);
 
   const handleSubmit = () => {
-    if (itens.length > 0 && !algumSelecionado) {
+    if (expandedItems.length > 0 && !algumSelecionado) {
       alert("Selecione pelo menos 1 produto/serviço para encaminhar!");
       return;
     }
-    const indicesSelecionados = itensSelecionados
-      .map((sel, idx) => (sel ? idx : null))
-      .filter((v) => v !== null);
+    const indicesSelecionados = [
+      ...new Set(expandedItems.filter((_, idx) => itensSelecionados[idx]).map((ei) => ei.itemIdx)),
+    ];
     onEncaminhar({ ...form, itens_selecionados: indicesSelecionados });
   };
 
@@ -59,14 +66,14 @@ export function EncaminharModal({ os, tecnicos, getClienteNome, fmtBRL, onEncami
           <p className="text-[11px] text-gray-500">Cliente: {getClienteNome(os.cliente_id)}</p>
         </div>
 
-        {itens.length > 0 && (
+        {expandedItems.length > 0 && (
           <div className="mb-3">
             <p className="text-xs font-medium text-gray-700 mb-1.5">
               Produtos/Serviços contratados *
               <span className="ml-1 text-[10px] font-normal text-gray-400">(selecione ao menos 1)</span>
             </p>
             <div className="border border-gray-200 rounded divide-y divide-gray-100 max-h-36 overflow-y-auto">
-              {itens.map((item, idx) => (
+              {expandedItems.map((item, idx) => (
                 <label key={idx} className="flex items-center gap-2 px-2.5 py-1.5 cursor-pointer hover:bg-gray-50">
                   <input
                     type="checkbox"
@@ -75,8 +82,8 @@ export function EncaminharModal({ os, tecnicos, getClienteNome, fmtBRL, onEncami
                     className="accent-blue-700 w-3.5 h-3.5 shrink-0"
                   />
                   <span className="text-[11px] text-gray-700 flex-1">{item.nome}</span>
-                  {item.quantidade && (
-                    <span className="text-[10px] text-gray-400 shrink-0">x{item.quantidade}</span>
+                  {item.unitIdx !== null && (
+                    <span className="text-[10px] text-gray-400 shrink-0">({item.unitIdx}/{item.quantidade})</span>
                   )}
                 </label>
               ))}
