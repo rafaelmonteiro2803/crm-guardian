@@ -57,8 +57,10 @@ export const renderRoute = (viewMode, props) => {
     ordensServico,
     getTecnicoNome,
     encaminharParaTecnico, concluirOrdemServico, excluirOrdemServico, salvarEvolucao,
+    agendarAtendimento,
     modalEncaminhar, osEncaminhar, abrirModalEncaminhar, fecharModalEncaminhar,
     modalEvolucao, osEvolucao, abrirModalEvolucao, fecharModalEvolucao,
+    modalAgendar, osAgendar, abrirModalAgendar, fecharModalAgendar,
     // Comissões
     comissoes, agendarComissao, pagarComissao, excluirComissao,
     // Estoque
@@ -132,6 +134,7 @@ export const renderRoute = (viewMode, props) => {
           concluirOrdemServico={concluirOrdemServico}
           excluirOrdemServico={excluirOrdemServico}
           salvarEvolucao={salvarEvolucao}
+          agendarAtendimento={agendarAtendimento}
           modalEncaminhar={modalEncaminhar}
           osEncaminhar={osEncaminhar}
           abrirModalEncaminhar={abrirModalEncaminhar}
@@ -140,6 +143,10 @@ export const renderRoute = (viewMode, props) => {
           osEvolucao={osEvolucao}
           abrirModalEvolucao={abrirModalEvolucao}
           fecharModalEvolucao={fecharModalEvolucao}
+          modalAgendar={modalAgendar}
+          osAgendar={osAgendar}
+          abrirModalAgendar={abrirModalAgendar}
+          fecharModalAgendar={fecharModalAgendar}
         />
       );
     case "atendimentos_relatorio":

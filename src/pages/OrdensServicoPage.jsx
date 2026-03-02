@@ -3,6 +3,7 @@ import { DataGrid } from "../components/DataGrid";
 import { Icons } from "../components/Icons";
 import { EncaminharModal } from "../components/modals/EncaminharModal";
 import { EvolucaoModal } from "../components/modals/EvolucaoModal";
+import { AgendarAtendimentoModal } from "../components/modals/AgendarAtendimentoModal";
 
 export function OrdensServicoPage({
   ordensServico,
@@ -14,6 +15,7 @@ export function OrdensServicoPage({
   concluirOrdemServico,
   excluirOrdemServico,
   salvarEvolucao,
+  agendarAtendimento,
   modalEncaminhar,
   osEncaminhar,
   abrirModalEncaminhar,
@@ -22,7 +24,17 @@ export function OrdensServicoPage({
   osEvolucao,
   abrirModalEvolucao,
   fecharModalEvolucao,
+  modalAgendar,
+  osAgendar,
+  abrirModalAgendar,
+  fecharModalAgendar,
 }) {
+  const temItensPendentes = (o) => {
+    const itens = Array.isArray(o.itens) ? o.itens : [];
+    const selecionados = Array.isArray(o.itens_selecionados) ? o.itens_selecionados : [];
+    return itens.length > 0 && selecionados.length < itens.length;
+  };
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
@@ -66,6 +78,15 @@ export function OrdensServicoPage({
         columns={[
           { key: "numero_os", label: "Nº OS", render: (o) => <span className="font-mono font-medium text-gray-800 text-[11px]">{o.numero_os}</span>, filterValue: (o) => o.numero_os || "" },
           { key: "data_abertura", label: "Abertura", render: (o) => o.data_abertura ? new Date(o.data_abertura).toLocaleDateString("pt-BR") : "-", filterValue: (o) => o.data_abertura ? new Date(o.data_abertura).toLocaleDateString("pt-BR") : "", sortValue: (o) => o.data_abertura },
+          {
+            key: "data_agendamento",
+            label: "Agendado",
+            render: (o) => o.data_agendamento
+              ? <span className="text-orange-600 font-medium text-[11px]">{new Date(o.data_agendamento).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>
+              : <span className="text-gray-300 text-[11px]">-</span>,
+            filterValue: (o) => o.data_agendamento ? new Date(o.data_agendamento).toLocaleString("pt-BR") : "",
+            sortValue: (o) => o.data_agendamento,
+          },
           { key: "cliente_id", label: "Cliente", render: (o) => <span className="font-medium">{getClienteNome(o.cliente_id)}</span>, filterValue: (o) => getClienteNome(o.cliente_id) },
           { key: "descricao", label: "Descrição", filterValue: (o) => o.descricao || "" },
           { key: "valor_total", label: "Valor", render: (o) => <span className="font-medium text-green-700">R$ {fmtBRL(o.valor_total)}</span>, sortValue: (o) => parseFloat(o.valor_total || 0) },
@@ -75,8 +96,14 @@ export function OrdensServicoPage({
             key: "status",
             label: "Status",
             render: (o) => {
+              const pendente = temItensPendentes(o);
               if (o.status === "aguardando_atendimento") return <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] bg-gray-100 text-gray-700"><Icons.Clock className="w-3 h-3" />Aguardando</span>;
-              if (o.status === "em_atendimento") return <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] bg-blue-50 text-blue-700"><Icons.ArrowRight className="w-3 h-3" />Em Atendimento</span>;
+              if (o.status === "em_atendimento") return (
+                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] bg-blue-50 text-blue-700">
+                  <Icons.ArrowRight className="w-3 h-3" />Em Atendimento
+                  {pendente && <Icons.AlertCircle className="w-3 h-3 text-orange-500 ml-0.5" title="Itens pendentes" />}
+                </span>
+              );
               return <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] bg-green-50 text-green-700"><Icons.CheckCircle className="w-3 h-3" />Concluído</span>;
             },
             filterValue: (o) => o.status === "aguardando_atendimento" ? "Aguardando" : o.status === "em_atendimento" ? "Em Atendimento" : "Concluído",
@@ -87,10 +114,20 @@ export function OrdensServicoPage({
           <div className="flex items-center gap-1">
             <button onClick={() => abrirModalEvolucao(o)} title="Evolução do Atendimento" className="text-purple-600 hover:bg-purple-50 p-1 rounded"><Icons.BookOpen /></button>
             {o.status !== "atendimento_concluido" && (
+              <button onClick={() => abrirModalAgendar(o)} title="Agendar Atendimento" className="text-orange-500 hover:bg-orange-50 p-1 rounded">
+                <Icons.CalendarPlus />
+              </button>
+            )}
+            {o.status !== "atendimento_concluido" && (
               <button onClick={() => abrirModalEncaminhar(o)} className="text-blue-600 hover:bg-blue-50 px-1.5 py-0.5 rounded text-[11px] font-medium whitespace-nowrap">Encaminhar</button>
             )}
-            {o.status === "em_atendimento" && (
+            {o.status === "em_atendimento" && !temItensPendentes(o) && (
               <button onClick={() => concluirOrdemServico(o.id)} className="text-green-600 hover:bg-green-50 px-1.5 py-0.5 rounded text-[11px] font-medium whitespace-nowrap">Concluir</button>
+            )}
+            {o.status === "em_atendimento" && temItensPendentes(o) && (
+              <span title="Itens pendentes — encaminhe todos os serviços antes de concluir" className="text-orange-400 px-1.5 py-0.5 rounded text-[11px] font-medium whitespace-nowrap cursor-not-allowed">
+                Pendente
+              </span>
             )}
             <button onClick={() => excluirOrdemServico(o.id)} className="text-gray-400 hover:text-red-600 hover:bg-red-50 p-1 rounded"><Icons.Trash /></button>
           </div>
@@ -115,6 +152,16 @@ export function OrdensServicoPage({
           fmtBRL={fmtBRL}
           onEncaminhar={encaminharParaTecnico}
           onFechar={fecharModalEncaminhar}
+        />
+      )}
+
+      {modalAgendar && osAgendar && (
+        <AgendarAtendimentoModal
+          os={osAgendar}
+          getClienteNome={getClienteNome}
+          fmtBRL={fmtBRL}
+          onAgendar={agendarAtendimento}
+          onFechar={fecharModalAgendar}
         />
       )}
     </div>

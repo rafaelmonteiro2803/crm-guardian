@@ -7,6 +7,8 @@ export function useOrdensServico(tenantId, userId, adicionarComissao) {
   const [osEncaminhar, setOsEncaminhar] = useState(null);
   const [modalEvolucao, setModalEvolucao] = useState(false);
   const [osEvolucao, setOsEvolucao] = useState(null);
+  const [modalAgendar, setModalAgendar] = useState(false);
+  const [osAgendar, setOsAgendar] = useState(null);
 
   const carregarOrdensServico = useCallback(async () => {
     if (!tenantId) return;
@@ -24,10 +26,16 @@ export function useOrdensServico(tenantId, userId, adicionarComissao) {
 
   const encaminharParaTecnico = useCallback(async (form) => {
     if (!form.tecnico_id) { alert("Selecione um técnico!"); return; }
+    const itens = Array.isArray(osEncaminhar?.itens) ? osEncaminhar.itens : [];
+    if (itens.length > 0 && (!form.itens_selecionados || form.itens_selecionados.length === 0)) {
+      alert("Selecione pelo menos 1 produto/serviço para encaminhar!");
+      return;
+    }
     const payload = {
       tecnico_id: form.tecnico_id,
       comissao_percentual: parseFloat(form.comissao_percentual || 0),
       comissao_valor: parseFloat(form.comissao_valor || 0),
+      itens_selecionados: form.itens_selecionados || [],
       status: "em_atendimento",
       data_atribuicao: new Date().toISOString(),
     };
@@ -41,6 +49,16 @@ export function useOrdensServico(tenantId, userId, adicionarComissao) {
   }, [osEncaminhar]);
 
   const concluirOrdemServico = useCallback(async (id) => {
+    const os = ordensServico.find((o) => o.id === id);
+    if (os) {
+      const itens = Array.isArray(os.itens) ? os.itens : [];
+      const selecionados = Array.isArray(os.itens_selecionados) ? os.itens_selecionados : [];
+      if (itens.length > 0 && selecionados.length < itens.length) {
+        const pendentes = itens.length - selecionados.length;
+        alert(`Existem ${pendentes} produto(s)/serviço(s) com atividade pendente. Todos os itens devem ser atendidos antes de concluir.`);
+        return;
+      }
+    }
     if (!confirm("Marcar atendimento como concluído?")) return;
     const { data } = await supabase
       .from("ordens_servico")
@@ -49,13 +67,13 @@ export function useOrdensServico(tenantId, userId, adicionarComissao) {
       .select();
     if (data) {
       setOrdensServico((prev) => prev.map((o) => (o.id === id ? data[0] : o)));
-      const os = data[0];
-      if (os.tecnico_id && parseFloat(os.comissao_valor || 0) > 0) {
+      const updated = data[0];
+      if (updated.tecnico_id && parseFloat(updated.comissao_valor || 0) > 0) {
         const novaComissao = {
-          ordem_servico_id: os.id,
-          tecnico_id: os.tecnico_id,
-          valor: os.comissao_valor,
-          percentual: os.comissao_percentual,
+          ordem_servico_id: updated.id,
+          tecnico_id: updated.tecnico_id,
+          valor: updated.comissao_valor,
+          percentual: updated.comissao_percentual,
           status: "pendente",
           user_id: userId,
           tenant_id: tenantId,
@@ -64,7 +82,7 @@ export function useOrdensServico(tenantId, userId, adicionarComissao) {
         if (comissaoData) adicionarComissao(comissaoData[0]);
       }
     }
-  }, [tenantId, userId, adicionarComissao]);
+  }, [tenantId, userId, adicionarComissao, ordensServico]);
 
   const excluirOrdemServico = useCallback(async (id) => {
     if (!confirm("Excluir ordem de serviço?")) return;
@@ -80,6 +98,17 @@ export function useOrdensServico(tenantId, userId, adicionarComissao) {
       .select();
     if (data) setOrdensServico((prev) => prev.map((o) => (o.id === osId ? data[0] : o)));
     fecharModalEvolucao();
+  }, []);
+
+  const agendarAtendimento = useCallback(async (osId, dataAgendamento) => {
+    if (!dataAgendamento) { alert("Informe a data e hora do agendamento!"); return; }
+    const { data } = await supabase
+      .from("ordens_servico")
+      .update({ data_agendamento: dataAgendamento })
+      .eq("id", osId)
+      .select();
+    if (data) setOrdensServico((prev) => prev.map((o) => (o.id === osId ? data[0] : o)));
+    fecharModalAgendar();
   }, []);
 
   const abrirModalEncaminhar = useCallback((os) => {
@@ -102,6 +131,16 @@ export function useOrdensServico(tenantId, userId, adicionarComissao) {
     setOsEvolucao(null);
   }, []);
 
+  const abrirModalAgendar = useCallback((os) => {
+    setOsAgendar(os);
+    setModalAgendar(true);
+  }, []);
+
+  const fecharModalAgendar = useCallback(() => {
+    setModalAgendar(false);
+    setOsAgendar(null);
+  }, []);
+
   return {
     ordensServico,
     setOrdensServico,
@@ -111,6 +150,7 @@ export function useOrdensServico(tenantId, userId, adicionarComissao) {
     concluirOrdemServico,
     excluirOrdemServico,
     salvarEvolucao,
+    agendarAtendimento,
     modalEncaminhar,
     osEncaminhar,
     abrirModalEncaminhar,
@@ -119,5 +159,9 @@ export function useOrdensServico(tenantId, userId, adicionarComissao) {
     osEvolucao,
     abrirModalEvolucao,
     fecharModalEvolucao,
+    modalAgendar,
+    osAgendar,
+    abrirModalAgendar,
+    fecharModalAgendar,
   };
 }
