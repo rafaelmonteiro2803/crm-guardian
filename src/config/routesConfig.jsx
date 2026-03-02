@@ -84,7 +84,7 @@ export const renderRoute = (viewMode, props) => {
 
   switch (viewMode) {
     case "dashboard":
-      return <DashboardPage clientes={clientes} oportunidades={oportunidades} vendas={vendas} titulos={titulos} fmtBRL={fmtBRL} />;
+      return <DashboardPage clientes={clientes} oportunidades={oportunidades} vendas={vendas} titulos={titulos} fmtBRL={fmtBRL} ordensServico={ordensServico} />;
     case "clientes":
       return <ClientesPage clientes={clientes} onSalvar={salvarCliente} onExcluir={excluirCliente} />;
     case "usuarios":
