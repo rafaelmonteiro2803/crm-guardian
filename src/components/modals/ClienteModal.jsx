@@ -12,6 +12,7 @@ const FORM_INICIAL = {
 
 export function ClienteModal({ aberto, editando, onClose, onSalvar }) {
   const [form, setForm] = useState(FORM_INICIAL);
+  const [erros, setErros] = useState({});
 
   useEffect(() => {
     if (editando) {
@@ -27,12 +28,15 @@ export function ClienteModal({ aberto, editando, onClose, onSalvar }) {
     } else {
       setForm(FORM_INICIAL);
     }
+    setErros({});
   }, [editando, aberto]);
 
   if (!aberto) return null;
 
   const handleSalvar = () => {
-    if (!form.nome.trim()) return alert("Nome é obrigatório!");
+    const e = {};
+    if (!form.nome.trim()) e.nome = true;
+    if (Object.keys(e).length) return setErros(e);
     onSalvar({
       ...form,
       data_nascimento: form.data_nascimento || null,
@@ -48,6 +52,11 @@ export function ClienteModal({ aberto, editando, onClose, onSalvar }) {
     setForm({ ...form, cpf: f });
   };
 
+  const ic = (field) =>
+    `w-full border ${erros[field] ? "border-red-500" : "border-gray-200"} rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none`;
+
+  const clearErr = (field) => erros[field] && setErros({ ...erros, [field]: false });
+
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg border border-gray-200 max-w-sm w-full p-4 max-h-[90vh] overflow-y-auto">
@@ -60,8 +69,8 @@ export function ClienteModal({ aberto, editando, onClose, onSalvar }) {
             <input
               type="text"
               value={form.nome}
-              onChange={(e) => setForm({ ...form, nome: e.target.value })}
-              className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"
+              onChange={(e) => { setForm({ ...form, nome: e.target.value }); clearErr("nome"); }}
+              className={ic("nome")}
             />
           </div>
           <div>
@@ -71,7 +80,7 @@ export function ClienteModal({ aberto, editando, onClose, onSalvar }) {
               value={form.cpf}
               onChange={handleCpf}
               placeholder="000.000.000-00"
-              className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"
+              className={ic("")}
             />
           </div>
           <div>
@@ -80,7 +89,7 @@ export function ClienteModal({ aberto, editando, onClose, onSalvar }) {
               type="date"
               value={form.data_nascimento}
               onChange={(e) => setForm({ ...form, data_nascimento: e.target.value })}
-              className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"
+              className={ic("")}
             />
           </div>
           <div>
@@ -89,7 +98,7 @@ export function ClienteModal({ aberto, editando, onClose, onSalvar }) {
               type="email"
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
-              className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"
+              className={ic("")}
             />
           </div>
           <div>
@@ -98,7 +107,7 @@ export function ClienteModal({ aberto, editando, onClose, onSalvar }) {
               type="tel"
               value={form.telefone}
               onChange={(e) => setForm({ ...form, telefone: e.target.value })}
-              className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"
+              className={ic("")}
             />
           </div>
           <div>
@@ -107,7 +116,7 @@ export function ClienteModal({ aberto, editando, onClose, onSalvar }) {
               type="text"
               value={form.empresa}
               onChange={(e) => setForm({ ...form, empresa: e.target.value })}
-              className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"
+              className={ic("")}
             />
           </div>
           <div>
@@ -115,7 +124,7 @@ export function ClienteModal({ aberto, editando, onClose, onSalvar }) {
             <textarea
               value={form.observacoes}
               onChange={(e) => setForm({ ...form, observacoes: e.target.value })}
-              className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"
+              className={ic("")}
               rows="2"
             />
           </div>

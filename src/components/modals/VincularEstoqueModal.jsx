@@ -14,6 +14,7 @@ export function VincularEstoqueModal({
   onClose,
 }) {
   const [form, setForm] = useState(FORM_INICIAL);
+  const [erros, setErros] = useState({});
 
   if (!aberto || !produto) return null;
 
@@ -23,11 +24,13 @@ export function VincularEstoqueModal({
   );
 
   const handleSalvar = () => {
-    if (!form.estoque_item_id) return alert("Selecione um item de estoque!");
-    if (!form.quantidade_usada || parseFloat(form.quantidade_usada) <= 0)
-      return alert("Informe a quantidade usada!");
+    const e = {};
+    if (!form.estoque_item_id) e.estoque_item_id = true;
+    if (!form.quantidade_usada || parseFloat(form.quantidade_usada) <= 0) e.quantidade_usada = true;
+    if (Object.keys(e).length) return setErros(e);
     onSalvar(form);
     setForm(FORM_INICIAL);
+    setErros({});
   };
 
   const handleExcluir = (id) => {
@@ -35,7 +38,13 @@ export function VincularEstoqueModal({
     onExcluir(id);
   };
 
-  const inputCls = "w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none";
+  const cls = (field) =>
+    `w-full border ${erros[field] ? "border-red-500" : "border-gray-200"} rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none`;
+
+  const f = (field) => (e) => {
+    setForm({ ...form, [field]: e.target.value });
+    if (erros[field]) setErros({ ...erros, [field]: false });
+  };
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
@@ -102,8 +111,8 @@ export function VincularEstoqueModal({
                 <label className="block text-xs text-gray-600 mb-0.5">Item de Estoque *</label>
                 <select
                   value={form.estoque_item_id}
-                  onChange={(e) => setForm({ ...form, estoque_item_id: e.target.value })}
-                  className={inputCls}
+                  onChange={f("estoque_item_id")}
+                  className={cls("estoque_item_id")}
                 >
                   <option value="">Selecione um item</option>
                   {itensDisponiveis.map((e) => (
@@ -123,8 +132,8 @@ export function VincularEstoqueModal({
                     step="0.001"
                     min="0.001"
                     value={form.quantidade_usada}
-                    onChange={(e) => setForm({ ...form, quantidade_usada: e.target.value })}
-                    className={inputCls}
+                    onChange={f("quantidade_usada")}
+                    className={cls("quantidade_usada")}
                   />
                 </div>
                 <div>
@@ -132,8 +141,8 @@ export function VincularEstoqueModal({
                   <input
                     type="text"
                     value={form.observacoes}
-                    onChange={(e) => setForm({ ...form, observacoes: e.target.value })}
-                    className={inputCls}
+                    onChange={f("observacoes")}
+                    className={cls("")}
                   />
                 </div>
               </div>

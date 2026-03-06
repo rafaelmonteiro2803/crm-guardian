@@ -31,10 +31,12 @@ const STATUS_LABELS = {
 
 export function MovimentoBancarioModal({ aberto, editando, contasBancarias, onClose, onSalvar }) {
   const [form, setForm] = useState(FORM_INICIAL);
+  const [erros, setErros] = useState({});
 
   useEffect(() => {
     if (aberto) {
       setForm(editando ? { ...FORM_INICIAL, ...editando, valor: editando.valor?.toString() || "" } : FORM_INICIAL);
+      setErros({});
     }
   }, [editando, aberto]);
 
@@ -43,15 +45,21 @@ export function MovimentoBancarioModal({ aberto, editando, contasBancarias, onCl
   const contasAtivas = contasBancarias.filter((c) => c.ativo);
 
   const handleSalvar = () => {
-    if (!form.conta_id) return alert("Selecione uma conta!");
-    if (!form.descricao.trim()) return alert("Descrição é obrigatória!");
-    if (!form.valor || parseFloat(form.valor) <= 0) return alert("Informe um valor válido!");
+    const e = {};
+    if (!form.conta_id) e.conta_id = true;
+    if (!form.descricao.trim()) e.descricao = true;
+    if (!form.valor || parseFloat(form.valor) <= 0) e.valor = true;
+    if (Object.keys(e).length) return setErros(e);
     onSalvar(form);
     onClose();
   };
 
-  const f = (field) => (e) => setForm({ ...form, [field]: e.target.value });
-  const inputCls = "w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none";
+  const f = (field) => (e) => {
+    setForm({ ...form, [field]: e.target.value });
+    if (erros[field]) setErros({ ...erros, [field]: false });
+  };
+  const inputCls = (field) =>
+    `w-full border ${erros[field] ? "border-red-500" : "border-gray-200"} rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none`;
 
   const tipoCls = form.tipo === "entrada"
     ? "bg-green-50 border-green-200"
@@ -97,7 +105,7 @@ export function MovimentoBancarioModal({ aberto, editando, contasBancarias, onCl
           </div>
           <div>
             <label className="block text-xs text-gray-600 mb-0.5">Conta de Destino *</label>
-            <select value={form.conta_id} onChange={f("conta_id")} className={inputCls}>
+            <select value={form.conta_id} onChange={f("conta_id")} className={inputCls("conta_id")}>
               <option value="">Selecione a conta...</option>
               {contasAtivas.map((c) => (
                 <option key={c.id} value={c.id}>{c.nome}</option>
@@ -111,7 +119,7 @@ export function MovimentoBancarioModal({ aberto, editando, contasBancarias, onCl
               value={form.descricao}
               onChange={f("descricao")}
               placeholder="Ex: Recebimento de venda, Pagamento fornecedor..."
-              className={inputCls}
+              className={inputCls("descricao")}
             />
           </div>
           <div>
@@ -123,13 +131,13 @@ export function MovimentoBancarioModal({ aberto, editando, contasBancarias, onCl
               value={form.valor}
               onChange={f("valor")}
               placeholder="0,00"
-              className={inputCls}
+              className={inputCls("valor")}
             />
           </div>
           {form.tipo === "entrada" && (
             <div>
               <label className="block text-xs text-gray-600 mb-0.5">Fonte de Pagamento *</label>
-              <select value={form.fonte_pagamento} onChange={f("fonte_pagamento")} className={inputCls}>
+              <select value={form.fonte_pagamento} onChange={f("fonte_pagamento")} className={inputCls("")}>
                 {FONTES_PAGAMENTO.map((fp) => (
                   <option key={fp.value} value={fp.value}>{fp.label}</option>
                 ))}
@@ -142,7 +150,7 @@ export function MovimentoBancarioModal({ aberto, editando, contasBancarias, onCl
               type="date"
               value={form.data_movimento}
               onChange={f("data_movimento")}
-              className={inputCls}
+              className={inputCls("")}
             />
           </div>
           <div>
@@ -150,7 +158,7 @@ export function MovimentoBancarioModal({ aberto, editando, contasBancarias, onCl
             <textarea
               value={form.observacoes}
               onChange={f("observacoes")}
-              className={inputCls}
+              className={inputCls("")}
               rows="2"
             />
           </div>

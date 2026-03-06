@@ -36,8 +36,12 @@ export function OportunidadeModal({ editando, clientes, produtos, fmtBRL, onSalv
     produtoInicial ? `${produtoInicial.nome} — R$ ${fmtBRL(produtoInicial.preco_base)}` : ""
   );
   const [produtoSelecionado, setProdutoSelecionado] = useState(produtoInicial || null);
+  const [erros, setErros] = useState({});
 
-  const set = (field, value) => setForm((f) => ({ ...f, [field]: value }));
+  const set = (field, value) => {
+    setForm((f) => ({ ...f, [field]: value }));
+    if (erros[field]) setErros((e) => ({ ...e, [field]: false }));
+  };
 
   const clientesFiltrados = clientes.filter((c) =>
     c.nome.toLowerCase().includes(clienteBusca.toLowerCase())
@@ -65,6 +69,17 @@ export function OportunidadeModal({ editando, clientes, produtos, fmtBRL, onSalv
     set("produto_id", "");
   };
 
+  const handleSalvar = () => {
+    const e = {};
+    if (!form.titulo.trim()) e.titulo = true;
+    if (!form.cliente_id) e.cliente_id = true;
+    if (Object.keys(e).length) return setErros(e);
+    onSalvar(form);
+  };
+
+  const ic = (field) =>
+    `w-full border ${erros[field] ? "border-red-500" : "border-gray-200"} rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none`;
+
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg border border-gray-200 max-w-sm w-full p-4">
@@ -75,7 +90,7 @@ export function OportunidadeModal({ editando, clientes, produtos, fmtBRL, onSalv
           <div>
             <label className="block text-xs text-gray-600 mb-0.5">Título *</label>
             <input type="text" value={form.titulo} onChange={(e) => set("titulo", e.target.value)}
-              className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" />
+              className={ic("titulo")} />
           </div>
 
           <div>
@@ -87,7 +102,7 @@ export function OportunidadeModal({ editando, clientes, produtos, fmtBRL, onSalv
                 value={clienteBusca}
                 onChange={(e) => { setClienteBusca(e.target.value); setClienteSelecionado(null); set("cliente_id", ""); }}
                 placeholder="Digite o nome do cliente..."
-                className="w-full border border-gray-200 rounded pl-8 pr-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"
+                className={`w-full border ${erros.cliente_id ? "border-red-500" : "border-gray-200"} rounded pl-8 pr-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none`}
               />
             </div>
             {clienteBusca.trim().length > 0 && !clienteSelecionado && (
@@ -128,7 +143,7 @@ export function OportunidadeModal({ editando, clientes, produtos, fmtBRL, onSalv
                 value={produtoBusca}
                 onChange={(e) => { setProdutoBusca(e.target.value); setProdutoSelecionado(null); set("produto_id", ""); }}
                 placeholder="Digite o nome do produto..."
-                className="w-full border border-gray-200 rounded pl-8 pr-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"
+                className={ic("")}
               />
             </div>
             {produtoBusca.trim().length > 0 && !produtoSelecionado && (
@@ -155,12 +170,12 @@ export function OportunidadeModal({ editando, clientes, produtos, fmtBRL, onSalv
           <div>
             <label className="block text-xs text-gray-600 mb-0.5">Valor (R$)</label>
             <input type="number" step="0.01" value={form.valor} onChange={(e) => set("valor", e.target.value)}
-              className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" />
+              className={ic("")} />
           </div>
           <div>
             <label className="block text-xs text-gray-600 mb-0.5">Estágio</label>
             <select value={form.estagio} onChange={(e) => set("estagio", e.target.value)}
-              className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none">
+              className={ic("")}>
               {ESTAGIOS.map((e) => (
                 <option key={e} value={e}>{e.charAt(0).toUpperCase() + e.slice(1)}</option>
               ))}
@@ -169,12 +184,12 @@ export function OportunidadeModal({ editando, clientes, produtos, fmtBRL, onSalv
           <div>
             <label className="block text-xs text-gray-600 mb-0.5">Data de Início</label>
             <input type="date" value={form.data_inicio} onChange={(e) => set("data_inicio", e.target.value)}
-              className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" />
+              className={ic("")} />
           </div>
         </div>
         <div className="flex gap-2 mt-4">
           <button onClick={onFechar} className="flex-1 px-3 py-1.5 border border-gray-200 rounded text-xs hover:bg-gray-50">Cancelar</button>
-          <button onClick={() => onSalvar(form)} className="flex-1 px-3 py-1.5 bg-gray-800 text-white rounded text-xs hover:bg-gray-700">
+          <button onClick={handleSalvar} className="flex-1 px-3 py-1.5 bg-gray-800 text-white rounded text-xs hover:bg-gray-700">
             {editando ? "Salvar" : "Adicionar"}
           </button>
         </div>

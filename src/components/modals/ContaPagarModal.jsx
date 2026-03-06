@@ -30,6 +30,7 @@ export function ContaPagarModal({
 }) {
   const [form, setForm] = useState(FORM_INICIAL);
   const [previewParcelas, setPreviewParcelas] = useState([]);
+  const [erros, setErros] = useState({});
 
   useEffect(() => {
     if (editando) {
@@ -50,6 +51,7 @@ export function ContaPagarModal({
     } else {
       setForm(FORM_INICIAL);
     }
+    setErros({});
   }, [editando, aberto]);
 
   useEffect(() => {
@@ -65,13 +67,19 @@ export function ContaPagarModal({
   if (!aberto) return null;
 
   const handleSalvar = () => {
-    if (!form.descricao.trim()) return alert("Descrição é obrigatória!");
-    if (!form.valor_total || parseFloat(form.valor_total) <= 0) return alert("Valor deve ser maior que zero!");
+    const e = {};
+    if (!form.descricao.trim()) e.descricao = true;
+    if (!form.valor_total || parseFloat(form.valor_total) <= 0) e.valor_total = true;
+    if (Object.keys(e).length) return setErros(e);
     onSalvar(form);
   };
 
-  const f = (field) => (e) => setForm({ ...form, [field]: e.target.value });
-  const cls = "w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none";
+  const f = (field) => (e) => {
+    setForm({ ...form, [field]: e.target.value });
+    if (erros[field]) setErros({ ...erros, [field]: false });
+  };
+  const cls = (field) =>
+    `w-full border ${erros[field] ? "border-red-500" : "border-gray-200"} rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none`;
   const fmtBRL = (v) => parseFloat(v || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 });
 
   return (
@@ -87,7 +95,7 @@ export function ContaPagarModal({
               type="text"
               value={form.descricao}
               onChange={f("descricao")}
-              className={cls}
+              className={cls("descricao")}
               placeholder="Ex: Aluguel sede, Fatura energia, Salários..."
             />
           </div>
@@ -95,7 +103,7 @@ export function ContaPagarModal({
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="block text-xs text-gray-600 mb-0.5">Categoria *</label>
-              <select value={form.categoria} onChange={f("categoria")} className={cls}>
+              <select value={form.categoria} onChange={f("categoria")} className={cls("")}>
                 {CATEGORIAS_CONTAS_PAGAR.map((c) => (
                   <option key={c.value} value={c.value}>{c.label}</option>
                 ))}
@@ -103,7 +111,7 @@ export function ContaPagarModal({
             </div>
             <div>
               <label className="block text-xs text-gray-600 mb-0.5">Tipo</label>
-              <select value={form.tipo} onChange={f("tipo")} className={cls}>
+              <select value={form.tipo} onChange={f("tipo")} className={cls("")}>
                 {TIPOS_DESPESA.map((t) => (
                   <option key={t.value} value={t.value}>{t.label}</option>
                 ))}
@@ -120,7 +128,7 @@ export function ContaPagarModal({
                 min="0"
                 value={form.valor_total}
                 onChange={f("valor_total")}
-                className={cls}
+                className={cls("valor_total")}
                 placeholder="0,00"
               />
             </div>
@@ -132,7 +140,7 @@ export function ContaPagarModal({
                 max="60"
                 value={form.numero_parcelas}
                 onChange={f("numero_parcelas")}
-                className={cls}
+                className={cls("")}
               />
             </div>
           </div>
@@ -140,18 +148,18 @@ export function ContaPagarModal({
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="block text-xs text-gray-600 mb-0.5">Competência</label>
-              <input type="date" value={form.data_competencia} onChange={f("data_competencia")} className={cls} />
+              <input type="date" value={form.data_competencia} onChange={f("data_competencia")} className={cls("")} />
             </div>
             <div>
               <label className="block text-xs text-gray-600 mb-0.5">Venc. 1ª Parcela</label>
-              <input type="date" value={form.data_primeira_parcela} onChange={f("data_primeira_parcela")} className={cls} />
+              <input type="date" value={form.data_primeira_parcela} onChange={f("data_primeira_parcela")} className={cls("")} />
             </div>
           </div>
 
           {fornecedores && fornecedores.length > 0 && (
             <div>
               <label className="block text-xs text-gray-600 mb-0.5">Fornecedor</label>
-              <select value={form.fornecedor_id} onChange={f("fornecedor_id")} className={cls}>
+              <select value={form.fornecedor_id} onChange={f("fornecedor_id")} className={cls("")}>
                 <option value="">Nenhum</option>
                 {fornecedores.filter((f) => f.ativo).map((f) => (
                   <option key={f.id} value={f.id}>{f.nome}</option>
@@ -163,7 +171,7 @@ export function ContaPagarModal({
           {centrosCusto && centrosCusto.length > 0 && (
             <div>
               <label className="block text-xs text-gray-600 mb-0.5">Centro de Custo</label>
-              <select value={form.centro_custo_id} onChange={f("centro_custo_id")} className={cls}>
+              <select value={form.centro_custo_id} onChange={f("centro_custo_id")} className={cls("")}>
                 <option value="">Nenhum</option>
                 {centrosCusto.filter((c) => c.ativo).map((c) => (
                   <option key={c.id} value={c.id}>{c.nome}{c.codigo ? ` (${c.codigo})` : ""}</option>
@@ -184,7 +192,7 @@ export function ContaPagarModal({
 
           <div>
             <label className="block text-xs text-gray-600 mb-0.5">Observações</label>
-            <textarea value={form.observacoes} onChange={f("observacoes")} className={cls} rows="2" />
+            <textarea value={form.observacoes} onChange={f("observacoes")} className={cls("")} rows="2" />
           </div>
 
           {/* Preview das parcelas */}

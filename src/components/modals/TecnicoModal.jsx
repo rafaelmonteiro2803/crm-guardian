@@ -16,8 +16,12 @@ export function TecnicoModal({ editando, onSalvar, onFechar }) {
         }
       : FORM_INICIAL
   );
+  const [erros, setErros] = useState({});
 
-  const set = (field, value) => setForm((f) => ({ ...f, [field]: value }));
+  const set = (field, value) => {
+    setForm((f) => ({ ...f, [field]: value }));
+    if (erros[field]) setErros((e) => ({ ...e, [field]: false }));
+  };
 
   const handleCpf = (v) => {
     const d = v.replace(/\D/g, "").slice(0, 11);
@@ -26,8 +30,18 @@ export function TecnicoModal({ editando, onSalvar, onFechar }) {
       : d.length > 6 ? d.replace(/(\d{3})(\d{3})(\d{1,3})/, "$1.$2.$3")
       : d.length > 3 ? d.replace(/(\d{3})(\d{1,3})/, "$1.$2")
       : d;
-    set("cpf", f);
+    setForm((prev) => ({ ...prev, cpf: f }));
   };
+
+  const handleSalvar = () => {
+    const e = {};
+    if (!form.nome.trim()) e.nome = true;
+    if (Object.keys(e).length) return setErros(e);
+    onSalvar(form);
+  };
+
+  const ic = (field) =>
+    `w-full border ${erros[field] ? "border-red-500" : "border-gray-200"} rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none`;
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
@@ -37,39 +51,39 @@ export function TecnicoModal({ editando, onSalvar, onFechar }) {
           <div>
             <label className="block text-xs text-gray-600 mb-0.5">Nome *</label>
             <input type="text" value={form.nome} onChange={(e) => set("nome", e.target.value)}
-              className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" />
+              className={ic("nome")} />
           </div>
           <div>
             <label className="block text-xs text-gray-600 mb-0.5">CPF</label>
             <input type="text" value={form.cpf} onChange={(e) => handleCpf(e.target.value)}
               placeholder="000.000.000-00"
-              className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" />
+              className={ic("")} />
           </div>
           <div>
             <label className="block text-xs text-gray-600 mb-0.5">Email</label>
             <input type="email" value={form.email} onChange={(e) => set("email", e.target.value)}
-              className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" />
+              className={ic("")} />
           </div>
           <div>
             <label className="block text-xs text-gray-600 mb-0.5">Telefone</label>
             <input type="tel" value={form.telefone} onChange={(e) => set("telefone", e.target.value)}
-              className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" />
+              className={ic("")} />
           </div>
           <div>
             <label className="block text-xs text-gray-600 mb-0.5">Especialidade</label>
             <input type="text" value={form.especialidade} onChange={(e) => set("especialidade", e.target.value)}
               placeholder="Ex: Elétrica, Hidráulica, TI..."
-              className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" />
+              className={ic("")} />
           </div>
           <div>
             <label className="block text-xs text-gray-600 mb-0.5">Endereço</label>
             <input type="text" value={form.endereco} onChange={(e) => set("endereco", e.target.value)}
-              className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" />
+              className={ic("")} />
           </div>
           <div>
             <label className="block text-xs text-gray-600 mb-0.5">Observações</label>
             <textarea value={form.observacoes} onChange={(e) => set("observacoes", e.target.value)}
-              className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none" rows="2" />
+              className={ic("")} rows="2" />
           </div>
           <div className="flex items-center gap-2">
             <input id="ta" type="checkbox" checked={!!form.ativo} onChange={(e) => set("ativo", e.target.checked)} />
@@ -78,7 +92,7 @@ export function TecnicoModal({ editando, onSalvar, onFechar }) {
         </div>
         <div className="flex gap-2 mt-4">
           <button onClick={onFechar} className="flex-1 px-3 py-1.5 border border-gray-200 rounded text-xs hover:bg-gray-50">Cancelar</button>
-          <button onClick={() => onSalvar(form)} className="flex-1 px-3 py-1.5 bg-gray-800 text-white rounded text-xs hover:bg-gray-700">
+          <button onClick={handleSalvar} className="flex-1 px-3 py-1.5 bg-gray-800 text-white rounded text-xs hover:bg-gray-700">
             {editando ? "Salvar" : "Adicionar"}
           </button>
         </div>

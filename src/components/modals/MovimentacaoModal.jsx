@@ -12,10 +12,12 @@ const FORM_INICIAL = (tipo = "entrada", custoUnitario = "") => ({
 
 export function MovimentacaoModal({ aberto, item, tipoInicial = "entrada", onClose, onSalvar }) {
   const [form, setForm] = useState(FORM_INICIAL());
+  const [erros, setErros] = useState({});
 
   useEffect(() => {
     if (aberto && item) {
       setForm(FORM_INICIAL(tipoInicial, (item.custo_unitario ?? 0).toString()));
+      setErros({});
     }
   }, [aberto, item, tipoInicial]);
 
@@ -29,13 +31,18 @@ export function MovimentacaoModal({ aberto, item, tipoInicial = "entrada", onClo
   };
 
   const handleSalvar = () => {
-    if (!form.quantidade || parseFloat(form.quantidade) <= 0)
-      return alert("Informe uma quantidade válida!");
+    const e = {};
+    if (!form.quantidade || parseFloat(form.quantidade) <= 0) e.quantidade = true;
+    if (Object.keys(e).length) return setErros(e);
     onSalvar(form, item);
   };
 
-  const f = (field) => (e) => setForm({ ...form, [field]: e.target.value });
-  const inputCls = "w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none";
+  const f = (field) => (e) => {
+    setForm({ ...form, [field]: e.target.value });
+    if (erros[field]) setErros({ ...erros, [field]: false });
+  };
+  const inputCls = (field) =>
+    `w-full border ${erros[field] ? "border-red-500" : "border-gray-200"} rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none`;
 
   const tipoCls =
     form.tipo === "entrada"
@@ -75,7 +82,7 @@ export function MovimentacaoModal({ aberto, item, tipoInicial = "entrada", onClo
             <select
               value={form.tipo}
               onChange={(e) => handleTipoChange(e.target.value)}
-              className={inputCls}
+              className={inputCls("")}
             >
               <option value="entrada">Entrada</option>
               <option value="saida">Saída</option>
@@ -84,7 +91,7 @@ export function MovimentacaoModal({ aberto, item, tipoInicial = "entrada", onClo
           </div>
           <div>
             <label className="block text-xs text-gray-600 mb-0.5">Motivo *</label>
-            <select value={form.motivo} onChange={f("motivo")} className={inputCls}>
+            <select value={form.motivo} onChange={f("motivo")} className={inputCls("")}>
               {form.tipo === "entrada" && (
                 <>
                   <option value="compra">Compra</option>
@@ -116,7 +123,7 @@ export function MovimentacaoModal({ aberto, item, tipoInicial = "entrada", onClo
               value={form.quantidade}
               onChange={f("quantidade")}
               placeholder="0"
-              className={inputCls}
+              className={inputCls("quantidade")}
             />
           </div>
           {form.tipo === "entrada" && (
@@ -128,17 +135,17 @@ export function MovimentacaoModal({ aberto, item, tipoInicial = "entrada", onClo
                 min="0"
                 value={form.custo_unitario}
                 onChange={f("custo_unitario")}
-                className={inputCls}
+                className={inputCls("")}
               />
             </div>
           )}
           <div>
             <label className="block text-xs text-gray-600 mb-0.5">Data</label>
-            <input type="date" value={form.data_movimentacao} onChange={f("data_movimentacao")} className={inputCls} />
+            <input type="date" value={form.data_movimentacao} onChange={f("data_movimentacao")} className={inputCls("")} />
           </div>
           <div>
             <label className="block text-xs text-gray-600 mb-0.5">Observações</label>
-            <textarea value={form.observacoes} onChange={f("observacoes")} className={inputCls} rows="2" />
+            <textarea value={form.observacoes} onChange={f("observacoes")} className={inputCls("")} rows="2" />
           </div>
         </div>
         <div className="flex gap-2 mt-4">

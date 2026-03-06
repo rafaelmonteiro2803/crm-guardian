@@ -43,6 +43,7 @@ export function VendaModal({ editando, clientes, produtos, fmtBRL, onSalvar, onF
   const [clienteSelecionado, setClienteSelecionado] = useState(clienteInicial || null);
   const [produtoBusca, setProdutoBusca] = useState("");
   const [produtoSelecionado, setProdutoSelecionado] = useState(null);
+  const [erros, setErros] = useState({});
 
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
 
@@ -58,6 +59,7 @@ export function VendaModal({ editando, clientes, produtos, fmtBRL, onSalvar, onF
     setClienteSelecionado(c);
     setClienteBusca(c.nome);
     set({ cliente_id: c.id });
+    if (erros.cliente_id) setErros((e) => ({ ...e, cliente_id: false }));
   };
 
   const selecionarProduto = (p) => {
@@ -73,6 +75,7 @@ export function VendaModal({ editando, clientes, produtos, fmtBRL, onSalvar, onF
         { produto_id: produtoSelecionado.id, nome: produtoSelecionado.nome, quantidade: 1, valor_unitario: parseFloat(produtoSelecionado.preco_base || 0) },
       ],
     });
+    if (erros.itens) setErros((e) => ({ ...e, itens: false }));
     setProdutoBusca("");
     setProdutoSelecionado(null);
   };
@@ -84,6 +87,18 @@ export function VendaModal({ editando, clientes, produtos, fmtBRL, onSalvar, onF
   };
 
   const removerItem = (idx) => set({ itens: form.itens.filter((_, i) => i !== idx) });
+
+  const handleSalvar = () => {
+    const e = {};
+    if (!form.cliente_id) e.cliente_id = true;
+    if (!form.descricao.trim()) e.descricao = true;
+    if (form.itens.length === 0) e.itens = true;
+    if (Object.keys(e).length) return setErros(e);
+    onSalvar(form);
+  };
+
+  const ic = (field) =>
+    `w-full border ${erros[field] ? "border-red-500" : "border-gray-200"} rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none`;
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
@@ -100,7 +115,7 @@ export function VendaModal({ editando, clientes, produtos, fmtBRL, onSalvar, onF
                 value={clienteBusca}
                 onChange={(e) => { setClienteBusca(e.target.value); setClienteSelecionado(null); set({ cliente_id: "" }); }}
                 placeholder="Digite o nome do cliente..."
-                className="w-full border border-gray-200 rounded pl-8 pr-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"
+                className={`w-full border ${erros.cliente_id ? "border-red-500" : "border-gray-200"} rounded pl-8 pr-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none`}
               />
             </div>
             {clienteBusca.trim().length > 0 && !clienteSelecionado && (
@@ -130,8 +145,8 @@ export function VendaModal({ editando, clientes, produtos, fmtBRL, onSalvar, onF
             <input
               type="text"
               value={form.descricao}
-              onChange={(e) => set({ descricao: e.target.value })}
-              className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"
+              onChange={(e) => { set({ descricao: e.target.value }); if (erros.descricao) setErros((er) => ({ ...er, descricao: false })); }}
+              className={ic("descricao")}
             />
           </div>
 
@@ -145,7 +160,7 @@ export function VendaModal({ editando, clientes, produtos, fmtBRL, onSalvar, onF
                   value={produtoBusca}
                   onChange={(e) => { setProdutoBusca(e.target.value); setProdutoSelecionado(null); }}
                   placeholder="Digite o nome do produto..."
-                  className="w-full border border-gray-200 rounded pl-8 pr-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"
+                  className={`w-full border ${erros.itens && form.itens.length === 0 ? "border-red-500" : "border-gray-200"} rounded pl-8 pr-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none`}
                 />
                 {produtoBusca.trim().length > 0 && !produtoSelecionado && (
                   <div className="absolute z-10 w-full border border-gray-200 rounded overflow-hidden mt-1 bg-white shadow-sm">
@@ -236,7 +251,7 @@ export function VendaModal({ editando, clientes, produtos, fmtBRL, onSalvar, onF
               step="0.01"
               value={form.desconto}
               onChange={(e) => set({ desconto: e.target.value })}
-              className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"
+              className={ic("")}
               placeholder="0,00"
             />
           </div>
@@ -266,7 +281,7 @@ export function VendaModal({ editando, clientes, produtos, fmtBRL, onSalvar, onF
               type="date"
               value={form.data_venda}
               onChange={(e) => set({ data_venda: e.target.value })}
-              className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"
+              className={ic("")}
             />
           </div>
 
@@ -275,7 +290,7 @@ export function VendaModal({ editando, clientes, produtos, fmtBRL, onSalvar, onF
             <select
               value={form.forma_pagamento}
               onChange={(e) => set({ forma_pagamento: e.target.value })}
-              className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"
+              className={ic("")}
             >
               {["à vista", "parcelado", "boleto", "cartão", "pix"].map((f) => (
                 <option key={f} value={f}>{f.charAt(0).toUpperCase() + f.slice(1)}</option>
@@ -288,7 +303,7 @@ export function VendaModal({ editando, clientes, produtos, fmtBRL, onSalvar, onF
             <textarea
               value={form.observacoes}
               onChange={(e) => set({ observacoes: e.target.value })}
-              className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"
+              className={ic("")}
               rows="2"
             />
           </div>
@@ -298,7 +313,7 @@ export function VendaModal({ editando, clientes, produtos, fmtBRL, onSalvar, onF
           <button onClick={onFechar} className="flex-1 px-3 py-1.5 border border-gray-200 rounded text-xs hover:bg-gray-50">
             Cancelar
           </button>
-          <button onClick={() => onSalvar(form)} className="flex-1 px-3 py-1.5 bg-gray-800 text-white rounded text-xs hover:bg-gray-700">
+          <button onClick={handleSalvar} className="flex-1 px-3 py-1.5 bg-gray-800 text-white rounded text-xs hover:bg-gray-700">
             {editando ? "Salvar" : "Adicionar"}
           </button>
         </div>
