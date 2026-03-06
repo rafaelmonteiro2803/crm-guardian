@@ -40,10 +40,11 @@ export function useVendas(tenantId, userId, onNovaOS) {
       alert("Descrição é obrigatória!");
       return;
     }
-    const valorTotal =
-      form.itens.length > 0
-        ? calcularTotalVenda(form.itens, form.desconto)
-        : parseFloat(form.valor || 0);
+    if (form.itens.length === 0) {
+      alert("É obrigatório adicionar ao menos 1 produto ou serviço!");
+      return;
+    }
+    const valorTotal = calcularTotalVenda(form.itens, form.desconto);
     const payload = {
       cliente_id: form.cliente_id,
       descricao: form.descricao,
@@ -57,7 +58,25 @@ export function useVendas(tenantId, userId, onNovaOS) {
 
     if (editando) {
       const updated = await updateVenda(editando.id, payload);
-      if (updated) setVendas((prev) => prev.map((v) => (v.id === editando.id ? updated : v)));
+      if (updated) {
+        setVendas((prev) => prev.map((v) => (v.id === editando.id ? updated : v)));
+
+        const tituloRelacionado = titulos.find(
+          (t) => t.venda_id === editando.id && t.status === "pendente"
+        );
+        if (tituloRelacionado) {
+          const tituloAtualizado = await updateTitulo(tituloRelacionado.id, {
+            descricao: updated.descricao,
+            valor: updated.valor,
+            data_vencimento: updated.data_venda || tituloRelacionado.data_vencimento,
+          });
+          if (tituloAtualizado) {
+            setTitulos((prev) =>
+              prev.map((t) => (t.id === tituloRelacionado.id ? tituloAtualizado : t))
+            );
+          }
+        }
+      }
     } else {
       const created = await createVenda({ ...payload, user_id: userId, tenant_id: tenantId });
       if (created) {
