@@ -136,7 +136,7 @@ export function VendaModal({ editando, clientes, produtos, fmtBRL, onSalvar, onF
           </div>
 
           <div>
-            <label className="block text-xs text-gray-600 mb-1">Produtos</label>
+            <label className="block text-xs text-gray-600 mb-1">Produtos / Serviços *</label>
             <div className="flex gap-2 mb-2">
               <div className="flex-1 relative">
                 <Icons.Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
@@ -241,7 +241,7 @@ export function VendaModal({ editando, clientes, produtos, fmtBRL, onSalvar, onF
             />
           </div>
 
-          {form.itens.length > 0 ? (
+          {form.itens.length > 0 && (
             <div className="bg-gray-50 rounded p-3 text-sm">
               <div className="flex justify-between text-gray-600 text-xs">
                 <span>Subtotal:</span>
@@ -257,17 +257,6 @@ export function VendaModal({ editando, clientes, produtos, fmtBRL, onSalvar, onF
                 <span>Total:</span>
                 <span>R$ {fmtBRL(fmtItens(form.itens, form.desconto))}</span>
               </div>
-            </div>
-          ) : (
-            <div>
-              <label className="block text-xs text-gray-600 mb-0.5">Valor (R$) *</label>
-              <input
-                type="number"
-                step="0.01"
-                value={form.valor}
-                onChange={(e) => set({ valor: e.target.value })}
-                className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"
-              />
             </div>
           )}
 
