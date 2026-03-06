@@ -50,3 +50,17 @@ export const createOrdemServico = async (payload) => {
   const { data } = await supabase.from("ordens_servico").insert([payload]).select();
   return data?.[0] || null;
 };
+
+export const fetchOrdemServicoPorVenda = async (vendaId) => {
+  const { data } = await supabase
+    .from("ordens_servico")
+    .select("*")
+    .eq("venda_id", vendaId)
+    .neq("status", "atendimento_concluido");
+  return data || [];
+};
+
+export const updateOrdemServico = async (id, payload) => {
+  const { data } = await supabase.from("ordens_servico").update(payload).eq("id", id).select();
+  return data?.[0] || null;
+};

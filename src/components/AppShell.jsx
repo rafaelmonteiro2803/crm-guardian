@@ -96,7 +96,9 @@ export function AppShell() {
     salvarVenda, excluirVenda,
     salvarTitulo, excluirTitulo,
     marcarComoPago,
-  } = useVendas(tenantId, session?.user?.id, adicionarOrdemServico);
+  } = useVendas(tenantId, session?.user?.id, adicionarOrdemServico, (osAtualizada) => {
+    setOrdensServico((prev) => prev.map((o) => (o.id === osAtualizada.id ? osAtualizada : o)));
+  });
 
   const {
     contasBancarias, setContasBancarias,

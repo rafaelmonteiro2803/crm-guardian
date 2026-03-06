@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { DataGrid } from "../components/DataGrid";
 import { Icons } from "../components/Icons";
 import { EncaminharModal } from "../components/modals/EncaminharModal";
@@ -29,16 +29,32 @@ export function OrdensServicoPage({
   abrirModalAgendar,
   fecharModalAgendar,
 }) {
+  const [mostrarConcluidas, setMostrarConcluidas] = useState(false);
+
   const temItensPendentes = (o) => {
     const itens = Array.isArray(o.itens) ? o.itens : [];
     const selecionados = Array.isArray(o.itens_selecionados) ? o.itens_selecionados : [];
     return itens.length > 0 && selecionados.length < itens.length;
   };
 
+  const ordensVisiveis = mostrarConcluidas
+    ? ordensServico
+    : ordensServico.filter((o) => o.status !== "atendimento_concluido");
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-gray-700">Ordens de Serviço</h2>
+        <button
+          onClick={() => setMostrarConcluidas((v) => !v)}
+          className={`text-xs px-2.5 py-1 rounded border font-medium transition-colors ${
+            mostrarConcluidas
+              ? "bg-green-50 border-green-300 text-green-700 hover:bg-green-100"
+              : "bg-gray-50 border-gray-300 text-gray-600 hover:bg-gray-100"
+          }`}
+        >
+          {mostrarConcluidas ? "Ocultar concluídas" : "Mostrar concluídas"}
+        </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -109,7 +125,7 @@ export function OrdensServicoPage({
             filterValue: (o) => o.status === "aguardando_atendimento" ? "Aguardando" : o.status === "em_atendimento" ? "Em Atendimento" : "Concluído",
           },
         ]}
-        data={ordensServico}
+        data={ordensVisiveis}
         actions={(o) => (
           <div className="flex items-center gap-1">
             <button onClick={() => abrirModalEvolucao(o)} title="Evolução do Atendimento" className="text-purple-600 hover:bg-purple-50 p-1 rounded"><Icons.BookOpen /></button>
