@@ -9,11 +9,13 @@ import {
   updateTitulo,
   deleteTitulo,
   createOrdemServico,
+  fetchOrdemServicoPorVenda,
+  updateOrdemServico,
 } from "../services/vendasService";
 
 const hoje = () => new Date().toISOString().split("T")[0];
 
-export function useVendas(tenantId, userId, onNovaOS) {
+export function useVendas(tenantId, userId, onNovaOS, onAtualizarOS) {
   const [vendas, setVendas] = useState([]);
   const [titulos, setTitulos] = useState([]);
 
@@ -75,6 +77,17 @@ export function useVendas(tenantId, userId, onNovaOS) {
               prev.map((t) => (t.id === tituloRelacionado.id ? tituloAtualizado : t))
             );
           }
+        }
+
+        const osRelacionadas = await fetchOrdemServicoPorVenda(editando.id);
+        for (const os of osRelacionadas) {
+          const osAtualizada = await updateOrdemServico(os.id, {
+            descricao: updated.descricao,
+            itens: updated.itens || [],
+            valor_total: updated.valor,
+            cliente_id: updated.cliente_id,
+          });
+          if (osAtualizada) onAtualizarOS?.(osAtualizada);
         }
       }
     } else {
