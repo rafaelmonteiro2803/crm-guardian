@@ -9,6 +9,7 @@ const FORM_INICIAL = {
 
 export function CentroCustoModal({ aberto, editando, onClose, onSalvar }) {
   const [form, setForm] = useState(FORM_INICIAL);
+  const [erros, setErros] = useState({});
 
   useEffect(() => {
     if (editando) {
@@ -21,17 +22,24 @@ export function CentroCustoModal({ aberto, editando, onClose, onSalvar }) {
     } else {
       setForm(FORM_INICIAL);
     }
+    setErros({});
   }, [editando, aberto]);
 
   if (!aberto) return null;
 
   const handleSalvar = () => {
-    if (!form.nome.trim()) return alert("Nome é obrigatório!");
+    const e = {};
+    if (!form.nome.trim()) e.nome = true;
+    if (Object.keys(e).length) return setErros(e);
     onSalvar(form);
   };
 
-  const f = (field) => (e) => setForm({ ...form, [field]: e.target.value });
-  const cls = "w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none";
+  const f = (field) => (e) => {
+    setForm({ ...form, [field]: e.target.value });
+    if (erros[field]) setErros({ ...erros, [field]: false });
+  };
+  const cls = (field) =>
+    `w-full border ${erros[field] ? "border-red-500" : "border-gray-200"} rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none`;
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
@@ -42,15 +50,15 @@ export function CentroCustoModal({ aberto, editando, onClose, onSalvar }) {
         <div className="space-y-2.5">
           <div>
             <label className="block text-xs text-gray-600 mb-0.5">Nome *</label>
-            <input type="text" value={form.nome} onChange={f("nome")} className={cls} placeholder="Ex: Administrativo, Operacional..." />
+            <input type="text" value={form.nome} onChange={f("nome")} className={cls("nome")} placeholder="Ex: Administrativo, Operacional..." />
           </div>
           <div>
             <label className="block text-xs text-gray-600 mb-0.5">Código</label>
-            <input type="text" value={form.codigo} onChange={f("codigo")} className={cls} placeholder="Ex: ADM-001" />
+            <input type="text" value={form.codigo} onChange={f("codigo")} className={cls("")} placeholder="Ex: ADM-001" />
           </div>
           <div>
             <label className="block text-xs text-gray-600 mb-0.5">Descrição</label>
-            <textarea value={form.descricao} onChange={f("descricao")} className={cls} rows="2" />
+            <textarea value={form.descricao} onChange={f("descricao")} className={cls("")} rows="2" />
           </div>
           <div className="flex items-center gap-2">
             <input

@@ -13,8 +13,9 @@ const FORM_INICIAL = {
 };
 
 const inputCls = "w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none";
+const inputClsErr = "w-full border border-red-500 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none";
 
-function SearchableSelect({ options, value, onChange, placeholder, renderLabel, getId, emptyMsg }) {
+function SearchableSelect({ options, value, onChange, placeholder, renderLabel, getId, emptyMsg, hasError }) {
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
 
@@ -46,7 +47,7 @@ function SearchableSelect({ options, value, onChange, placeholder, renderLabel, 
         onFocus={handleFocus}
         onBlur={handleBlur}
         placeholder={placeholder}
-        className={inputCls}
+        className={hasError ? inputClsErr : inputCls}
         autoComplete="off"
       />
       {open && (
@@ -83,9 +84,13 @@ export function ConciliacaoModal({
   fmtBRL,
 }) {
   const [form, setForm] = useState(FORM_INICIAL);
+  const [erros, setErros] = useState({});
 
   useEffect(() => {
-    if (aberto) setForm(FORM_INICIAL);
+    if (aberto) {
+      setForm(FORM_INICIAL);
+      setErros({});
+    }
   }, [aberto]);
 
   if (!aberto) return null;
@@ -135,6 +140,7 @@ export function ConciliacaoModal({
 
   const handleTipoChange = (novoTipo) => {
     setForm({ ...FORM_INICIAL, tipo: novoTipo });
+    setErros({});
   };
 
   const handleTituloChange = (id) => {
@@ -145,6 +151,7 @@ export function ConciliacaoModal({
       conta_pagar_parcela_id: "",
       valor_titulo: titulo ? titulo.valor.toString() : "",
     });
+    if (erros.titulo_id) setErros({ ...erros, titulo_id: false });
   };
 
   const handleParcelaChange = (id) => {
@@ -155,6 +162,7 @@ export function ConciliacaoModal({
       titulo_id: "",
       valor_titulo: parcela ? parcela.valor.toString() : "",
     });
+    if (erros.conta_pagar_parcela_id) setErros({ ...erros, conta_pagar_parcela_id: false });
   };
 
   const handleMovimentoChange = (id) => {
@@ -164,6 +172,7 @@ export function ConciliacaoModal({
       movimento_bancario_id: id,
       valor_movimento: mov ? mov.valor.toString() : "",
     });
+    if (erros.movimento_bancario_id) setErros({ ...erros, movimento_bancario_id: false });
   };
 
   const diferencaValor = parseFloat(form.valor_titulo || 0) - parseFloat(form.valor_movimento || 0);
@@ -173,11 +182,13 @@ export function ConciliacaoModal({
       : 0;
 
   const handleSalvar = () => {
-    if (isPago && !form.conta_pagar_parcela_id) return alert("Selecione o título relacionado (conta a pagar)!");
-    if (!isPago && !form.titulo_id) return alert("Selecione o título relacionado (venda)!");
-    if (!form.movimento_bancario_id) return alert("Selecione um movimento bancário!");
-    if (!form.valor_titulo || parseFloat(form.valor_titulo) <= 0) return alert("Valor do título inválido!");
-    if (!form.valor_movimento || parseFloat(form.valor_movimento) <= 0) return alert("Valor do movimento inválido!");
+    const e = {};
+    if (isPago && !form.conta_pagar_parcela_id) e.conta_pagar_parcela_id = true;
+    if (!isPago && !form.titulo_id) e.titulo_id = true;
+    if (!form.movimento_bancario_id) e.movimento_bancario_id = true;
+    if (!form.valor_titulo || parseFloat(form.valor_titulo) <= 0) e.valor_titulo = true;
+    if (!form.valor_movimento || parseFloat(form.valor_movimento) <= 0) e.valor_movimento = true;
+    if (Object.keys(e).length) return setErros(e);
 
     const payload = {
       tipo: form.tipo,
@@ -194,7 +205,10 @@ export function ConciliacaoModal({
     onClose();
   };
 
-  const f = (field) => (e) => setForm({ ...form, [field]: e.target.value });
+  const f = (field) => (e) => {
+    setForm({ ...form, [field]: e.target.value });
+    if (erros[field]) setErros({ ...erros, [field]: false });
+  };
 
   const getContaNome = (contaId) =>
     contasBancarias.find((c) => c.id === contaId)?.nome || "-";
@@ -246,6 +260,7 @@ export function ConciliacaoModal({
                   getId={(p) => p.id}
                   renderLabel={(p) => getContaPagarDescricao(p.id)}
                   emptyMsg="Nenhuma conta a pagar disponível para conciliação."
+                  hasError={!!erros.conta_pagar_parcela_id}
                 />
                 {parcelasPagas.length === 0 && (
                   <p className="text-[11px] text-yellow-600 mt-1">
@@ -264,6 +279,7 @@ export function ConciliacaoModal({
                   getId={(t) => t.id}
                   renderLabel={getTituloLabel}
                   emptyMsg="Nenhum título de venda disponível para conciliação."
+                  hasError={!!erros.titulo_id}
                 />
                 {titulosDisponiveis.length === 0 && (
                   <p className="text-[11px] text-yellow-600 mt-1">
@@ -287,6 +303,7 @@ export function ConciliacaoModal({
               getId={(m) => m.id}
               renderLabel={getMovimentoLabel}
               emptyMsg={`Nenhum movimento de ${isPago ? "saída" : "entrada"} disponível.`}
+              hasError={!!erros.movimento_bancario_id}
             />
             {movimentosFiltrados.length === 0 && (
               <p className="text-[11px] text-yellow-600 mt-1">
@@ -307,7 +324,7 @@ export function ConciliacaoModal({
                 value={form.valor_titulo}
                 onChange={f("valor_titulo")}
                 placeholder="0,00"
-                className={inputCls}
+                className={erros.valor_titulo ? inputClsErr : inputCls}
               />
             </div>
             <div>
@@ -321,7 +338,7 @@ export function ConciliacaoModal({
                 value={form.valor_movimento}
                 onChange={f("valor_movimento")}
                 placeholder="0,00"
-                className={inputCls}
+                className={erros.valor_movimento ? inputClsErr : inputCls}
               />
             </div>
           </div>

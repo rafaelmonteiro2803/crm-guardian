@@ -23,6 +23,7 @@ const FORM_INICIAL = {
 
 export function FornecedorModal({ aberto, editando, onClose, onSalvar }) {
   const [form, setForm] = useState(FORM_INICIAL);
+  const [erros, setErros] = useState({});
 
   useEffect(() => {
     if (editando) {
@@ -41,17 +42,24 @@ export function FornecedorModal({ aberto, editando, onClose, onSalvar }) {
     } else {
       setForm(FORM_INICIAL);
     }
+    setErros({});
   }, [editando, aberto]);
 
   if (!aberto) return null;
 
   const handleSalvar = () => {
-    if (!form.nome.trim()) return alert("Nome é obrigatório!");
+    const e = {};
+    if (!form.nome.trim()) e.nome = true;
+    if (Object.keys(e).length) return setErros(e);
     onSalvar(form);
   };
 
-  const f = (field) => (e) => setForm({ ...form, [field]: e.target.value });
-  const cls = "w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none";
+  const f = (field) => (e) => {
+    setForm({ ...form, [field]: e.target.value });
+    if (erros[field]) setErros({ ...erros, [field]: false });
+  };
+  const cls = (field) =>
+    `w-full border ${erros[field] ? "border-red-500" : "border-gray-200"} rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none`;
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
@@ -62,11 +70,11 @@ export function FornecedorModal({ aberto, editando, onClose, onSalvar }) {
         <div className="space-y-2.5">
           <div>
             <label className="block text-xs text-gray-600 mb-0.5">Nome *</label>
-            <input type="text" value={form.nome} onChange={f("nome")} className={cls} placeholder="Nome do fornecedor ou empresa" />
+            <input type="text" value={form.nome} onChange={f("nome")} className={cls("nome")} placeholder="Nome do fornecedor ou empresa" />
           </div>
           <div>
             <label className="block text-xs text-gray-600 mb-0.5">Categoria</label>
-            <select value={form.categoria} onChange={f("categoria")} className={cls}>
+            <select value={form.categoria} onChange={f("categoria")} className={cls("")}>
               {CATEGORIAS_FORNECEDOR.map((c) => (
                 <option key={c.value} value={c.value}>{c.label}</option>
               ))}
@@ -75,34 +83,34 @@ export function FornecedorModal({ aberto, editando, onClose, onSalvar }) {
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="block text-xs text-gray-600 mb-0.5">CNPJ</label>
-              <input type="text" value={form.cnpj} onChange={f("cnpj")} className={cls} placeholder="00.000.000/0001-00" />
+              <input type="text" value={form.cnpj} onChange={f("cnpj")} className={cls("")} placeholder="00.000.000/0001-00" />
             </div>
             <div>
               <label className="block text-xs text-gray-600 mb-0.5">CPF</label>
-              <input type="text" value={form.cpf} onChange={f("cpf")} className={cls} placeholder="000.000.000-00" />
+              <input type="text" value={form.cpf} onChange={f("cpf")} className={cls("")} placeholder="000.000.000-00" />
             </div>
           </div>
           <div>
             <label className="block text-xs text-gray-600 mb-0.5">Contato / Responsável</label>
-            <input type="text" value={form.contato} onChange={f("contato")} className={cls} />
+            <input type="text" value={form.contato} onChange={f("contato")} className={cls("")} />
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="block text-xs text-gray-600 mb-0.5">Telefone</label>
-              <input type="text" value={form.telefone} onChange={f("telefone")} className={cls} />
+              <input type="text" value={form.telefone} onChange={f("telefone")} className={cls("")} />
             </div>
             <div>
               <label className="block text-xs text-gray-600 mb-0.5">Email</label>
-              <input type="email" value={form.email} onChange={f("email")} className={cls} />
+              <input type="email" value={form.email} onChange={f("email")} className={cls("")} />
             </div>
           </div>
           <div>
             <label className="block text-xs text-gray-600 mb-0.5">Endereço</label>
-            <input type="text" value={form.endereco} onChange={f("endereco")} className={cls} />
+            <input type="text" value={form.endereco} onChange={f("endereco")} className={cls("")} />
           </div>
           <div>
             <label className="block text-xs text-gray-600 mb-0.5">Observações</label>
-            <textarea value={form.observacoes} onChange={f("observacoes")} className={cls} rows="2" />
+            <textarea value={form.observacoes} onChange={f("observacoes")} className={cls("")} rows="2" />
           </div>
           <div className="flex items-center gap-2">
             <input

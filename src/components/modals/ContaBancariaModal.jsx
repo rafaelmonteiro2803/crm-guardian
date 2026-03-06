@@ -20,21 +20,29 @@ const TIPOS_CONTA = [
 
 export function ContaBancariaModal({ aberto, editando, onClose, onSalvar }) {
   const [form, setForm] = useState(FORM_INICIAL);
+  const [erros, setErros] = useState({});
 
   useEffect(() => {
     setForm(editando ? { ...FORM_INICIAL, ...editando } : FORM_INICIAL);
+    setErros({});
   }, [editando, aberto]);
 
   if (!aberto) return null;
 
   const handleSalvar = () => {
-    if (!form.nome.trim()) return alert("Nome é obrigatório!");
+    const e = {};
+    if (!form.nome.trim()) e.nome = true;
+    if (Object.keys(e).length) return setErros(e);
     onSalvar(form);
     onClose();
   };
 
-  const f = (field) => (e) => setForm({ ...form, [field]: e.target.value });
-  const inputCls = "w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none";
+  const f = (field) => (e) => {
+    setForm({ ...form, [field]: e.target.value });
+    if (erros[field]) setErros({ ...erros, [field]: false });
+  };
+  const inputCls = (field) =>
+    `w-full border ${erros[field] ? "border-red-500" : "border-gray-200"} rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none`;
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
@@ -50,12 +58,12 @@ export function ContaBancariaModal({ aberto, editando, onClose, onSalvar }) {
               value={form.nome}
               onChange={f("nome")}
               placeholder="Ex: Itaú, PagBank, Caixa..."
-              className={inputCls}
+              className={inputCls("nome")}
             />
           </div>
           <div>
             <label className="block text-xs text-gray-600 mb-0.5">Tipo *</label>
-            <select value={form.tipo} onChange={f("tipo")} className={inputCls}>
+            <select value={form.tipo} onChange={f("tipo")} className={inputCls("")}>
               {TIPOS_CONTA.map((t) => (
                 <option key={t.value} value={t.value}>{t.label}</option>
               ))}
@@ -70,7 +78,7 @@ export function ContaBancariaModal({ aberto, editando, onClose, onSalvar }) {
                   value={form.banco}
                   onChange={f("banco")}
                   placeholder="Ex: Itaú, Bradesco, Nubank..."
-                  className={inputCls}
+                  className={inputCls("")}
                 />
               </div>
               <div className="grid grid-cols-2 gap-2">
@@ -81,7 +89,7 @@ export function ContaBancariaModal({ aberto, editando, onClose, onSalvar }) {
                     value={form.agencia}
                     onChange={f("agencia")}
                     placeholder="0000"
-                    className={inputCls}
+                    className={inputCls("")}
                   />
                 </div>
                 <div>
@@ -91,7 +99,7 @@ export function ContaBancariaModal({ aberto, editando, onClose, onSalvar }) {
                     value={form.conta}
                     onChange={f("conta")}
                     placeholder="00000-0"
-                    className={inputCls}
+                    className={inputCls("")}
                   />
                 </div>
               </div>
@@ -102,7 +110,7 @@ export function ContaBancariaModal({ aberto, editando, onClose, onSalvar }) {
             <textarea
               value={form.observacoes}
               onChange={f("observacoes")}
-              className={inputCls}
+              className={inputCls("")}
               rows="2"
             />
           </div>

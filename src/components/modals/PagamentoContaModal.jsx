@@ -17,6 +17,7 @@ export function PagamentoContaModal({
     observacoes: "",
   });
   const [salvando, setSalvando] = useState(false);
+  const [erros, setErros] = useState({});
 
   useEffect(() => {
     if (parcela) {
@@ -27,14 +28,17 @@ export function PagamentoContaModal({
         forma_pagamento: "pix",
         observacoes: "",
       });
+      setErros({});
     }
   }, [parcela, aberto, contasBancarias]);
 
   if (!aberto || !parcela) return null;
 
   const handlePagar = async () => {
-    if (!form.conta_bancaria_id) return alert("Selecione a conta bancária!");
-    if (!form.valor_pago || parseFloat(form.valor_pago) <= 0) return alert("Valor do pagamento inválido!");
+    const e = {};
+    if (!form.conta_bancaria_id) e.conta_bancaria_id = true;
+    if (!form.valor_pago || parseFloat(form.valor_pago) <= 0) e.valor_pago = true;
+    if (Object.keys(e).length) return setErros(e);
     setSalvando(true);
     try {
       await onPagar(parcela, form);
@@ -46,8 +50,12 @@ export function PagamentoContaModal({
     }
   };
 
-  const f = (field) => (e) => setForm({ ...form, [field]: e.target.value });
-  const cls = "w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none";
+  const f = (field) => (e) => {
+    setForm({ ...form, [field]: e.target.value });
+    if (erros[field]) setErros({ ...erros, [field]: false });
+  };
+  const cls = (field) =>
+    `w-full border ${erros[field] ? "border-red-500" : "border-gray-200"} rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none`;
   const fmtBRL = (v) => parseFloat(v || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 });
 
   return (
@@ -74,23 +82,23 @@ export function PagamentoContaModal({
         <div className="space-y-2.5">
           <div>
             <label className="block text-xs text-gray-600 mb-0.5">Data do Pagamento</label>
-            <input type="date" value={form.data_pagamento} onChange={f("data_pagamento")} className={cls} />
+            <input type="date" value={form.data_pagamento} onChange={f("data_pagamento")} className={cls("")} />
           </div>
           <div>
-            <label className="block text-xs text-gray-600 mb-0.5">Valor Pago (R$)</label>
+            <label className="block text-xs text-gray-600 mb-0.5">Valor Pago (R$) *</label>
             <input
               type="number"
               step="0.01"
               min="0"
               value={form.valor_pago}
               onChange={f("valor_pago")}
-              className={cls}
+              className={cls("valor_pago")}
             />
           </div>
           <div>
             <label className="block text-xs text-gray-600 mb-0.5">Conta Bancária *</label>
             {contasBancarias && contasBancarias.length > 0 ? (
-              <select value={form.conta_bancaria_id} onChange={f("conta_bancaria_id")} className={cls}>
+              <select value={form.conta_bancaria_id} onChange={f("conta_bancaria_id")} className={cls("conta_bancaria_id")}>
                 <option value="">Selecione...</option>
                 {contasBancarias.filter((c) => c.ativo).map((c) => (
                   <option key={c.id} value={c.id}>{c.nome}</option>
@@ -102,7 +110,7 @@ export function PagamentoContaModal({
           </div>
           <div>
             <label className="block text-xs text-gray-600 mb-0.5">Forma de Pagamento</label>
-            <select value={form.forma_pagamento} onChange={f("forma_pagamento")} className={cls}>
+            <select value={form.forma_pagamento} onChange={f("forma_pagamento")} className={cls("")}>
               {FORMAS_PAGAMENTO.map((fp) => (
                 <option key={fp.value} value={fp.value}>{fp.label}</option>
               ))}
@@ -110,7 +118,7 @@ export function PagamentoContaModal({
           </div>
           <div>
             <label className="block text-xs text-gray-600 mb-0.5">Observações</label>
-            <textarea value={form.observacoes} onChange={f("observacoes")} className={cls} rows="2" />
+            <textarea value={form.observacoes} onChange={f("observacoes")} className={cls("")} rows="2" />
           </div>
         </div>
 

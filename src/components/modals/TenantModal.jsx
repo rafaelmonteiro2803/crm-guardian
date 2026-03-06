@@ -55,6 +55,7 @@ export function TenantModal({ aberto, editando, onClose, onSalvar }) {
   const [form, setForm] = useState(FORM_INICIAL);
   const [logoFile, setLogoFile] = useState(null);
   const [logoPreview, setLogoPreview] = useState(null);
+  const [erros, setErros] = useState({});
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -83,6 +84,7 @@ export function TenantModal({ aberto, editando, onClose, onSalvar }) {
       setLogoPreview(null);
     }
     setLogoFile(null);
+    setErros({});
   }, [editando, aberto]);
 
   if (!aberto) return null;
@@ -102,17 +104,24 @@ export function TenantModal({ aberto, editando, onClose, onSalvar }) {
   };
 
   const handleSalvar = () => {
-    if (!form.nome.trim()) return alert("Nome é obrigatório!");
-    if (!form.razao_social.trim()) return alert("Razão Social é obrigatória!");
-    if (!form.cnpj.trim()) return alert("CNPJ é obrigatório!");
-    if (!form.endereco_logradouro.trim()) return alert("Logradouro é obrigatório!");
-    if (!form.endereco_numero.trim()) return alert("Número é obrigatório!");
-    if (!form.endereco_bairro.trim()) return alert("Bairro é obrigatório!");
-    if (!form.endereco_cidade.trim()) return alert("Cidade é obrigatória!");
-    if (!form.endereco_estado.trim()) return alert("Estado é obrigatório!");
-    if (!form.endereco_cep.trim()) return alert("CEP é obrigatório!");
+    const e = {};
+    if (!form.nome.trim()) e.nome = true;
+    if (!form.razao_social.trim()) e.razao_social = true;
+    if (!form.cnpj.trim()) e.cnpj = true;
+    if (!form.endereco_logradouro.trim()) e.endereco_logradouro = true;
+    if (!form.endereco_numero.trim()) e.endereco_numero = true;
+    if (!form.endereco_bairro.trim()) e.endereco_bairro = true;
+    if (!form.endereco_cidade.trim()) e.endereco_cidade = true;
+    if (!form.endereco_estado.trim()) e.endereco_estado = true;
+    if (!form.endereco_cep.trim()) e.endereco_cep = true;
+    if (Object.keys(e).length) return setErros(e);
     onSalvar(form, logoFile);
   };
+
+  const ic = (key) =>
+    `w-full border ${erros[key] ? "border-red-500" : "border-gray-200"} rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none`;
+
+  const clearErr = (key) => erros[key] && setErros({ ...erros, [key]: false });
 
   const field = (label, key, inputProps = {}) => (
     <div>
@@ -120,8 +129,8 @@ export function TenantModal({ aberto, editando, onClose, onSalvar }) {
       <input
         type="text"
         value={form[key]}
-        onChange={(e) => setForm({ ...form, [key]: e.target.value })}
-        className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"
+        onChange={(e) => { setForm({ ...form, [key]: e.target.value }); clearErr(key); }}
+        className={ic(key)}
         {...inputProps}
       />
     </div>
@@ -206,9 +215,9 @@ export function TenantModal({ aberto, editando, onClose, onSalvar }) {
             <input
               type="text"
               value={form.cnpj}
-              onChange={(e) => setForm({ ...form, cnpj: formatCnpj(e.target.value) })}
+              onChange={(e) => { setForm({ ...form, cnpj: formatCnpj(e.target.value) }); clearErr("cnpj"); }}
               placeholder="00.000.000/0000-00"
-              className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"
+              className={ic("cnpj")}
             />
           </div>
 
@@ -236,9 +245,9 @@ export function TenantModal({ aberto, editando, onClose, onSalvar }) {
               <input
                 type="text"
                 value={form.endereco_cep}
-                onChange={(e) => setForm({ ...form, endereco_cep: formatCep(e.target.value) })}
+                onChange={(e) => { setForm({ ...form, endereco_cep: formatCep(e.target.value) }); clearErr("endereco_cep"); }}
                 placeholder="00000-000"
-                className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"
+                className={ic("endereco_cep")}
               />
             </div>
             <div>
@@ -246,8 +255,8 @@ export function TenantModal({ aberto, editando, onClose, onSalvar }) {
               <input
                 type="text"
                 value={form.endereco_numero}
-                onChange={(e) => setForm({ ...form, endereco_numero: e.target.value })}
-                className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"
+                onChange={(e) => { setForm({ ...form, endereco_numero: e.target.value }); clearErr("endereco_numero"); }}
+                className={ic("endereco_numero")}
               />
             </div>
           </div>
@@ -262,8 +271,8 @@ export function TenantModal({ aberto, editando, onClose, onSalvar }) {
               <label className="block text-xs text-gray-600 mb-0.5">Estado *</label>
               <select
                 value={form.endereco_estado}
-                onChange={(e) => setForm({ ...form, endereco_estado: e.target.value })}
-                className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none bg-white"
+                onChange={(e) => { setForm({ ...form, endereco_estado: e.target.value }); clearErr("endereco_estado"); }}
+                className={`${ic("endereco_estado")} bg-white`}
               >
                 <option value="">UF</option>
                 {ESTADOS_BR.map((uf) => (

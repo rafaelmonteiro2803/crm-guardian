@@ -27,8 +27,13 @@ export function TituloModal({ editando, vendas, titulos, fmtBRL, onSalvar, onFec
   const [pagarParcial, setPagarParcial] = useState(false);
   const [valorParcial, setValorParcial] = useState("");
   const [confirmandoSaldo, setConfirmandoSaldo] = useState(false);
+  const [erros, setErros] = useState({});
 
-  const set = (patch) => setForm((f) => ({ ...f, ...patch }));
+  const set = (patch) => {
+    setForm((f) => ({ ...f, ...patch }));
+    const keys = Object.keys(patch);
+    if (keys.some((k) => erros[k])) setErros((e) => { const n = { ...e }; keys.forEach((k) => delete n[k]); return n; });
+  };
 
   const vendaRel = form.venda_id ? vendas.find((v) => v.id === form.venda_id) : null;
   const saldoVenda = vendaRel
@@ -48,6 +53,10 @@ export function TituloModal({ editando, vendas, titulos, fmtBRL, onSalvar, onFec
   const saldoParcial = valorParcialNum > 0 ? valorOriginal - valorParcialNum : 0;
 
   const handleSalvar = () => {
+    const e = {};
+    if (!form.descricao.trim()) e.descricao = true;
+    if (!form.data_vencimento) e.data_vencimento = true;
+    if (Object.keys(e).length) return setErros(e);
     if (pagarParcial && valorParcialNum > 0 && saldoParcial > 0.01) {
       setConfirmandoSaldo(true);
     } else {
@@ -64,6 +73,9 @@ export function TituloModal({ editando, vendas, titulos, fmtBRL, onSalvar, onFec
       status: "pago",
     });
   };
+
+  const ic = (field) =>
+    `w-full border ${erros[field] ? "border-red-500" : "border-gray-200"} rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none`;
 
   if (confirmandoSaldo) {
     return (
@@ -128,7 +140,7 @@ export function TituloModal({ editando, vendas, titulos, fmtBRL, onSalvar, onFec
               type="text"
               value={form.descricao}
               onChange={(e) => set({ descricao: e.target.value })}
-              className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"
+              className={ic("descricao")}
             />
           </div>
 
@@ -174,7 +186,7 @@ export function TituloModal({ editando, vendas, titulos, fmtBRL, onSalvar, onFec
                 max={valorOriginal}
                 value={valorParcial}
                 onChange={(e) => setValorParcial(e.target.value)}
-                className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"
+                className={ic("")}
                 placeholder="0,00"
                 autoFocus
               />
@@ -193,7 +205,7 @@ export function TituloModal({ editando, vendas, titulos, fmtBRL, onSalvar, onFec
               type="date"
               value={form.data_emissao}
               onChange={(e) => set({ data_emissao: e.target.value })}
-              className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"
+              className={ic("")}
             />
           </div>
 
@@ -203,7 +215,7 @@ export function TituloModal({ editando, vendas, titulos, fmtBRL, onSalvar, onFec
               type="date"
               value={form.data_vencimento}
               onChange={(e) => set({ data_vencimento: e.target.value })}
-              className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"
+              className={ic("data_vencimento")}
             />
           </div>
 
@@ -213,7 +225,7 @@ export function TituloModal({ editando, vendas, titulos, fmtBRL, onSalvar, onFec
               <select
                 value={form.status}
                 onChange={(e) => set({ status: e.target.value })}
-                className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-gray-400 outline-none"
+                className={ic("")}
               >
                 <option value="pendente">Pendente</option>
                 <option value="pago">Pago</option>
