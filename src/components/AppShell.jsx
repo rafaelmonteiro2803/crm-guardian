@@ -239,6 +239,17 @@ export function AppShell() {
     }
   };
 
+  // Ao confirmar uma conciliação, atualiza os estados de títulos e parcelas locais
+  const confirmarConciliacaoBancariaComStatus = async (conciliacao) => {
+    const { updatedTitulo, updatedParcela } = await confirmarConciliacaoBancaria(conciliacao);
+    if (updatedTitulo) {
+      setTitulos((prev) => prev.map((t) => (t.id === updatedTitulo.id ? updatedTitulo : t)));
+    }
+    if (updatedParcela) {
+      setParcelasContasPagar((prev) => prev.map((p) => (p.id === updatedParcela.id ? updatedParcela : p)));
+    }
+  };
+
   // Quando um título de venda é marcado como pago, gera movimento bancário e conciliação automática (recebido)
   const marcarComoPagoComConciliacao = async (id) => {
     const titulo = await marcarComoPago(id);
@@ -336,7 +347,7 @@ export function AppShell() {
           fornecedores,
           contasBancarias, salvarContaBancaria, excluirContaBancaria,
           movimentosBancarios, salvarMovimentoBancario, excluirMovimentoBancario,
-          conciliacoesBancarias, salvarConciliacaoBancaria, confirmarConciliacaoBancaria, excluirConciliacaoBancaria,
+          conciliacoesBancarias, salvarConciliacaoBancaria, confirmarConciliacaoBancaria: confirmarConciliacaoBancariaComStatus, excluirConciliacaoBancaria,
           tenants, salvarTenant, excluirTenant,
           contasPagar, parcelasContasPagar, salvarContaPagar, excluirContaPagar, pagarParcela,
           salvarFornecedor, excluirFornecedor,

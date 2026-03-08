@@ -107,7 +107,7 @@ export const buildNavGroups = ({
         label: "Financeiro",
         icon: <Icons.DollarSign />,
         items: [
-          { key: "financeiro", label: "Financeiro", icon: <Icons.CreditCard />, count: titulos.length },
+          { key: "financeiro", label: "Caixa", icon: <Icons.CreditCard />, count: titulos.length },
         ],
       },
       {

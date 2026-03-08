@@ -13,6 +13,8 @@ import {
   updateConciliacao,
   deleteConciliacao,
 } from "../services/movimentosBancariosService";
+import { updateTitulo } from "../services/vendasService";
+import { updateParcela } from "../services/contasPagarService";
 
 export function useMovimentosBancarios(tenantId, userId) {
   const [contasBancarias, setContasBancarias] = useState([]);
@@ -103,16 +105,25 @@ export function useMovimentosBancarios(tenantId, userId) {
   }, [tenantId, userId]);
 
   const confirmarConciliacao = useCallback(async (conciliacao) => {
-    const updatedConc = await updateConciliacao(conciliacao.id, { status: "confirmado" });
+    const updatedConc = await updateConciliacao(conciliacao.id, { status: "conciliado" });
     setConciliacoesBancarias((prev) =>
       prev.map((c) => (c.id === conciliacao.id ? updatedConc : c))
     );
     if (conciliacao.movimento_bancario_id) {
-      const updatedMov = await updateMovimentoBancario(conciliacao.movimento_bancario_id, { status: "confirmado" });
+      const updatedMov = await updateMovimentoBancario(conciliacao.movimento_bancario_id, { status: "conciliado" });
       setMovimentosBancarios((prev) =>
         prev.map((m) => (m.id === conciliacao.movimento_bancario_id ? updatedMov : m))
       );
     }
+    let updatedTitulo = null;
+    let updatedParcela = null;
+    if (conciliacao.titulo_id) {
+      updatedTitulo = await updateTitulo(conciliacao.titulo_id, { status: "conciliado" });
+    }
+    if (conciliacao.conta_pagar_parcela_id) {
+      updatedParcela = await updateParcela(conciliacao.conta_pagar_parcela_id, { status: "conciliado" });
+    }
+    return { updatedTitulo, updatedParcela };
   }, []);
 
   const excluirConciliacao = useCallback(async (id) => {

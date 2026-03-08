@@ -7,6 +7,7 @@ const STATUS_MOV = {
   aguardando_conciliacao: { label: "Aguardando Conciliação", cls: "bg-yellow-50 text-yellow-700" },
   aguardando_confirmacao: { label: "Aguardando Confirmação", cls: "bg-blue-50 text-blue-700" },
   confirmado: { label: "Confirmado", cls: "bg-green-50 text-green-700" },
+  conciliado: { label: "Conciliado", cls: "bg-green-100 text-green-800" },
 };
 
 export function MovimentosBancariosPage({
