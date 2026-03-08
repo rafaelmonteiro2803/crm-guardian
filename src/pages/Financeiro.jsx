@@ -22,7 +22,7 @@ export function FinanceiroPage({ titulos, vendas, fmtBRL, onSalvar, onExcluir, o
   };
 
   const pend = titulos.filter((t) => t.status === "pendente");
-  const pagos = titulos.filter((t) => t.status === "pago");
+  const pagos = titulos.filter((t) => t.status === "pago" || t.status === "conciliado");
   const venc = pend.filter((t) => new Date(t.data_vencimento) < new Date());
 
   const totalRecebido = pagos.reduce((s, t) => s + parseFloat(t.valor || 0), 0);
@@ -87,6 +87,8 @@ export function FinanceiroPage({ titulos, vendas, fmtBRL, onSalvar, onExcluir, o
             label: "Status",
             render: (t) => {
               const vencido = t.status === "pendente" && new Date(t.data_vencimento) < new Date();
+              if (t.status === "conciliado")
+                return <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] bg-green-100 text-green-800"><Icons.CheckCircle className="w-3 h-3" />Conciliado</span>;
               if (t.status === "pago")
                 return <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] bg-green-50 text-green-700"><Icons.CheckCircle className="w-3 h-3" />Pago</span>;
               if (vencido)
@@ -94,6 +96,7 @@ export function FinanceiroPage({ titulos, vendas, fmtBRL, onSalvar, onExcluir, o
               return <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] bg-yellow-50 text-yellow-700"><Icons.Clock className="w-3 h-3" />Pendente</span>;
             },
             filterValue: (t) => {
+              if (t.status === "conciliado") return "Conciliado";
               const vencido = t.status === "pendente" && new Date(t.data_vencimento) < new Date();
               return t.status === "pago" ? "Pago" : vencido ? "Vencido" : "Pendente";
             },

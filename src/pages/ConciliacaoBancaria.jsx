@@ -25,7 +25,7 @@ export function ConciliacaoBancariaPage({
   };
 
   const handleConfirmar = async (c) => {
-    if (!confirm("Confirmar esta conciliação? O movimento bancário será marcado como Confirmado.")) return;
+    if (!confirm("Concluir esta conciliação? O movimento bancário e o título relacionado serão marcados como Conciliados.")) return;
     await onConfirmar(c);
   };
 
@@ -281,16 +281,14 @@ export function ConciliacaoBancariaPage({
           {
             key: "status",
             label: "Status",
-            render: (c) => (
-              <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium ${
-                c.status === "confirmado"
-                  ? "bg-green-50 text-green-700"
-                  : "bg-yellow-50 text-yellow-700"
-              }`}>
-                {c.status === "confirmado" ? "Confirmado" : "Aguard. Confirmação"}
-              </span>
-            ),
-            filterValue: (c) => c.status === "confirmado" ? "Confirmado" : "Aguardando Confirmação",
+            render: (c) => {
+              if (c.status === "conciliado")
+                return <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-green-100 text-green-800">Conciliado</span>;
+              if (c.status === "confirmado")
+                return <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-green-50 text-green-700">Confirmado</span>;
+              return <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-yellow-50 text-yellow-700">Aguard. Confirmação</span>;
+            },
+            filterValue: (c) => c.status === "conciliado" ? "Conciliado" : c.status === "confirmado" ? "Confirmado" : "Aguardando Confirmação",
           },
           {
             key: "diferenca",
@@ -324,10 +322,10 @@ export function ConciliacaoBancariaPage({
         data={conciliacoesFiltradas}
         actions={(c) => (
           <div className="flex items-center gap-1">
-            {c.status !== "confirmado" && (
+            {c.status !== "confirmado" && c.status !== "conciliado" && (
               <button
                 onClick={() => handleConfirmar(c)}
-                title="Confirmar conciliação"
+                title="Concluir conciliação"
                 className="text-gray-400 hover:text-green-700 hover:bg-green-50 p-1 rounded"
               >
                 <Icons.CheckCircle />
@@ -342,6 +340,7 @@ export function ConciliacaoBancariaPage({
           </div>
         )}
         rowClassName={(c) => {
+          if (c.status === "conciliado") return "bg-green-50/30";
           if (c.status === "aguardando_confirmacao") return "bg-yellow-50/30";
           const pct = parseFloat(c.percentual_taxa || 0);
           return pct > 3 ? "bg-red-50/30" : pct > 0.005 ? "bg-amber-50/30" : "";
