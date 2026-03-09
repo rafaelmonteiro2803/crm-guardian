@@ -119,7 +119,7 @@ export const renderRoute = (viewMode, props) => {
     case "documentos":
       return <DocumentosPage vendas={vendas} clientes={clientes} fmtBRL={fmtBRL} />;
     case "financeiro":
-      return <FinanceiroPage titulos={titulos} vendas={vendas} fmtBRL={fmtBRL} onSalvar={salvarTitulo} onExcluir={excluirTitulo} onMarcarPago={marcarComoPago} />;
+      return <FinanceiroPage titulos={titulos} vendas={vendas} fmtBRL={fmtBRL} onSalvar={salvarTitulo} onExcluir={excluirTitulo} onMarcarPago={marcarComoPago} getClienteNome={getClienteNome} />;
     case "tecnicos":
       return <TecnicosPage tecnicos={tecnicos} onSalvar={salvarTecnico} onExcluir={excluirTecnico} />;
     case "ordens_servico":

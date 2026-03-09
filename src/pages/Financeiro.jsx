@@ -3,7 +3,7 @@ import { Icons } from "../components/Icons";
 import { DataGrid } from "../components/DataGrid";
 import { TituloModal } from "../components/modals/TituloModal";
 
-export function FinanceiroPage({ titulos, vendas, fmtBRL, onSalvar, onExcluir, onMarcarPago }) {
+export function FinanceiroPage({ titulos, vendas, fmtBRL, onSalvar, onExcluir, onMarcarPago, getClienteNome }) {
   const [editando, setEditando] = useState(null);
   const [modalAberto, setModalAberto] = useState(false);
 
@@ -24,6 +24,13 @@ export function FinanceiroPage({ titulos, vendas, fmtBRL, onSalvar, onExcluir, o
   const pend = titulos.filter((t) => t.status === "pendente");
   const pagos = titulos.filter((t) => t.status === "pago" || t.status === "conciliado");
   const venc = pend.filter((t) => new Date(t.data_vencimento) < new Date());
+
+  const titulosNaoPagos = titulos.filter((t) => t.status !== "pago" && t.status !== "conciliado");
+
+  const getClienteDoTitulo = (t) => {
+    const venda = vendas.find((v) => v.id === t.venda_id);
+    return venda && getClienteNome ? getClienteNome(venda.cliente_id) : (t.descricao || "-");
+  };
 
   const totalRecebido = pagos.reduce((s, t) => s + parseFloat(t.valor || 0), 0);
   const totalReceber = pend.reduce((s, t) => s + parseFloat(t.valor || 0), 0);
@@ -61,7 +68,12 @@ export function FinanceiroPage({ titulos, vendas, fmtBRL, onSalvar, onExcluir, o
 
       <DataGrid
         columns={[
-          { key: "descricao", label: "Descrição", filterValue: (t) => t.descricao || "" },
+          {
+            key: "cliente",
+            label: "Cliente",
+            render: (t) => <span className="font-medium">{getClienteDoTitulo(t)}</span>,
+            filterValue: (t) => getClienteDoTitulo(t),
+          },
           {
             key: "data_emissao",
             label: "Emissão",
@@ -102,7 +114,7 @@ export function FinanceiroPage({ titulos, vendas, fmtBRL, onSalvar, onExcluir, o
             },
           },
         ]}
-        data={titulos}
+        data={titulosNaoPagos}
         actions={(t) => (
           <div className="flex items-center gap-1">
             {t.status === "pendente" && (
