@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useState } from "react";
 import { Icons } from "../components/Icons";
+import { EvolucaoModal } from "../components/modals/EvolucaoModal";
 
 function calcularIndicadores(oportunidades, vendas, titulos) {
   const abertas = oportunidades.filter((o) => !["fechado", "cancelado"].includes(o.estagio));
@@ -72,14 +73,21 @@ function calcularFaturamentoMensal(vendas, titulos) {
     .map(([, v]) => v);
 }
 
-export function DashboardPage({ clientes, oportunidades, vendas, titulos, fmtBRL, ordensServico = [] }) {
+export function DashboardPage({ clientes, oportunidades, vendas, titulos, fmtBRL, ordensServico = [], salvarEvolucao }) {
   const ind = calcularIndicadores(oportunidades, vendas, titulos);
   const vendasPorMes = calcularVendasPorMes(vendas);
   const faturamentoMensal = calcularFaturamentoMensal(vendas, titulos);
 
+  const [modalEvolucao, setModalEvolucao] = useState(false);
+  const [osEvolucao, setOsEvolucao] = useState(null);
+
   const agendamentos = (ordensServico || [])
     .filter((os) => os.data_agendamento && os.status !== "atendimento_concluido")
     .sort((a, b) => new Date(a.data_agendamento) - new Date(b.data_agendamento));
+
+  const atendimentosAbertos = (ordensServico || [])
+    .filter((os) => os.status !== "atendimento_concluido")
+    .sort((a, b) => new Date(a.data_abertura) - new Date(b.data_abertura));
 
   const getClienteNomeLocal = (id) => clientes.find((c) => c.id === id)?.nome || "N/A";
 
@@ -92,43 +100,108 @@ export function DashboardPage({ clientes, oportunidades, vendas, titulos, fmtBRL
     return os.descricao || "-";
   };
 
+  const statusLabel = (status) => {
+    if (status === "aguardando_atendimento") return { label: "Aguardando", color: "bg-gray-100 text-gray-600" };
+    if (status === "em_atendimento") return { label: "Em Atendimento", color: "bg-blue-50 text-blue-700" };
+    return { label: status, color: "bg-gray-100 text-gray-600" };
+  };
+
+  const abrirEvolucao = (os) => {
+    setOsEvolucao(os);
+    setModalEvolucao(true);
+  };
+
+  const fecharEvolucao = () => {
+    setModalEvolucao(false);
+    setOsEvolucao(null);
+  };
+
   return (
     <div className="space-y-4">
       <h2 className="text-sm font-semibold text-gray-700">Visão Geral</h2>
 
-      <div className="bg-white border border-orange-200 rounded p-4">
-        <h3 className="text-xs font-medium text-gray-600 mb-3 flex items-center gap-1.5">
-          <Icons.Calendar className="w-3.5 h-3.5 text-orange-500" />
-          Agenda dos Próximos Dias
-        </h3>
-        {agendamentos.length === 0 ? (
-          <p className="text-gray-400 text-center py-4 text-xs">Sem Agendamentos.</p>
-        ) : (
-          <div className="divide-y divide-gray-100">
-            {agendamentos.map((os) => {
-              const dt = new Date(os.data_agendamento);
-              return (
-                <div key={os.id} className="flex items-center gap-3 py-2 first:pt-0 last:pb-0">
-                  <div className="flex-shrink-0 bg-orange-50 border border-orange-200 rounded p-1.5 text-center min-w-[48px]">
-                    <p className="text-[11px] font-semibold text-orange-700 leading-tight">
-                      {dt.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}
-                    </p>
-                    <p className="text-[10px] text-orange-500 leading-tight">
-                      {dt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-                    </p>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        {/* Agenda dos Próximos Dias */}
+        <div className="bg-white border border-orange-200 rounded p-4">
+          <h3 className="text-xs font-medium text-gray-600 mb-3 flex items-center gap-1.5">
+            <Icons.Calendar className="w-3.5 h-3.5 text-orange-500" />
+            Agenda dos Próximos Dias
+          </h3>
+          {agendamentos.length === 0 ? (
+            <p className="text-gray-400 text-center py-4 text-xs">Sem Agendamentos.</p>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {agendamentos.map((os) => {
+                const dt = new Date(os.data_agendamento);
+                return (
+                  <div key={os.id} className="flex items-center gap-3 py-2 first:pt-0 last:pb-0">
+                    <div className="flex-shrink-0 bg-orange-50 border border-orange-200 rounded p-1.5 text-center min-w-[48px]">
+                      <p className="text-[11px] font-semibold text-orange-700 leading-tight">
+                        {dt.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}
+                      </p>
+                      <p className="text-[10px] text-orange-500 leading-tight">
+                        {dt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                      </p>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-gray-800 truncate">{getClienteNomeLocal(os.cliente_id)}</p>
+                      <p className="text-[11px] text-gray-500 truncate">{getServicosNome(os)}</p>
+                    </div>
+                    {os.numero_os && (
+                      <span className="flex-shrink-0 font-mono text-[10px] text-gray-400">{os.numero_os}</span>
+                    )}
                   </div>
-                  <div className="flex-1 min-w-0 grid grid-cols-1 sm:grid-cols-3 gap-x-3 gap-y-0.5">
-                    <p className="text-xs font-medium text-gray-800 truncate">{getClienteNomeLocal(os.cliente_id)}</p>
-                    <p className="text-[11px] text-gray-500 truncate sm:col-span-2">{getServicosNome(os)}</p>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Atendimentos em Aberto */}
+        <div className="bg-white border border-blue-200 rounded p-4">
+          <h3 className="text-xs font-medium text-gray-600 mb-3 flex items-center gap-1.5">
+            <Icons.Clock className="w-3.5 h-3.5 text-blue-500" />
+            Atendimentos em Aberto
+            {atendimentosAbertos.length > 0 && (
+              <span className="ml-auto bg-blue-100 text-blue-700 text-[10px] font-semibold px-1.5 py-0.5 rounded-full">
+                {atendimentosAbertos.length}
+              </span>
+            )}
+          </h3>
+          {atendimentosAbertos.length === 0 ? (
+            <p className="text-gray-400 text-center py-4 text-xs">Nenhum atendimento em aberto.</p>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {atendimentosAbertos.map((os) => {
+                const st = statusLabel(os.status);
+                return (
+                  <div key={os.id} className="flex items-center gap-2 py-2 first:pt-0 last:pb-0">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        {os.numero_os && (
+                          <span className="font-mono text-[10px] text-gray-400">{os.numero_os}</span>
+                        )}
+                        <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${st.color}`}>
+                          {st.label}
+                        </span>
+                      </div>
+                      <p className="text-xs font-medium text-gray-800 truncate">{getClienteNomeLocal(os.cliente_id)}</p>
+                      <p className="text-[11px] text-gray-500 truncate">{getServicosNome(os)}</p>
+                    </div>
+                    <button
+                      onClick={() => abrirEvolucao(os)}
+                      title="Registrar evolução do atendimento"
+                      className="flex-shrink-0 flex items-center gap-1 text-[11px] text-purple-600 hover:text-purple-800 hover:bg-purple-50 px-2 py-1 rounded border border-purple-200 hover:border-purple-300 transition-colors"
+                    >
+                      <Icons.BookOpen className="w-3 h-3" />
+                      Evolução
+                    </button>
                   </div>
-                  {os.numero_os && (
-                    <span className="flex-shrink-0 font-mono text-[10px] text-gray-400">{os.numero_os}</span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -255,6 +328,18 @@ export function DashboardPage({ clientes, oportunidades, vendas, titulos, fmtBRL
           })()}
         </div>
       </div>
+
+      {modalEvolucao && osEvolucao && (
+        <EvolucaoModal
+          aberto={modalEvolucao}
+          os={osEvolucao}
+          onFechar={fecharEvolucao}
+          onSalvar={(id, texto) => {
+            if (salvarEvolucao) salvarEvolucao(id, texto);
+            fecharEvolucao();
+          }}
+        />
+      )}
     </div>
   );
 }
