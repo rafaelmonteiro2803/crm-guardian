@@ -10,7 +10,7 @@ function calcularIndicadores(oportunidades, vendas, titulos) {
   const totalV = vendas.reduce((s, v) => s + parseFloat(v.valor || 0), 0);
   const now = new Date();
   const vm = vendas.filter((v) => {
-    const d = new Date(v.data_venda);
+    const d = new Date(v.data_venda + "T00:00:00");
     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
   });
   const totalVM = vm.reduce((s, v) => s + parseFloat(v.valor || 0), 0);
@@ -38,7 +38,7 @@ function calcularVendasPorMes(vendas) {
   const meses = {};
   const nm = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
   vendas.forEach((v) => {
-    const d = new Date(v.data_venda);
+    const d = new Date(v.data_venda + "T00:00:00");
     const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
     const l = `${nm[d.getMonth()]}/${d.getFullYear()}`;
     if (!meses[k]) meses[k] = { label: l, total: 0, count: 0 };
@@ -55,7 +55,7 @@ function calcularFaturamentoMensal(vendas, titulos) {
   const meses = {};
   const nm = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
   vendas.forEach((v) => {
-    const d = new Date(v.data_venda);
+    const d = new Date(v.data_venda + "T00:00:00");
     const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
     const l = `${nm[d.getMonth()]}/${d.getFullYear()}`;
     if (!meses[k]) meses[k] = { label: l, pago: 0, pendente: 0 };
