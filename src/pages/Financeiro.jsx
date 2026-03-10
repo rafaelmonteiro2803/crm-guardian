@@ -6,6 +6,7 @@ import { TituloModal } from "../components/modals/TituloModal";
 export function FinanceiroPage({ titulos, vendas, fmtBRL, onSalvar, onExcluir, onMarcarPago, getClienteNome }) {
   const [editando, setEditando] = useState(null);
   const [modalAberto, setModalAberto] = useState(false);
+  const [filtroStatus, setFiltroStatus] = useState("nao_pago");
 
   const abrirModal = (titulo = null) => {
     setEditando(titulo);
@@ -21,11 +22,29 @@ export function FinanceiroPage({ titulos, vendas, fmtBRL, onSalvar, onExcluir, o
     onSalvar(form, editando, fecharModal);
   };
 
+  const isVencido = (t) => t.status === "pendente" && new Date(t.data_vencimento) < new Date();
+
   const pend = titulos.filter((t) => t.status === "pendente");
   const pagos = titulos.filter((t) => t.status === "pago" || t.status === "conciliado");
-  const venc = pend.filter((t) => new Date(t.data_vencimento) < new Date());
+  const venc = pend.filter(isVencido);
 
-  const titulosNaoPagos = titulos.filter((t) => t.status !== "pago" && t.status !== "conciliado");
+  const qtdPago = titulos.filter((t) => t.status === "pago").length;
+  const qtdConciliado = titulos.filter((t) => t.status === "conciliado").length;
+  const qtdPendente = pend.filter((t) => !isVencido(t)).length;
+  const qtdVencido = venc.length;
+
+  const titulosFiltrados =
+    filtroStatus === "todos"
+      ? titulos
+      : filtroStatus === "nao_pago"
+      ? titulos.filter((t) => t.status !== "pago" && t.status !== "conciliado")
+      : filtroStatus === "pago"
+      ? titulos.filter((t) => t.status === "pago")
+      : filtroStatus === "conciliado"
+      ? titulos.filter((t) => t.status === "conciliado")
+      : filtroStatus === "pendente"
+      ? pend.filter((t) => !isVencido(t))
+      : venc;
 
   const getClienteDoTitulo = (t) => {
     const venda = vendas.find((v) => v.id === t.venda_id);
@@ -35,6 +54,15 @@ export function FinanceiroPage({ titulos, vendas, fmtBRL, onSalvar, onExcluir, o
   const totalRecebido = pagos.reduce((s, t) => s + parseFloat(t.valor || 0), 0);
   const totalReceber = pend.reduce((s, t) => s + parseFloat(t.valor || 0), 0);
   const totalVencido = venc.reduce((s, t) => s + parseFloat(t.valor || 0), 0);
+
+  const filtros = [
+    { key: "nao_pago", label: "Não Pagos", count: qtdPendente + qtdVencido, activeClass: "bg-gray-800 text-white border-gray-800" },
+    { key: "pendente", label: "Pendente", count: qtdPendente, activeClass: "bg-yellow-500 text-white border-yellow-500" },
+    { key: "vencido", label: "Vencido", count: qtdVencido, activeClass: "bg-red-600 text-white border-red-600" },
+    { key: "pago", label: "Pago", count: qtdPago, activeClass: "bg-green-600 text-white border-green-600" },
+    { key: "conciliado", label: "Conciliado", count: qtdConciliado, activeClass: "bg-blue-600 text-white border-blue-600" },
+    { key: "todos", label: "Todos", count: titulos.length, activeClass: "bg-gray-500 text-white border-gray-500" },
+  ];
 
   return (
     <div className="space-y-3">
@@ -64,6 +92,26 @@ export function FinanceiroPage({ titulos, vendas, fmtBRL, onSalvar, onExcluir, o
           <p className="text-lg font-semibold text-red-700">R$ {fmtBRL(totalVencido)}</p>
           <p className="text-[11px] text-red-600">{venc.length} títulos</p>
         </div>
+      </div>
+
+      {/* Filtros de status */}
+      <div className="flex flex-wrap gap-2">
+        {filtros.map(({ key, label, count, activeClass }) => (
+          <button
+            key={key}
+            onClick={() => setFiltroStatus(key)}
+            className={`px-3 py-1.5 rounded text-xs font-medium border transition-colors ${
+              filtroStatus === key
+                ? activeClass
+                : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+            }`}
+          >
+            {label}
+            <span className={`ml-1 text-[10px] px-1 rounded-full ${filtroStatus === key ? "bg-white/20" : "bg-gray-100"}`}>
+              {count}
+            </span>
+          </button>
+        ))}
       </div>
 
       <DataGrid
@@ -98,7 +146,7 @@ export function FinanceiroPage({ titulos, vendas, fmtBRL, onSalvar, onExcluir, o
             key: "status",
             label: "Status",
             render: (t) => {
-              const vencido = t.status === "pendente" && new Date(t.data_vencimento) < new Date();
+              const vencido = isVencido(t);
               if (t.status === "conciliado")
                 return <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] bg-green-100 text-green-800"><Icons.CheckCircle className="w-3 h-3" />Conciliado</span>;
               if (t.status === "pago")
@@ -109,12 +157,12 @@ export function FinanceiroPage({ titulos, vendas, fmtBRL, onSalvar, onExcluir, o
             },
             filterValue: (t) => {
               if (t.status === "conciliado") return "Conciliado";
-              const vencido = t.status === "pendente" && new Date(t.data_vencimento) < new Date();
+              const vencido = isVencido(t);
               return t.status === "pago" ? "Pago" : vencido ? "Vencido" : "Pendente";
             },
           },
         ]}
-        data={titulosNaoPagos}
+        data={titulosFiltrados}
         actions={(t) => (
           <div className="flex items-center gap-1">
             {t.status === "pendente" && (
@@ -140,9 +188,9 @@ export function FinanceiroPage({ titulos, vendas, fmtBRL, onSalvar, onExcluir, o
           </div>
         )}
         rowClassName={(t) =>
-          t.status === "pendente" && new Date(t.data_vencimento) < new Date() ? "bg-red-50/50" : ""
+          isVencido(t) ? "bg-red-50/50" : ""
         }
-        emptyMessage="Nenhum título cadastrado."
+        emptyMessage="Nenhum título encontrado para o filtro selecionado."
       />
 
       {modalAberto && (
