@@ -296,18 +296,19 @@ export function DashboardPage({ clientes, oportunidades, vendas, titulos, fmtBRL
             <p className="text-gray-400 text-center py-6 text-xs">Nenhuma venda registrada.</p>
           ) : (() => {
             const mx = Math.max(...vendasPorMes.map((m) => m.total));
+            const BAR_MAX = 140;
             return (
-              <div className="flex items-end gap-1" style={{ height: "180px" }}>
+              <div className="flex items-end gap-1">
                 {vendasPorMes.map((m, i) => {
-                  const h = mx > 0 ? (m.total / mx) * 100 : 0;
+                  const barH = mx > 0 ? Math.max((m.total / mx) * BAR_MAX, 3) : 3;
                   return (
-                    <div key={i} className="flex-1 flex flex-col items-center justify-end h-full">
+                    <div key={i} className="flex-1 flex flex-col items-center">
                       <span className="text-[10px] text-gray-500 mb-1">
                         R$ {m.total.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}
                       </span>
                       <div
                         className="w-full bg-gray-700 rounded-t hover:bg-gray-600 transition-colors"
-                        style={{ height: `${Math.max(h, 2)}%`, minHeight: "3px" }}
+                        style={{ height: `${barH}px` }}
                         title={`${m.label}: R$ ${fmtBRL(m.total)} (${m.count})`}
                       />
                       <span className="text-[10px] text-gray-400 mt-1">{m.label}</span>
@@ -327,27 +328,27 @@ export function DashboardPage({ clientes, oportunidades, vendas, titulos, fmtBRL
             <p className="text-gray-400 text-center py-6 text-xs">Nenhuma venda registrada.</p>
           ) : (() => {
             const mx = Math.max(...faturamentoMensal.map((m) => m.pago + m.pendente));
+            const BAR_MAX = 140;
             return (
               <div>
-                <div className="flex items-end gap-1" style={{ height: "180px" }}>
+                <div className="flex items-end gap-1">
                   {faturamentoMensal.map((m, i) => {
                     const total = m.pago + m.pendente;
-                    const h = mx > 0 ? (total / mx) * 100 : 0;
-                    const pctPago = total > 0 ? (m.pago / total) * 100 : 0;
+                    const barH = mx > 0 ? Math.max((total / mx) * BAR_MAX, 3) : 3;
+                    const pxPago = total > 0 ? Math.round((m.pago / total) * barH) : 0;
+                    const pxPendente = barH - pxPago;
                     return (
-                      <div key={i} className="flex-1 flex flex-col items-center justify-end h-full">
+                      <div key={i} className="flex-1 flex flex-col items-center">
                         <span className="text-[10px] text-gray-500 mb-1">
                           R$ {total.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}
                         </span>
                         <div
                           className="w-full rounded-t overflow-hidden"
-                          style={{ height: `${Math.max(h, 2)}%`, minHeight: "3px" }}
+                          style={{ height: `${barH}px` }}
                           title={`${m.label}: Pago R$ ${fmtBRL(m.pago)} · Pendente R$ ${fmtBRL(m.pendente)}`}
                         >
-                          <div className="w-full h-full flex flex-col justify-end">
-                            <div className="w-full" style={{ height: `${100 - pctPago}%`, background: "#e84672" }} />
-                            <div className="w-full" style={{ height: `${pctPago}%`, background: "#22c55e" }} />
-                          </div>
+                          <div className="w-full" style={{ height: `${pxPendente}px`, background: "#e84672" }} />
+                          <div className="w-full" style={{ height: `${pxPago}px`, background: "#22c55e" }} />
                         </div>
                         <span className="text-[10px] text-gray-400 mt-1">{m.label}</span>
                       </div>
