@@ -42,8 +42,10 @@ export function EvolucaoModal({ aberto, os, onFechar, onSalvar }) {
         {os.observacoes ? (
           <div className="mb-3 flex-1 overflow-y-auto">
             <label className="block text-xs font-medium text-gray-500 mb-1">Histórico</label>
-            <div className="bg-gray-50 border border-gray-200 rounded p-3 text-xs text-gray-700 whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto font-mono">
-              {os.observacoes}
+            <div className="bg-gray-50 border border-gray-200 rounded p-3 text-xs text-gray-700 leading-relaxed max-h-48 overflow-y-auto font-mono flex flex-col gap-2">
+              {os.observacoes.split("\n\n").reverse().map((entrada, i) => (
+                <div key={i} className="whitespace-pre-wrap">{entrada}</div>
+              ))}
             </div>
           </div>
         ) : (
