@@ -22,6 +22,7 @@ import { FornecedoresPage } from "../pages/Fornecedores";
 import { CentrosCustoPage } from "../pages/CentrosCusto";
 import { ContasPagarPage } from "../pages/ContasPagar";
 import { ContasPagarDashboard } from "../pages/ContasPagarDashboard";
+import { ComprasPorDiaPage } from "../pages/ComprasPorDiaPage";
 
 /**
  * Renders the page component for the given viewMode.
@@ -173,6 +174,8 @@ export const renderRoute = (viewMode, props) => {
       return <FornecedoresPage fornecedores={fornecedores} onSalvar={salvarFornecedor} onExcluir={excluirFornecedor} />;
     case "centros_custo":
       return <CentrosCustoPage centrosCusto={centrosCusto} onSalvar={salvarCentroCusto} onExcluir={excluirCentroCusto} />;
+    case "compras_por_dia":
+      return <ComprasPorDiaPage vendas={vendas} fmtBRL={fmtBRL} />;
     default:
       return null;
   }

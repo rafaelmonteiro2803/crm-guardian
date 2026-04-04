@@ -140,6 +140,7 @@ export const buildNavGroups = ({
     items: [
       { key: "dashboard", label: "Dashboard", icon: <Icons.BarChart /> },
       { key: "atendimentos_relatorio", label: "Atendimentos", icon: <Icons.ClipboardCheck /> },
+      { key: "compras_por_dia", label: "Compras por Dia", icon: <Icons.TrendingUp /> },
     ],
   },
 ];
