@@ -111,6 +111,22 @@ export function DashboardPage({ clientes, oportunidades, vendas, titulos, fmtBRL
   const [paginaAgenda, setPaginaAgenda] = useState(1);
   const [paginaAtendimentos, setPaginaAtendimentos] = useState(1);
 
+  const hoje = new Date();
+  const mesAtual = hoje.getMonth();
+  const anoAtual = hoje.getFullYear();
+  const aniversariantesMes = (clientes || [])
+    .filter((c) => {
+      if (!c.data_nascimento) return false;
+      const d = new Date(c.data_nascimento + "T00:00:00");
+      return d.getMonth() === mesAtual;
+    })
+    .map((c) => {
+      const nasc = new Date(c.data_nascimento + "T00:00:00");
+      const idade = anoAtual - nasc.getFullYear();
+      return { ...c, _nasc: nasc, _idade: idade };
+    })
+    .sort((a, b) => a._nasc.getDate() - b._nasc.getDate());
+
   const agendamentos = (ordensServico || [])
     .filter((os) => os.data_agendamento && os.status !== "atendimento_concluido")
     .sort((a, b) => new Date(a.data_agendamento) - new Date(b.data_agendamento));
@@ -153,9 +169,39 @@ export function DashboardPage({ clientes, oportunidades, vendas, titulos, fmtBRL
     <div className="space-y-4">
       <h2 className="text-sm font-semibold text-gray-700">Visão Geral</h2>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-3">
+        {/* Aniversariantes do Mês */}
+        <div className="bg-white border border-pink-200 rounded p-4 lg:col-span-1">
+          <h3 className="text-xs font-medium text-gray-600 mb-3 flex items-center gap-1.5">
+            <Icons.Cake className="w-3.5 h-3.5 text-pink-500" />
+            Aniversariantes do Mês
+            {aniversariantesMes.length > 0 && (
+              <span className="ml-auto bg-pink-100 text-pink-700 text-[10px] font-semibold px-1.5 py-0.5 rounded-full">
+                {aniversariantesMes.length}
+              </span>
+            )}
+          </h3>
+          {aniversariantesMes.length === 0 ? (
+            <p className="text-gray-400 text-center py-4 text-xs">Nenhum aniversariante este mês.</p>
+          ) : (
+            <div className="overflow-y-auto max-h-[220px] divide-y divide-gray-100 pr-0.5">
+              {aniversariantesMes.map((c) => (
+                <div key={c.id} className="flex items-center gap-2 py-2 first:pt-0 last:pb-0">
+                  <div className="flex-shrink-0 bg-pink-50 border border-pink-200 rounded p-1 text-center min-w-[40px]">
+                    <p className="text-[11px] font-semibold text-pink-700 leading-tight">
+                      {String(c._nasc.getDate()).padStart(2, "0")}/{String(c._nasc.getMonth() + 1).padStart(2, "0")}
+                    </p>
+                    <p className="text-[10px] text-pink-500 leading-tight">{c._idade} anos</p>
+                  </div>
+                  <p className="text-[11px] font-medium text-gray-800 leading-tight line-clamp-2">{c.nome}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         {/* Agenda dos Próximos Dias */}
-        <div className="bg-white border border-orange-200 rounded p-4">
+        <div className="bg-white border border-orange-200 rounded p-4 lg:col-span-2">
           <h3 className="text-xs font-medium text-gray-600 mb-3 flex items-center gap-1.5">
             <Icons.Calendar className="w-3.5 h-3.5 text-orange-500" />
             Agenda dos Próximos Dias
@@ -194,7 +240,7 @@ export function DashboardPage({ clientes, oportunidades, vendas, titulos, fmtBRL
         </div>
 
         {/* Atendimentos em Aberto */}
-        <div className="bg-white border border-blue-200 rounded p-4">
+        <div className="bg-white border border-blue-200 rounded p-4 lg:col-span-2">
           <h3 className="text-xs font-medium text-gray-600 mb-3 flex items-center gap-1.5">
             <Icons.Clock className="w-3.5 h-3.5 text-blue-500" />
             Atendimentos em Aberto
