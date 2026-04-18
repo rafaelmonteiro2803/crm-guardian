@@ -1,5 +1,20 @@
 import React, { useState } from "react";
 
+const ordenarEvolucoes = (texto) => {
+  if (!texto) return texto;
+  const entradas = texto.split(/\n\n(?=\[)/);
+  entradas.sort((a, b) => {
+    const extrairData = (entrada) => {
+      const match = entrada.match(/^\[(\d{2})\/(\d{2})\/(\d{4}),\s*(\d{2}):(\d{2})\]/);
+      if (!match) return 0;
+      const [, dia, mes, ano, hora, min] = match;
+      return new Date(Number(ano), Number(mes) - 1, Number(dia), Number(hora), Number(min)).getTime();
+    };
+    return extrairData(a) - extrairData(b);
+  });
+  return entradas.join("\n\n");
+};
+
 export function EvolucaoModal({ aberto, os, onFechar, onSalvar }) {
   const [novoTexto, setNovoTexto] = useState("");
 
@@ -43,7 +58,7 @@ export function EvolucaoModal({ aberto, os, onFechar, onSalvar }) {
           <div className="mb-3 flex-1 overflow-y-auto">
             <label className="block text-xs font-medium text-gray-500 mb-1">Histórico</label>
             <div className="bg-gray-50 border border-gray-200 rounded p-3 text-xs text-gray-700 whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto font-mono">
-              {os.observacoes}
+              {ordenarEvolucoes(os.observacoes)}
             </div>
           </div>
         ) : (
