@@ -35,15 +35,22 @@ function calcularIndicadores(oportunidades, vendas, titulos) {
 }
 
 function calcularVendasPorMes(vendas) {
+  const hoje = new Date();
+  const diaAtual = hoje.getDate();
   const meses = {};
   const nm = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
   vendas.forEach((v) => {
     const d = new Date(v.data_venda + "T00:00:00");
     const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
     const l = `${nm[d.getMonth()]}/${d.getFullYear()}`;
-    if (!meses[k]) meses[k] = { label: l, total: 0, count: 0 };
-    meses[k].total += parseFloat(v.valor || 0);
+    if (!meses[k]) meses[k] = { label: l, total: 0, count: 0, parcial: 0, countParcial: 0 };
+    const valor = parseFloat(v.valor || 0);
+    meses[k].total += valor;
     meses[k].count += 1;
+    if (d.getDate() <= diaAtual) {
+      meses[k].parcial += valor;
+      meses[k].countParcial += 1;
+    }
   });
   return Object.entries(meses)
     .sort(([a], [b]) => a.localeCompare(b))
@@ -363,25 +370,51 @@ export function DashboardPage({ clientes, oportunidades, vendas, titulos, fmtBRL
           ) : (() => {
             const mx = Math.max(...vendasPorMes.map((m) => m.total));
             const BAR_MAX = 140;
+            const diaAtual = new Date().getDate();
             return (
-              <div className="flex items-end gap-1">
-                {vendasPorMes.map((m, i) => {
-                  const barH = mx > 0 ? Math.max((m.total / mx) * BAR_MAX, 3) : 3;
-                  return (
-                    <div key={i} className="flex-1 flex flex-col items-center">
-                      <span className="text-[10px] text-gray-500 mb-1">
-                        R$ {m.total.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}
-                      </span>
-                      <div
-                        className="w-full bg-gray-700 rounded-t hover:bg-gray-600 transition-colors"
-                        style={{ height: `${barH}px` }}
-                        title={`${m.label}: R$ ${fmtBRL(m.total)} (${m.count})`}
-                      />
-                      <span className="text-[10px] text-gray-400 mt-1">{m.label}</span>
-                    </div>
-                  );
-                })}
-              </div>
+              <>
+                <div className="flex items-end gap-1">
+                  {vendasPorMes.map((m, i) => {
+                    const barH = mx > 0 ? Math.max((m.total / mx) * BAR_MAX, 3) : 3;
+                    const parcialH = mx > 0 ? Math.max((m.parcial / mx) * BAR_MAX, 3) : 3;
+                    return (
+                      <div key={i} className="flex-1 flex flex-col items-center">
+                        <div className="flex items-end gap-0.5 w-full">
+                          <div className="flex-1 flex flex-col items-center">
+                            <span className="text-[9px] text-gray-500 mb-1 leading-tight">
+                              {m.total.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}
+                            </span>
+                            <div
+                              className="w-full bg-gray-700 rounded-t hover:bg-gray-600 transition-colors"
+                              style={{ height: `${barH}px` }}
+                              title={`Total ${m.label}: R$ ${fmtBRL(m.total)} (${m.count} vendas)`}
+                            />
+                          </div>
+                          <div className="flex-1 flex flex-col items-center">
+                            <span className="text-[9px] text-blue-500 mb-1 leading-tight">
+                              {m.parcial.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}
+                            </span>
+                            <div
+                              className="w-full bg-blue-400 rounded-t hover:bg-blue-300 transition-colors"
+                              style={{ height: `${parcialH}px` }}
+                              title={`Até dia ${diaAtual} em ${m.label}: R$ ${fmtBRL(m.parcial)} (${m.countParcial} vendas)`}
+                            />
+                          </div>
+                        </div>
+                        <span className="text-[9px] text-gray-400 mt-1">{m.label}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="flex items-center gap-3 mt-2 justify-end">
+                  <span className="flex items-center gap-1 text-[10px] text-gray-400">
+                    <span className="inline-block w-2.5 h-2.5 rounded-sm bg-gray-700" />Total do mês
+                  </span>
+                  <span className="flex items-center gap-1 text-[10px] text-gray-400">
+                    <span className="inline-block w-2.5 h-2.5 rounded-sm bg-blue-400" />Até dia {new Date().getDate()}
+                  </span>
+                </div>
+              </>
             );
           })()}
         </div>
