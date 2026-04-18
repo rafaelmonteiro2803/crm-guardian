@@ -10,7 +10,7 @@ const ordenarEvolucoes = (texto) => {
       const [, dia, mes, ano, hora, min] = match;
       return new Date(Number(ano), Number(mes) - 1, Number(dia), Number(hora), Number(min)).getTime();
     };
-    return extrairData(a) - extrairData(b);
+    return extrairData(b) - extrairData(a);
   });
   return entradas.join("\n\n");
 };
