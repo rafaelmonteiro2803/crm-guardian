@@ -1,4 +1,4 @@
-import { Button } from './Card';
+import { Button } from './Button';
 
 export function EmptyState({
   icon: Icon,

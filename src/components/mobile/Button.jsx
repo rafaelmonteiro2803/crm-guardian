@@ -1,5 +1,3 @@
-import { LucideIcon } from 'lucide-react';
-
 export function Button({
   children,
   kind = 'primary',
