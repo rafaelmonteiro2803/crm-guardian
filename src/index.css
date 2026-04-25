@@ -34,3 +34,62 @@ input, select, textarea, button {
   background: #d1d5db;
   border-radius: 3px;
 }
+
+/* Mobile PWA Specific Styles */
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(1rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}
+
+.animate-pulse {
+  animation: shimmer 1.5s ease-in-out infinite;
+  background-size: 200% 100%;
+  background-image: linear-gradient(
+    90deg,
+    currentColor 0%,
+    rgba(0, 0, 0, 0.1) 50%,
+    currentColor 100%
+  );
+}
+
+/* Ensure minimum touch targets */
+button, [role="button"], a[role="button"] {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Safe area support */
+@supports (padding: max(0px)) {
+  body {
+    padding-left: max(12px, env(safe-area-inset-left));
+    padding-right: max(12px, env(safe-area-inset-right));
+  }
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
