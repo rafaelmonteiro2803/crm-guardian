@@ -1,50 +1,33 @@
 import express from 'express';
+import path from 'path';
 import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const app = express();
 const PORT = process.env.PORT || 5000;
+const distPath = path.join(__dirname, 'dist');
 
-// Servir arquivos estáticos do dist/
-app.use(express.static(join(__dirname, 'dist'), {
-  maxAge: '1h',
-  etag: false
-}));
+console.log('🚀 Iniciando servidor...');
+console.log('📁 Servindo arquivos de:', distPath);
 
-// Servir service worker (pode estar em dist ou public)
-app.get('/service-worker.js', (req, res, next) => {
-  const paths = [
-    join(__dirname, 'dist/service-worker.js'),
-    join(__dirname, 'public/service-worker.js')
-  ];
+// Servir todos os arquivos estáticos do dist/
+app.use(express.static(distPath));
 
-  for (const path of paths) {
-    try {
-      res.type('application/javascript');
-      res.sendFile(path);
-      return;
-    } catch (e) {
-      // Tenta o próximo caminho
-    }
-  }
-  next();
-});
-
-// Fallback para SPA - serve index.html em todas as rotas que não existem
+// SPA fallback - qualquer rota que não seja arquivo existente, serve index.html
 app.get('*', (req, res) => {
-  res.type('text/html');
-  res.sendFile(join(__dirname, 'dist/index.html'));
-});
-
-// Error handler
-app.use((err, req, res, next) => {
-  console.error('Erro:', err);
-  res.status(500).send('Erro no servidor');
+  console.log(`📍 Rota: ${req.path}`);
+  res.sendFile(path.join(distPath, 'index.html'), (err) => {
+    if (err) {
+      console.error('❌ Erro ao servir index.html:', err);
+      res.status(500).send('Erro ao carregar página');
+    }
+  });
 });
 
 app.listen(PORT, () => {
-  console.log(`✅ Guardian CRM rodando em porta ${PORT}`);
-  console.log(`   Web:    http://localhost:${PORT}`);
-  console.log(`   Mobile: http://localhost:${PORT}/m/`);
+  console.log(`✅ Guardian CRM rodando em http://0.0.0.0:${PORT}`);
+  console.log(`   Acessa: http://localhost:${PORT}`);
+  console.log(`   Mobile: http://localhost:${PORT}/m/login`);
 });
