@@ -4,7 +4,8 @@ import { useTenant } from '../../contexts/TenantContext';
 import { useVendas } from '../../hooks/useVendas';
 import { useMobileRouter } from '../../contexts/MobileRouterContext';
 import { MobileLayout } from '../../templates/MobileLayout';
-import { Header, Card, KpiCard, Pill, SwipeCard } from '../../components/mobile';
+import { Header, Card, KpiCard, Pill, SwipeCard, EmptyState } from '../../components/mobile';
+import { DollarSign } from 'lucide-react';
 
 export function MobileFinanceiroPage() {
   const { session } = useAuth();
@@ -129,9 +130,13 @@ export function MobileFinanceiroPage() {
         </div>
 
         {titulos.length === 0 && (
-          <div className="text-center py-s7 px-s5">
-            <p className="text-ink-3">Nenhum título registrado</p>
-          </div>
+          <EmptyState
+            icon={DollarSign}
+            title="Nenhum título"
+            description="Os títulos a receber aparecerão aqui conforme você registra vendas"
+            action="Criar venda"
+            onAction={() => navigate('/m/vendas')}
+          />
         )}
       </div>
     </MobileLayout>

@@ -9,8 +9,8 @@ export function Header({
   className = '',
 }) {
   return (
-    <div className={`sticky top-0 z-40 bg-bg border-b border-line ${className}`}>
-      <div className="h-16 px-s5 flex items-center justify-between">
+    <div className={`sticky top-0 z-40 bg-bg border-b border-line ${className}`} role="banner">
+      <div className="h-16 px-s5 flex items-center justify-between min-h-[44px]">
         <div className="flex items-center gap-s3 flex-1 min-w-0">
           {back && (
             <button

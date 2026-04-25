@@ -4,7 +4,8 @@ import { useTenant } from '../../contexts/TenantContext';
 import { useOportunidades } from '../../hooks/useOportunidades';
 import { useMobileRouter } from '../../contexts/MobileRouterContext';
 import { MobileLayout } from '../../templates/MobileLayout';
-import { Header, Card, Pill, SwipeCard } from '../../components/mobile';
+import { Header, Card, Pill, SwipeCard, EmptyState } from '../../components/mobile';
+import { TrendingUp } from 'lucide-react';
 
 export function MobilePipelinePage() {
   const { session } = useAuth();
@@ -110,9 +111,16 @@ export function MobilePipelinePage() {
         </div>
 
         {oportunidades.filter((o) => o.stage?.toLowerCase() === activeStage).length === 0 && (
-          <div className="text-center py-s7 px-s5">
-            <p className="text-ink-3">Nenhuma oportunidade neste estágio</p>
-          </div>
+          <EmptyState
+            icon={TrendingUp}
+            title={oportunidades.length === 0 ? 'Nenhuma oportunidade' : 'Vazio neste estágio'}
+            description={oportunidades.length === 0
+              ? 'Crie sua primeira oportunidade para acompanhar o pipeline de vendas'
+              : 'Mova oportunidades entre estágios usando swipe'
+            }
+            action={oportunidades.length === 0 ? 'Criar oportunidade' : undefined}
+            onAction={oportunidades.length === 0 ? () => navigate('/m/pipeline/nova') : undefined}
+          />
         )}
       </div>
     </MobileLayout>

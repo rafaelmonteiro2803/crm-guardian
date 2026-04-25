@@ -4,8 +4,8 @@ import { useTenant } from '../../contexts/TenantContext';
 import { useClientes } from '../../hooks/useClientes';
 import { useMobileRouter } from '../../contexts/MobileRouterContext';
 import { MobileLayout } from '../../templates/MobileLayout';
-import { Header, Card, Avatar, Button, Input, SwipeCard } from '../../components/mobile';
-import { Phone, MessageCircle, Plus } from 'lucide-react';
+import { Header, Card, Avatar, Button, Input, SwipeCard, EmptyState } from '../../components/mobile';
+import { Phone, MessageCircle, Plus, Users } from 'lucide-react';
 
 export function MobileClientesListPage() {
   const { session } = useAuth();
@@ -95,10 +95,22 @@ export function MobileClientesListPage() {
           ))}
         </div>
 
-        {filteredClientes.length === 0 && (
-          <div className="text-center py-s7">
-            <p className="text-ink-3">Nenhum cliente encontrado</p>
-          </div>
+        {filteredClientes.length === 0 && search && (
+          <EmptyState
+            icon={Users}
+            title="Nenhum cliente encontrado"
+            description={`Nenhum cliente corresponde a "${search}"`}
+          />
+        )}
+
+        {filteredClientes.length === 0 && !search && clientes.length === 0 && (
+          <EmptyState
+            icon={Users}
+            title="Nenhum cliente"
+            description="Começar a adicionar clientes para gerenciar suas vendas"
+            action="Criar primeiro cliente"
+            onAction={() => navigate('/m/clientes/novo')}
+          />
         )}
       </div>
     </MobileLayout>

@@ -9,3 +9,6 @@ export { KpiCard } from './KpiCard';
 export { Section } from './Section';
 export { Skeleton, SkeletonCard } from './Skeleton';
 export { SwipeCard } from './SwipeCard';
+export { InstallPrompt } from './InstallPrompt';
+export { EmptyState } from './EmptyState';
+export { ErrorBoundary } from './ErrorBoundary';

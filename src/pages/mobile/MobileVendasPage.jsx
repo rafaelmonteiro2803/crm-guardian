@@ -4,7 +4,8 @@ import { useTenant } from '../../contexts/TenantContext';
 import { useVendas } from '../../hooks/useVendas';
 import { useMobileRouter } from '../../contexts/MobileRouterContext';
 import { MobileLayout } from '../../templates/MobileLayout';
-import { Header, Card, KpiCard, Pill, SwipeCard } from '../../components/mobile';
+import { Header, Card, KpiCard, Pill, SwipeCard, EmptyState } from '../../components/mobile';
+import { ShoppingCart } from 'lucide-react';
 
 export function MobileVendasPage() {
   const { session } = useAuth();
@@ -109,9 +110,13 @@ export function MobileVendasPage() {
         </div>
 
         {vendas.length === 0 && (
-          <div className="text-center py-s7 px-s5">
-            <p className="text-ink-3">Nenhuma venda registrada</p>
-          </div>
+          <EmptyState
+            icon={ShoppingCart}
+            title="Nenhuma venda"
+            description="Registre sua primeira venda para acompanhar o faturamento"
+            action="Registrar venda"
+            onAction={() => navigate('/m/vendas/nova')}
+          />
         )}
       </div>
     </MobileLayout>

@@ -24,9 +24,9 @@ export function Button({
   }[kind];
 
   const sizeClasses = {
-    sm: 'px-s4 py-s2 text-xs h-8',
-    md: 'px-s5 py-s3 text-body h-10',
-    lg: 'px-s6 py-s4 text-body h-12',
+    sm: 'px-s4 py-s2 text-xs h-9 min-h-[44px] md:h-8 md:min-h-auto',
+    md: 'px-s5 py-s3 text-body h-11 min-h-[44px] md:h-10 md:min-h-auto',
+    lg: 'px-s6 py-s4 text-body h-12 min-h-[44px]',
   }[size];
 
   const widthClasses = full ? 'w-full' : '';

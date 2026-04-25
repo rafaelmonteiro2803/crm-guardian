@@ -1,6 +1,7 @@
 import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../contexts/TenantContext';
 import { useMobileRouter } from '../../contexts/MobileRouterContext';
+import { ErrorBoundary, InstallPrompt } from '../../components/mobile';
 import { MobileLoginPage } from './MobileLoginPage';
 import { MobileDashboardPage } from './MobileDashboardPage';
 import { MobileClientesListPage } from './MobileClientesListPage';
@@ -23,7 +24,11 @@ export function MobileApp() {
   }
 
   if (!session) {
-    return <MobileLoginPage />;
+    return (
+      <ErrorBoundary>
+        <MobileLoginPage />
+      </ErrorBoundary>
+    );
   }
 
   if (!tenantId) {
@@ -39,22 +44,31 @@ export function MobileApp() {
   const [page, ...rest] = segments;
   const id = rest?.[0];
 
-  switch (page) {
-    case 'login':
-      return <MobileLoginPage />;
-    case 'clientes':
-      return id ? (
-        <MobileClientesDetailPage clienteId={id} />
-      ) : (
-        <MobileClientesListPage />
-      );
-    case 'pipeline':
-      return <MobilePipelinePage />;
-    case 'vendas':
-      return <MobileVendasPage />;
-    case 'financeiro':
-      return <MobileFinanceiroPage />;
-    default:
-      return <MobileDashboardPage />;
-  }
+  const renderPage = () => {
+    switch (page) {
+      case 'login':
+        return <MobileLoginPage />;
+      case 'clientes':
+        return id ? (
+          <MobileClientesDetailPage clienteId={id} />
+        ) : (
+          <MobileClientesListPage />
+        );
+      case 'pipeline':
+        return <MobilePipelinePage />;
+      case 'vendas':
+        return <MobileVendasPage />;
+      case 'financeiro':
+        return <MobileFinanceiroPage />;
+      default:
+        return <MobileDashboardPage />;
+    }
+  };
+
+  return (
+    <ErrorBoundary>
+      {renderPage()}
+      <InstallPrompt />
+    </ErrorBoundary>
+  );
 }

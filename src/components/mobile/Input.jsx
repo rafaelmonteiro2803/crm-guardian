@@ -21,11 +21,17 @@ export function Input({
   return (
     <div className="flex flex-col gap-s2">
       {label && (
-        <label className="text-micro text-ink-2 font-semibold uppercase">
-          {label} {required && '*'}
+        <label htmlFor={rest.id} className="text-micro text-ink-2 font-semibold uppercase">
+          {label} {required && <span aria-label="requerido">*</span>}
         </label>
       )}
-      <div className={`relative flex items-center border-thick rounded-md ${error ? 'border-neg' : 'border-ink'} ${disabled ? 'opacity-50' : ''}`}>
+      <div
+        className={`relative flex items-center border-thick rounded-md min-h-[44px] transition-colors ${
+          error ? 'border-neg' : 'border-ink'
+        } ${disabled ? 'opacity-50' : ''}`}
+        role="region"
+        aria-label={error ? `${label}: ${error}` : label}
+      >
         {Icon && (
           <div className="pl-s4 flex items-center text-ink-3">
             <Icon size={18} />
