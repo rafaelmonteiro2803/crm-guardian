@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Guardian CRM · Wireframes Mobile</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Inter, sans-serif; background: #EEEAE0; color: #1F1D1A; min-height: 100vh; }
+  .canvas-header { padding: 40px 48px 24px; border-bottom: 1px solid #D8D3C7; background: #F5F1E7; position: sticky; top: 0; z-index: 100; }
+  .canvas-title { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
+  .canvas-sub { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #8B867D; letter-spacing: 1px; text-transform: uppercase; margin-top: 6px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, max-content)); gap: 56px 40px; padding: 40px 48px 100px; justify-content: center; }
+  .tweaks-btn { position: fixed; bottom: 20px; right: 20px; background: #1F1D1A; color: #fff; border: none; padding: 10px 16px; border-radius: 999px; font-family: Inter; font-size: 13px; font-weight: 500; cursor: pointer; z-index: 200; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+  .tweaks-panel { position: fixed; bottom: 70px; right: 20px; background: #fff; border: 1px solid #D8D3C7; border-radius: 12px; padding: 16px; width: 260px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); z-index: 200; }
+  .tweaks-panel h3 { font-size: 13px; font-weight: 600; margin-bottom: 10px; }
+  .tweak-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; font-size: 12px; }
+  .tweak-row select { font-family: Inter; font-size: 11px; padding: 3px 6px; border-radius: 4px; border: 1px solid #D8D3C7; }
+  .legend { padding: 0 48px 16px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #535049; line-height: 1.8; }
+</style>
+</head>
+<body>
+
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="wireframes/components/Frame.jsx"></script>
+<script type="text/babel" src="wireframes/screens/Login.jsx"></script>
+<script type="text/babel" src="wireframes/screens/Dashboard.jsx"></script>
+<script type="text/babel" src="wireframes/screens/Clientes.jsx"></script>
+<script type="text/babel" src="wireframes/screens/Pipeline.jsx"></script>
+<script type="text/babel" src="wireframes/screens/Vendas.jsx"></script>
+<script type="text/babel" src="wireframes/screens/OrdensServico.jsx"></script>
+<script type="text/babel" src="wireframes/screens/OtherScreens.jsx"></script>
+
+<script type="text/babel">
+const TWEAKS = /*EDITMODE-BEGIN*/{
+  "dashVariant": "A",
+  "clientesVariant": "A",
+  "pipelineVariant": "A",
+  "osVariant": "A"
+}/*EDITMODE-END*/;
+
+function App() {
+  const [t, setT] = React.useState(TWEAKS);
+  const [panel, setPanel] = React.useState(false);
+  const [editMode, setEditMode] = React.useState(false);
+
+  React.useEffect(() => {
+    const handler = (e) => {
+      if (e.data?.type === '__activate_edit_mode') setEditMode(true);
+      if (e.data?.type === '__deactivate_edit_mode') { setEditMode(false); setPanel(false); }
+    };
+    window.addEventListener('message', handler);
+    window.parent.postMessage({ type: '__edit_mode_available' }, '*');
+    return () => window.removeEventListener('message', handler);
+  }, []);
+
+  const update = (k, v) => {
+    const nt = { ...t, [k]: v };
+    setT(nt);
+    window.parent.postMessage({ type: '__edit_mode_set_keys', edits: { [k]: v } }, '*');
+  };
+
+  return (
+    <div>
+      <div className="canvas-header">
+        <div className="canvas-title">Guardian CRM · Wireframes Mobile</div>
+        <div className="canvas-sub">iOS · 10 TELAS · MID-FI WIREFRAMES · ABR 2026</div>
+      </div>
+      <div className="legend">
+        // sistema: cards verticais, tab bar inferior (5 itens), header sticky com botão "Novo" contextual, um acento cromático (laranja queimado) para ações/estados ativos.<br/>
+        // cores funcionais preservadas do CRM atual: verde=pago, âmbar=pendente, vermelho=vencido, azul=em atendimento, rosa=aniversário/evolução.<br/>
+        // {editMode ? 'tweaks ativos — use o painel para variar telas' : 'ative "Tweaks" no toolbar pra trocar variações'}
+      </div>
+      <div className="grid">
+        <ScreenLogin />
+        {t.dashVariant === 'A' ? <ScreenDashboardA /> : <ScreenDashboardB />}
+        {t.clientesVariant === 'A' ? <ScreenClientesA /> : <ScreenClientesB />}
+        {t.pipelineVariant === 'A' ? <ScreenPipelineA /> : <ScreenPipelineB />}
+        <ScreenVendas />
+        {t.osVariant === 'A' ? <ScreenOSLista /> : <ScreenOSDetalhe />}
+        <ScreenEstoque />
+        <ScreenFornecedores />
+        <ScreenFinanceiro />
+        <ScreenContasPagar />
+      </div>
+
+      {editMode && (
+        <>
+          <button className="tweaks-btn" onClick={() => setPanel(!panel)}>
+            Tweaks {panel ? '▾' : '▴'}
+          </button>
+          {panel && (
+            <div className="tweaks-panel">
+              <h3>Tweaks</h3>
+              <TweakRow label="Dashboard" val={t.dashVariant} opts={[['A','Resumido'],['B','Denso']]} onChange={v => update('dashVariant', v)} />
+              <TweakRow label="Clientes" val={t.clientesVariant} opts={[['A','Lista'],['B','Detalhe']]} onChange={v => update('clientesVariant', v)} />
+              <TweakRow label="Pipeline" val={t.pipelineVariant} opts={[['A','Swipe'],['B','Chips']]} onChange={v => update('pipelineVariant', v)} />
+              <TweakRow label="Ordens Serv." val={t.osVariant} opts={[['A','Lista'],['B','Detalhe']]} onChange={v => update('osVariant', v)} />
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+function TweakRow({ label, val, opts, onChange }) {
+  return (
+    <div className="tweak-row">
+      <span>{label}</span>
+      <select value={val} onChange={e => onChange(e.target.value)}>
+        {opts.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+      </select>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

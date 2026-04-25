@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Guardian CRM · Mobile Hi-Fi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Geist, Inter, sans-serif; background: #F4F4F2; color: #0A0A0A; min-height: 100vh; }
+  .canvas-header { padding: 40px 48px 24px; border-bottom: 1.5px solid #0A0A0A; background: #FAFAF9; }
+  .canvas-title { font-size: 32px; font-weight: 700; letter-spacing: -1px; }
+  .canvas-sub { font-family: 'Geist Mono', monospace; font-size: 11px; color: #737373; letter-spacing: 1px; text-transform: uppercase; margin-top: 6px; font-weight: 600; }
+  .intro { padding: 0 48px 16px; font-family: 'Geist Mono', monospace; font-size: 12px; color: #3F3F3F; line-height: 1.8; max-width: 900px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(430px, max-content)); gap: 56px 40px; padding: 30px 48px 100px; justify-content: center; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="hifi/components/Core.jsx"></script>
+<script type="text/babel" src="hifi/screens/LoginDashboard.jsx"></script>
+<script type="text/babel" src="hifi/screens/Clientes.jsx"></script>
+<script type="text/babel" src="hifi/screens/Flows.jsx"></script>
+
+<script type="text/babel">
+function App() {
+  return (
+    <div>
+      <div className="canvas-header">
+        <div className="canvas-title">Guardian CRM · Mobile Hi-Fi</div>
+        <div className="canvas-sub">DIREÇÃO B · MODERNO & ENERGÉTICO · 7 TELAS · ESCOPO PWA /m/*</div>
+      </div>
+      <div className="intro">
+        // Aplicação da Direção B em todas as telas do escopo: Login, Dashboard, Clientes (lista + detalhe), Pipeline, Vendas, Financeiro.<br/>
+        // Estes mocks servem de referência visual para o handoff ao Claude Code.
+      </div>
+      <div className="grid">
+        <HifiLogin />
+        <HifiDashboard />
+        <HifiClientesLista />
+        <HifiClienteDetalhe />
+        <HifiPipeline />
+        <HifiVendas />
+        <HifiFinanceiro />
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

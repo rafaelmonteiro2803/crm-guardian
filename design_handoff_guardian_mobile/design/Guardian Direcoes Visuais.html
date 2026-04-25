@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Guardian CRM · Direções Visuais</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Geist:wght@400;500;600;700&family=Newsreader:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Inter, sans-serif; background: #EEEAE0; color: #1F1D1A; min-height: 100vh; }
+  .canvas-header { padding: 40px 48px 24px; border-bottom: 1px solid #D8D3C7; background: #F5F1E7; }
+  .canvas-title { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
+  .canvas-sub { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #8B867D; letter-spacing: 1px; text-transform: uppercase; margin-top: 6px; }
+  .intro { padding: 0 48px 16px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #535049; line-height: 1.8; max-width: 900px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(430px, max-content)); gap: 56px 40px; padding: 30px 48px 100px; justify-content: center; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="wireframes/screens/DirecoesVisuais.jsx"></script>
+
+<script type="text/babel">
+function App() {
+  return (
+    <div>
+      <div className="canvas-header">
+        <div className="canvas-title">Guardian CRM · 3 Direções Visuais</div>
+        <div className="canvas-sub">Escolha uma para o handoff · Mesma tela (Dashboard) aplicada em cada direção</div>
+      </div>
+      <div className="intro">
+        // Cada direção define cor, tipografia, densidade e "tom" do app inteiro.<br/>
+        // Avalie: qual combina mais com seu público final (quem usa o CRM no dia a dia) e com a personalidade que você quer projetar?<br/>
+        // Me diga "quero a A/B/C" — eu aplico em todas as telas e gero o pacote de handoff pro Claude Code.
+      </div>
+      <div className="grid">
+        <DashDirA />
+        <DashDirB />
+        <DashDirC />
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
