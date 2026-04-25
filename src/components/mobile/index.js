@@ -8,3 +8,4 @@ export { TabBar } from './TabBar';
 export { KpiCard } from './KpiCard';
 export { Section } from './Section';
 export { Skeleton, SkeletonCard } from './Skeleton';
+export { SwipeCard } from './SwipeCard';

@@ -4,7 +4,7 @@ import { useTenant } from '../../contexts/TenantContext';
 import { useVendas } from '../../hooks/useVendas';
 import { useMobileRouter } from '../../contexts/MobileRouterContext';
 import { MobileLayout } from '../../templates/MobileLayout';
-import { Header, Card, KpiCard, Pill } from '../../components/mobile';
+import { Header, Card, KpiCard, Pill, SwipeCard } from '../../components/mobile';
 
 export function MobileVendasPage() {
   const { session } = useAuth();
@@ -73,11 +73,23 @@ export function MobileVendasPage() {
         {/* Sales Cards */}
         <div className="space-y-s3 px-s5 -mx-s5">
           {vendas.map((venda) => (
-            <Card
+            <SwipeCard
               key={venda.id}
-              thick
               onClick={() => navigate(`/m/vendas/${venda.id}`)}
-              className="cursor-pointer active:opacity-80"
+              actions={[
+                {
+                  label: 'Registrar\npagamento',
+                  color: 'bg-pos',
+                  onPress: () => {
+                    // TODO: Open payment modal
+                  },
+                },
+                {
+                  label: 'Ver\ntítulos',
+                  color: 'bg-info',
+                  onPress: () => navigate(`/m/vendas/${venda.id}/titulos`),
+                },
+              ]}
             >
               <div className="space-y-s3">
                 <div className="flex justify-between items-center">
@@ -92,7 +104,7 @@ export function MobileVendasPage() {
                   <p className="text-h3 font-bold">R$ {venda.valor}</p>
                 </div>
               </div>
-            </Card>
+            </SwipeCard>
           ))}
         </div>
 

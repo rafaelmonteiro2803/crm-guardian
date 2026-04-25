@@ -4,7 +4,7 @@ import { useTenant } from '../../contexts/TenantContext';
 import { useVendas } from '../../hooks/useVendas';
 import { useMobileRouter } from '../../contexts/MobileRouterContext';
 import { MobileLayout } from '../../templates/MobileLayout';
-import { Header, Card, KpiCard, Pill } from '../../components/mobile';
+import { Header, Card, KpiCard, Pill, SwipeCard } from '../../components/mobile';
 
 export function MobileFinanceiroPage() {
   const { session } = useAuth();
@@ -85,12 +85,32 @@ export function MobileFinanceiroPage() {
         {/* Títulos List */}
         <div className="space-y-s3 px-s5 -mx-s5">
           {titulos.map((titulo) => (
-            <Card
+            <SwipeCard
               key={titulo.id}
-              thick
-              variant={titulo.status === 'vencido' ? 'danger' : 'default'}
               onClick={() => navigate(`/m/financeiro/${titulo.id}`)}
-              className="cursor-pointer active:opacity-80"
+              actions={[
+                {
+                  label: 'Marcar\npago',
+                  color: 'bg-pos',
+                  onPress: () => {
+                    // TODO: Call marcarComoPago
+                  },
+                },
+                {
+                  label: 'Pagar\nparcial',
+                  color: 'bg-warn',
+                  onPress: () => {
+                    // TODO: Open partial payment modal
+                  },
+                },
+                {
+                  label: 'Cobrança\nWhatsApp',
+                  color: 'bg-info',
+                  onPress: () => {
+                    // TODO: Send WhatsApp message
+                  },
+                },
+              ]}
             >
               <div className="space-y-s2">
                 <div className="flex justify-between items-start">
@@ -104,7 +124,7 @@ export function MobileFinanceiroPage() {
                   <p className="text-h3 font-bold">R$ {titulo.valor}</p>
                 </div>
               </div>
-            </Card>
+            </SwipeCard>
           ))}
         </div>
 

@@ -4,7 +4,7 @@ import { useTenant } from '../../contexts/TenantContext';
 import { useOportunidades } from '../../hooks/useOportunidades';
 import { useMobileRouter } from '../../contexts/MobileRouterContext';
 import { MobileLayout } from '../../templates/MobileLayout';
-import { Header, Card, Pill } from '../../components/mobile';
+import { Header, Card, Pill, SwipeCard } from '../../components/mobile';
 
 export function MobilePipelinePage() {
   const { session } = useAuth();
@@ -59,11 +59,32 @@ export function MobilePipelinePage() {
           {oportunidades
             .filter((opp) => opp.stage?.toLowerCase() === activeStage)
             .map((opp) => (
-              <Card
+              <SwipeCard
                 key={opp.id}
-                thick
                 onClick={() => navigate(`/m/pipeline/${opp.id}`)}
-                className="cursor-pointer active:opacity-80"
+                actions={[
+                  {
+                    label: '→ Próxima\netapa',
+                    color: 'bg-accent',
+                    onPress: () => {
+                      // TODO: Move to next stage
+                    },
+                  },
+                  {
+                    label: '← Etapa\nanterior',
+                    color: 'bg-ink',
+                    onPress: () => {
+                      // TODO: Move to previous stage
+                    },
+                  },
+                  {
+                    label: 'Marcar\nganho',
+                    color: 'bg-pos',
+                    onPress: () => {
+                      // TODO: Mark as won
+                    },
+                  },
+                ]}
               >
                 <div className="space-y-s3">
                   <div className="flex justify-between items-start">
@@ -84,7 +105,7 @@ export function MobilePipelinePage() {
                     <span className="text-ink-3">{opp.probabilidade}% prob.</span>
                   </div>
                 </div>
-              </Card>
+              </SwipeCard>
             ))}
         </div>
 

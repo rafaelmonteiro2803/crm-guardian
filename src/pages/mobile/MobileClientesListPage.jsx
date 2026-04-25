@@ -4,7 +4,7 @@ import { useTenant } from '../../contexts/TenantContext';
 import { useClientes } from '../../hooks/useClientes';
 import { useMobileRouter } from '../../contexts/MobileRouterContext';
 import { MobileLayout } from '../../templates/MobileLayout';
-import { Header, Card, Avatar, Button, Input } from '../../components/mobile';
+import { Header, Card, Avatar, Button, Input, SwipeCard } from '../../components/mobile';
 import { Phone, MessageCircle, Plus } from 'lucide-react';
 
 export function MobileClientesListPage() {
@@ -59,11 +59,25 @@ export function MobileClientesListPage() {
         {/* Clients List */}
         <div className="space-y-s3">
           {filteredClientes.map((cliente) => (
-            <Card
+            <SwipeCard
               key={cliente.id}
-              thick
               onClick={() => navigate(`/m/clientes/${cliente.id}`)}
-              className="cursor-pointer active:opacity-80"
+              actions={[
+                {
+                  label: 'Editar',
+                  color: 'bg-ink',
+                  onPress: () => navigate(`/m/clientes/${cliente.id}/editar`),
+                },
+                {
+                  label: 'Arquivar',
+                  color: 'bg-neg',
+                  onPress: () => {
+                    if (confirm('Arquivar cliente?')) {
+                      // TODO: Call excluirCliente
+                    }
+                  },
+                },
+              ]}
             >
               <div className="flex items-center gap-s4 mb-s3">
                 <Avatar name={cliente.nome} size="md" />
@@ -77,7 +91,7 @@ export function MobileClientesListPage() {
                 <Button kind="ghost" size="sm" icon={MessageCircle} />
                 <Button kind="ghost" size="sm" icon={Phone} />
               </div>
-            </Card>
+            </SwipeCard>
           ))}
         </div>
 
