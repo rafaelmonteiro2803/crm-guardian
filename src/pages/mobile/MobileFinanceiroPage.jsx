@@ -39,6 +39,27 @@ export function MobileFinanceiroPage() {
     vencido: titulos.filter((t) => t.status === 'vencido').reduce((sum, t) => sum + (parseFloat(t.valor) || 0), 0),
   };
 
+  const filterTitulos = () => {
+    switch (activeFilter) {
+      case 'pagos':
+        return titulos.filter((t) => t.status === 'pago');
+      case 'vencidos':
+        return titulos.filter((t) => t.status === 'vencido');
+      case 'semana':
+        const today = new Date();
+        const nextWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+        return titulos.filter((t) => {
+          const venc = new Date(t.data_vencimento);
+          return venc >= today && venc <= nextWeek;
+        });
+      case 'hoje':
+        const todayStr = new Date().toISOString().split('T')[0];
+        return titulos.filter((t) => t.data_vencimento === todayStr);
+      default:
+        return titulos;
+    }
+  };
+
   return (
     <MobileLayout
       activeTab="financeiro"
@@ -85,7 +106,7 @@ export function MobileFinanceiroPage() {
 
         {/* Títulos List */}
         <div className="space-y-s3 px-s5 -mx-s5">
-          {titulos.map((titulo) => (
+          {filterTitulos().map((titulo) => (
             <SwipeCard
               key={titulo.id}
               onClick={() => navigate(`/m/financeiro/${titulo.id}`)}

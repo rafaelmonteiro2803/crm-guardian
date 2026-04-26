@@ -1,6 +1,7 @@
 import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../contexts/TenantContext';
 import { useClientes } from '../../hooks/useClientes';
+import { useVendas } from '../../hooks/useVendas';
 import { useMobileRouter } from '../../contexts/MobileRouterContext';
 import { MobileLayout } from '../../templates/MobileLayout';
 import { Header, Card, Avatar, Button, Section } from '../../components/mobile';
@@ -10,9 +11,13 @@ export function MobileClientesDetailPage({ clienteId }) {
   const { session } = useAuth();
   const { tenantId } = useTenant();
   const { clientes } = useClientes(tenantId, session?.user?.id);
+  const { vendas } = useVendas(tenantId, session?.user?.id);
   const { navigate, back } = useMobileRouter();
 
   const cliente = clientes.find((c) => c.id === clienteId);
+  const vendasCliente = vendas.filter((v) => v.cliente_id === clienteId);
+  const totalVendas = vendasCliente.reduce((sum, v) => sum + (parseFloat(v.valor) || 0), 0);
+  const vendasAbertas = vendasCliente.filter((v) => v.status !== 'pago').length;
 
   if (!cliente) {
     return (
@@ -41,7 +46,7 @@ export function MobileClientesDetailPage({ clienteId }) {
       onTabChange={handleTabChange}
       headerProps={{
         title: cliente.nome,
-        eyebrow: 'CLIENTE · DESDE MAI/24',
+        eyebrow: `CLIENTE · DESDE ${cliente.data_cadastro ? new Date(cliente.data_cadastro).toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }).toUpperCase() : 'DESCONHECIDO'}`,
         back,
         right: <Button kind="ghost" size="sm" icon={MoreVertical} />,
       }}
@@ -69,15 +74,15 @@ export function MobileClientesDetailPage({ clienteId }) {
         {/* Stats Grid */}
         <div className="grid grid-cols-3 gap-s3">
           <Card thick className="text-center">
-            <p className="text-h2 font-bold text-ink">8</p>
+            <p className="text-h2 font-bold text-ink">{vendasCliente.length}</p>
             <p className="text-xs text-ink-3">Vendas</p>
           </Card>
           <Card thick className="text-center">
-            <p className="text-h2 font-bold text-accent">R$ 14.2k</p>
+            <p className="text-h2 font-bold text-accent">R$ {(totalVendas / 1000).toFixed(1)}k</p>
             <p className="text-xs text-ink-3">Total</p>
           </Card>
           <Card thick className="text-center">
-            <p className="text-h2 font-bold text-info">2</p>
+            <p className="text-h2 font-bold text-info">{vendasAbertas}</p>
             <p className="text-xs text-ink-3">Abertos</p>
           </Card>
         </div>
@@ -95,11 +100,19 @@ export function MobileClientesDetailPage({ clienteId }) {
         </Section>
 
         {/* History */}
-        <Section label="Histórico" onViewAll={() => {}}>
-          <Card thick className="space-y-s2">
-            <p className="text-micro text-ink-3 font-mono">17 ABR, 09:30</p>
-            <p className="text-body">Venda concluída</p>
-          </Card>
+        <Section label={`Vendas · ${vendasCliente.length}`}>
+          {vendasCliente.slice(0, 5).map((venda) => (
+            <Card
+              key={venda.id}
+              thick
+              className="space-y-s2 cursor-pointer active:opacity-80"
+              onClick={() => navigate(`/m/vendas/${venda.id}`)}
+            >
+              <p className="text-micro text-ink-3 font-mono">{venda.data_venda?.split('-').reverse().join('/')}</p>
+              <p className="text-body font-semibold">{venda.descricao}</p>
+              <p className="text-h3 font-bold text-accent">R$ {venda.valor}</p>
+            </Card>
+          ))}
         </Section>
       </div>
     </MobileLayout>

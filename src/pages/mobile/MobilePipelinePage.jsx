@@ -50,25 +50,28 @@ export function MobilePipelinePage() {
       <div className="space-y-s5 pb-s6">
         {/* Stage Chips */}
         <div className="overflow-x-auto flex gap-s2 px-s5 -mx-s5">
-          {stages.map((stage) => (
-            <button
-              key={stage}
-              onClick={() => setActiveStage(stage)}
-              className={`px-s4 py-s2 rounded-pill text-xs font-semibold whitespace-nowrap border-thick ${
-                activeStage === stage
-                  ? 'bg-accent border-accent text-accent-ink'
-                  : 'bg-surface border-line text-ink'
-              }`}
-            >
-              {stage} (0)
-            </button>
-          ))}
+          {stages.map((stage) => {
+            const count = oportunidades.filter((o) => o.estagio?.toLowerCase() === stage).length;
+            return (
+              <button
+                key={stage}
+                onClick={() => setActiveStage(stage)}
+                className={`px-s4 py-s2 rounded-pill text-xs font-semibold whitespace-nowrap border-thick ${
+                  activeStage === stage
+                    ? 'bg-accent border-accent text-accent-ink'
+                    : 'bg-surface border-line text-ink'
+                }`}
+              >
+                {stage} ({count})
+              </button>
+            );
+          })}
         </div>
 
         {/* Pipeline Cards */}
         <div className="space-y-s3 px-s5 -mx-s5">
           {oportunidades
-            .filter((opp) => opp.stage?.toLowerCase() === activeStage)
+            .filter((opp) => opp.estagio?.toLowerCase() === activeStage)
             .map((opp) => (
               <SwipeCard
                 key={opp.id}
@@ -122,7 +125,7 @@ export function MobilePipelinePage() {
             ))}
         </div>
 
-        {oportunidades.filter((o) => o.stage?.toLowerCase() === activeStage).length === 0 && (
+        {oportunidades.filter((o) => o.estagio?.toLowerCase() === activeStage).length === 0 && (
           <EmptyState
             icon={TrendingUp}
             title={oportunidades.length === 0 ? 'Nenhuma oportunidade' : 'Vazio neste estágio'}

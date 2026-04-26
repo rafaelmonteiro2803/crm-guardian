@@ -10,7 +10,7 @@ import { ShoppingCart } from 'lucide-react';
 export function MobileVendasPage() {
   const { session } = useAuth();
   const { tenantId } = useTenant();
-  const { vendas } = useVendas(tenantId, session?.user?.id);
+  const { vendas, marcarComoPago } = useVendas(tenantId, session?.user?.id);
   const { navigate } = useMobileRouter();
   const [activeStatus, setActiveStatus] = useState('todas');
 
@@ -34,6 +34,19 @@ export function MobileVendasPage() {
 
   const totalMes = vendas.reduce((sum, v) => sum + (parseFloat(v.valor) || 0), 0);
   const ticketMedio = vendas.length > 0 ? (totalMes / vendas.length).toFixed(2) : 0;
+
+  const filterVendas = () => {
+    switch (activeStatus) {
+      case 'pagas':
+        return vendas.filter((v) => v.status === 'pago');
+      case 'pendentes':
+        return vendas.filter((v) => v.status !== 'pago');
+      case 'vencidas':
+        return vendas.filter((v) => v.status === 'vencido');
+      default:
+        return vendas;
+    }
+  };
 
   return (
     <MobileLayout
@@ -73,22 +86,15 @@ export function MobileVendasPage() {
 
         {/* Sales Cards */}
         <div className="space-y-s3 px-s5 -mx-s5">
-          {vendas.map((venda) => (
+          {filterVendas().map((venda) => (
             <SwipeCard
               key={venda.id}
               onClick={() => navigate(`/m/vendas/${venda.id}`)}
               actions={[
                 {
-                  label: 'Registrar\npagamento',
-                  color: 'bg-pos',
-                  onPress: () => {
-                    // TODO: Open payment modal
-                  },
-                },
-                {
                   label: 'Ver\ntítulos',
                   color: 'bg-info',
-                  onPress: () => navigate(`/m/vendas/${venda.id}/titulos`),
+                  onPress: () => navigate(`/m/financeiro`),
                 },
               ]}
             >
