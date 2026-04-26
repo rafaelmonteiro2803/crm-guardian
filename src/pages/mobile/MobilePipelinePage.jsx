@@ -10,7 +10,7 @@ import { TrendingUp } from 'lucide-react';
 export function MobilePipelinePage() {
   const { session } = useAuth();
   const { tenantId } = useTenant();
-  const { oportunidades } = useOportunidades(tenantId, session?.user?.id);
+  const { oportunidades, moverOportunidade } = useOportunidades(tenantId, session?.user?.id);
   const { navigate } = useMobileRouter();
   const [activeStage, setActiveStage] = useState('proposta');
 
@@ -27,6 +27,16 @@ export function MobilePipelinePage() {
 
   const stages = ['prospecção', 'qualificação', 'proposta', 'negociação', 'fechado'];
 
+  const getNextStage = (current) => {
+    const idx = stages.indexOf(current?.toLowerCase() || '');
+    return idx < stages.length - 1 ? stages[idx + 1] : null;
+  };
+
+  const getPrevStage = (current) => {
+    const idx = stages.indexOf(current?.toLowerCase() || '');
+    return idx > 0 ? stages[idx - 1] : null;
+  };
+
   return (
     <MobileLayout
       activeTab="pipeline"
@@ -40,25 +50,28 @@ export function MobilePipelinePage() {
       <div className="space-y-s5 pb-s6">
         {/* Stage Chips */}
         <div className="overflow-x-auto flex gap-s2 px-s5 -mx-s5">
-          {stages.map((stage) => (
-            <button
-              key={stage}
-              onClick={() => setActiveStage(stage)}
-              className={`px-s4 py-s2 rounded-pill text-xs font-semibold whitespace-nowrap border-thick ${
-                activeStage === stage
-                  ? 'bg-accent border-accent text-accent-ink'
-                  : 'bg-surface border-line text-ink'
-              }`}
-            >
-              {stage} (0)
-            </button>
-          ))}
+          {stages.map((stage) => {
+            const count = oportunidades.filter((o) => o.estagio?.toLowerCase() === stage).length;
+            return (
+              <button
+                key={stage}
+                onClick={() => setActiveStage(stage)}
+                className={`px-s4 py-s2 rounded-pill text-xs font-semibold whitespace-nowrap border-thick ${
+                  activeStage === stage
+                    ? 'bg-accent border-accent text-accent-ink'
+                    : 'bg-surface border-line text-ink'
+                }`}
+              >
+                {stage} ({count})
+              </button>
+            );
+          })}
         </div>
 
         {/* Pipeline Cards */}
         <div className="space-y-s3 px-s5 -mx-s5">
           {oportunidades
-            .filter((opp) => opp.stage?.toLowerCase() === activeStage)
+            .filter((opp) => opp.estagio?.toLowerCase() === activeStage)
             .map((opp) => (
               <SwipeCard
                 key={opp.id}
@@ -67,22 +80,24 @@ export function MobilePipelinePage() {
                   {
                     label: '→ Próxima\netapa',
                     color: 'bg-accent',
-                    onPress: () => {
-                      // TODO: Move to next stage
+                    onPress: async () => {
+                      const nextStage = getNextStage(opp.estagio);
+                      if (nextStage) await moverOportunidade(opp.id, nextStage);
                     },
                   },
                   {
                     label: '← Etapa\nanterior',
                     color: 'bg-ink',
-                    onPress: () => {
-                      // TODO: Move to previous stage
+                    onPress: async () => {
+                      const prevStage = getPrevStage(opp.estagio);
+                      if (prevStage) await moverOportunidade(opp.id, prevStage);
                     },
                   },
                   {
                     label: 'Marcar\nganho',
                     color: 'bg-pos',
-                    onPress: () => {
-                      // TODO: Mark as won
+                    onPress: async () => {
+                      await moverOportunidade(opp.id, 'fechado');
                     },
                   },
                 ]}
@@ -110,7 +125,7 @@ export function MobilePipelinePage() {
             ))}
         </div>
 
-        {oportunidades.filter((o) => o.stage?.toLowerCase() === activeStage).length === 0 && (
+        {oportunidades.filter((o) => o.estagio?.toLowerCase() === activeStage).length === 0 && (
           <EmptyState
             icon={TrendingUp}
             title={oportunidades.length === 0 ? 'Nenhuma oportunidade' : 'Vazio neste estágio'}

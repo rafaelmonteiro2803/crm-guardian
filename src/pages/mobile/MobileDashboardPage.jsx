@@ -36,13 +36,12 @@ export function MobileDashboardPage() {
     navigate(routes[tab]);
   };
 
-  // Sample data (replace with real data)
-  const heroValue = 'R$ 12.450';
-  const heroSubtitle = '8 TÍTULOS · 3 VENCIDOS: R$ 2.180';
-  const salesMonth = 'R$ 28.500';
-  const salesGrowth = '↑ 24% vs mar';
-  const pipelineValue = 'R$ 45.200';
-  const pipelineOpenCount = '6 abertas';
+  const totalReceber = vendas.reduce((sum, v) => sum + (parseFloat(v.valor) || 0), 0);
+  const titulosPendentes = oportunidades.filter(o => o.estagio?.toLowerCase() !== 'fechado').length;
+  const titulosVencidos = oportunidades.filter(o => o.probabilidade < 30).length;
+  const pipelineValue = oportunidades.reduce((sum, o) => sum + (parseFloat(o.valor) || 0), 0);
+  const pipelineAberto = oportunidades.filter(o => o.estagio?.toLowerCase() !== 'fechado').length;
+  const ventasTotal = vendas.reduce((sum, v) => sum + (parseFloat(v.valor) || 0), 0);
 
   return (
     <MobileLayout
@@ -65,9 +64,9 @@ export function MobileDashboardPage() {
       <div className="space-y-s6 pb-s6">
         {/* Hero KPI - A Receber */}
         <KpiCard
-          label="A RECEBER · ABRIL"
-          value={heroValue}
-          sub={heroSubtitle}
+          label="A RECEBER · MÊS"
+          value={`R$ ${(totalReceber / 1000).toFixed(1)}k`}
+          sub={`${titulosPendentes} TÍTULOS · ${titulosVencidos} VENCIDOS`}
           variant="hero"
         />
 
@@ -75,13 +74,13 @@ export function MobileDashboardPage() {
         <div className="grid grid-cols-2 gap-s3">
           <KpiCard
             label="VENDAS MÊS"
-            value={salesMonth}
-            sub={salesGrowth}
+            value={`R$ ${(ventasTotal / 1000).toFixed(1)}k`}
+            sub={`${vendas.length} vendas`}
           />
           <KpiCard
             label="PIPELINE"
-            value={pipelineValue}
-            sub={pipelineOpenCount}
+            value={`R$ ${(pipelineValue / 1000).toFixed(1)}k`}
+            sub={`${pipelineAberto} abertas`}
           />
         </div>
 

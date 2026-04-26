@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   fetchOportunidades,
   createOportunidade,
@@ -10,9 +10,14 @@ export function useOportunidades(tenantId, userId) {
   const [oportunidades, setOportunidades] = useState([]);
 
   const carregarOportunidades = async () => {
+    if (!tenantId) return;
     const data = await fetchOportunidades(tenantId);
     setOportunidades(data);
   };
+
+  useEffect(() => {
+    carregarOportunidades();
+  }, [tenantId]);
 
   const salvarOportunidade = async (form, editando, onSuccess) => {
     if (!form.titulo.trim()) { alert("Título é obrigatório!"); return; }

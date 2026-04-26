@@ -71,9 +71,9 @@ export function MobileClientesListPage() {
                 {
                   label: 'Arquivar',
                   color: 'bg-neg',
-                  onPress: () => {
+                  onPress: async () => {
                     if (confirm('Arquivar cliente?')) {
-                      // TODO: Call excluirCliente
+                      await excluir(cliente.id);
                     }
                   },
                 },

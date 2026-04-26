@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { fetchClientes, createCliente, updateCliente, deleteCliente } from "../services/clientesService";
 
 export function useClientes(tenantId, userId) {
@@ -9,6 +9,10 @@ export function useClientes(tenantId, userId) {
     const data = await fetchClientes(tenantId);
     setClientes(data);
   }, [tenantId]);
+
+  useEffect(() => {
+    carregar();
+  }, [carregar]);
 
   const salvar = useCallback(async (form, editandoId) => {
     if (editandoId) {

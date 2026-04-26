@@ -10,7 +10,7 @@ import { DollarSign } from 'lucide-react';
 export function MobileFinanceiroPage() {
   const { session } = useAuth();
   const { tenantId } = useTenant();
-  const { titulos } = useVendas(tenantId, session?.user?.id);
+  const { titulos, marcarComoPago } = useVendas(tenantId, session?.user?.id);
   const { navigate } = useMobileRouter();
   const [activeFilter, setActiveFilter] = useState('todos');
 
@@ -37,6 +37,27 @@ export function MobileFinanceiroPage() {
     pagos: titulos.filter((t) => t.status === 'pago').reduce((sum, t) => sum + (parseFloat(t.valor) || 0), 0),
     pendente: titulos.filter((t) => t.status !== 'pago').reduce((sum, t) => sum + (parseFloat(t.valor) || 0), 0),
     vencido: titulos.filter((t) => t.status === 'vencido').reduce((sum, t) => sum + (parseFloat(t.valor) || 0), 0),
+  };
+
+  const filterTitulos = () => {
+    switch (activeFilter) {
+      case 'pagos':
+        return titulos.filter((t) => t.status === 'pago');
+      case 'vencidos':
+        return titulos.filter((t) => t.status === 'vencido');
+      case 'semana':
+        const today = new Date();
+        const nextWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+        return titulos.filter((t) => {
+          const venc = new Date(t.data_vencimento);
+          return venc >= today && venc <= nextWeek;
+        });
+      case 'hoje':
+        const todayStr = new Date().toISOString().split('T')[0];
+        return titulos.filter((t) => t.data_vencimento === todayStr);
+      default:
+        return titulos;
+    }
   };
 
   return (
@@ -85,7 +106,7 @@ export function MobileFinanceiroPage() {
 
         {/* Títulos List */}
         <div className="space-y-s3 px-s5 -mx-s5">
-          {titulos.map((titulo) => (
+          {filterTitulos().map((titulo) => (
             <SwipeCard
               key={titulo.id}
               onClick={() => navigate(`/m/financeiro/${titulo.id}`)}
@@ -93,22 +114,15 @@ export function MobileFinanceiroPage() {
                 {
                   label: 'Marcar\npago',
                   color: 'bg-pos',
-                  onPress: () => {
-                    // TODO: Call marcarComoPago
+                  onPress: async () => {
+                    await marcarComoPago(titulo.id);
                   },
                 },
                 {
                   label: 'Pagar\nparcial',
                   color: 'bg-warn',
                   onPress: () => {
-                    // TODO: Open partial payment modal
-                  },
-                },
-                {
-                  label: 'Cobrança\nWhatsApp',
-                  color: 'bg-info',
-                  onPress: () => {
-                    // TODO: Send WhatsApp message
+                    navigate(`/m/financeiro/${titulo.id}/pagar-parcial`);
                   },
                 },
               ]}
