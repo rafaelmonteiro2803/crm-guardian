@@ -6,7 +6,7 @@ import { Zap } from 'lucide-react';
 
 export function MobileLoginPage() {
   const { handleSignIn } = useAuth();
-  const { tenants: allTenants, setTenantId } = useTenant();
+  const { tenantsList, setSelectedTenantId } = useTenant();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -52,9 +52,8 @@ export function MobileLoginPage() {
         setError('Email ou senha inválidos');
       } else {
         if (selectedTenant) {
-          setTenantId(selectedTenant);
+          setSelectedTenantId(selectedTenant);
         }
-        // Router will handle redirect to /m/ after auth
       }
     } catch (err) {
       setError('Erro ao fazer login. Tente novamente.');
@@ -99,7 +98,11 @@ export function MobileLoginPage() {
               }`}
             >
               <option value="">Selecione uma empresa</option>
-              {/* TODO: Carregar tenants do usuário após email */}
+              {tenantsList.map((tenant) => (
+                <option key={tenant.id} value={tenant.id}>
+                  {tenant.nome}
+                </option>
+              ))}
             </select>
             {fieldErrors.tenant && (
               <p className="text-xs text-neg">{fieldErrors.tenant}</p>

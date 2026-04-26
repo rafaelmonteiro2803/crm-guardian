@@ -10,7 +10,7 @@ import { TrendingUp } from 'lucide-react';
 export function MobilePipelinePage() {
   const { session } = useAuth();
   const { tenantId } = useTenant();
-  const { oportunidades } = useOportunidades(tenantId, session?.user?.id);
+  const { oportunidades, moverOportunidade } = useOportunidades(tenantId, session?.user?.id);
   const { navigate } = useMobileRouter();
   const [activeStage, setActiveStage] = useState('proposta');
 
@@ -26,6 +26,16 @@ export function MobilePipelinePage() {
   };
 
   const stages = ['prospecção', 'qualificação', 'proposta', 'negociação', 'fechado'];
+
+  const getNextStage = (current) => {
+    const idx = stages.indexOf(current?.toLowerCase() || '');
+    return idx < stages.length - 1 ? stages[idx + 1] : null;
+  };
+
+  const getPrevStage = (current) => {
+    const idx = stages.indexOf(current?.toLowerCase() || '');
+    return idx > 0 ? stages[idx - 1] : null;
+  };
 
   return (
     <MobileLayout
@@ -67,22 +77,24 @@ export function MobilePipelinePage() {
                   {
                     label: '→ Próxima\netapa',
                     color: 'bg-accent',
-                    onPress: () => {
-                      // TODO: Move to next stage
+                    onPress: async () => {
+                      const nextStage = getNextStage(opp.estagio);
+                      if (nextStage) await moverOportunidade(opp.id, nextStage);
                     },
                   },
                   {
                     label: '← Etapa\nanterior',
                     color: 'bg-ink',
-                    onPress: () => {
-                      // TODO: Move to previous stage
+                    onPress: async () => {
+                      const prevStage = getPrevStage(opp.estagio);
+                      if (prevStage) await moverOportunidade(opp.id, prevStage);
                     },
                   },
                   {
                     label: 'Marcar\nganho',
                     color: 'bg-pos',
-                    onPress: () => {
-                      // TODO: Mark as won
+                    onPress: async () => {
+                      await moverOportunidade(opp.id, 'fechado');
                     },
                   },
                 ]}

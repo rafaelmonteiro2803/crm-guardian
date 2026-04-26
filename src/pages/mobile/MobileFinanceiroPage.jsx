@@ -10,7 +10,7 @@ import { DollarSign } from 'lucide-react';
 export function MobileFinanceiroPage() {
   const { session } = useAuth();
   const { tenantId } = useTenant();
-  const { titulos } = useVendas(tenantId, session?.user?.id);
+  const { titulos, marcarComoPago } = useVendas(tenantId, session?.user?.id);
   const { navigate } = useMobileRouter();
   const [activeFilter, setActiveFilter] = useState('todos');
 
@@ -93,22 +93,15 @@ export function MobileFinanceiroPage() {
                 {
                   label: 'Marcar\npago',
                   color: 'bg-pos',
-                  onPress: () => {
-                    // TODO: Call marcarComoPago
+                  onPress: async () => {
+                    await marcarComoPago(titulo.id);
                   },
                 },
                 {
                   label: 'Pagar\nparcial',
                   color: 'bg-warn',
                   onPress: () => {
-                    // TODO: Open partial payment modal
-                  },
-                },
-                {
-                  label: 'Cobrança\nWhatsApp',
-                  color: 'bg-info',
-                  onPress: () => {
-                    // TODO: Send WhatsApp message
+                    navigate(`/m/financeiro/${titulo.id}/pagar-parcial`);
                   },
                 },
               ]}

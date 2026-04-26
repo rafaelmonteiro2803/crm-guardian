@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   fetchVendas,
   createVenda,
@@ -20,14 +20,21 @@ export function useVendas(tenantId, userId, onNovaOS, onAtualizarOS) {
   const [titulos, setTitulos] = useState([]);
 
   const carregarVendas = async () => {
+    if (!tenantId) return;
     const data = await fetchVendas(tenantId);
     setVendas(data);
   };
 
   const carregarTitulos = async () => {
+    if (!tenantId) return;
     const data = await fetchTitulos(tenantId);
     setTitulos(data);
   };
+
+  useEffect(() => {
+    carregarVendas();
+    carregarTitulos();
+  }, [tenantId]);
 
   const calcularTotalVenda = (itens, desconto) => {
     const sub = itens.reduce(
