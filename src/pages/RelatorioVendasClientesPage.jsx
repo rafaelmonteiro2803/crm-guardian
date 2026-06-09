@@ -147,7 +147,7 @@ export function RelatorioVendasClientesPage({ vendas = [], titulos = [], cliente
                       const descricao = venda.descricao || "-";
                       const pgto = (venda.forma_pagamento || "-").toLowerCase();
                       const valorFormatado = fmtBRL(venda.valor);
-                      const statusTitulo = aberto ? "PAGO" : "EM ABERTO";
+                      const statusTitulo = aberto ? "EM ABERTO" : "PAGO";
 
                       return (
                         <tr key={venda.id} className="hover:bg-gray-50">
