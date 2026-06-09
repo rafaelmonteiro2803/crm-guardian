@@ -195,7 +195,18 @@ export function RelatorioVendasClientesPage({ vendas = [], titulos = [], cliente
                 </p>
               ) : (
                 <div className="space-y-3">
-                  {titulosModal.titulos.map((t) => (
+                  {titulosModal.titulos
+                    .sort((a, b) => {
+                      const dataEmissaoA = new Date(a.data_emissao).getTime();
+                      const dataEmissaoB = new Date(b.data_emissao).getTime();
+                      if (dataEmissaoA !== dataEmissaoB) {
+                        return dataEmissaoA - dataEmissaoB;
+                      }
+                      const dataVencimentoA = new Date(a.data_vencimento).getTime();
+                      const dataVencimentoB = new Date(b.data_vencimento).getTime();
+                      return dataVencimentoA - dataVencimentoB;
+                    })
+                    .map((t) => (
                     <div key={t.id} className="border border-gray-200 rounded p-3">
                       <div className="flex items-start justify-between">
                         <div>
