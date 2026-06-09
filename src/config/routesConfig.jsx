@@ -178,7 +178,7 @@ export const renderRoute = (viewMode, props) => {
     case "compras_por_dia":
       return <ComprasPorDiaPage vendas={vendas} fmtBRL={fmtBRL} />;
     case "relatorio_vendas_clientes":
-      return <RelatorioVendasClientesPage vendas={vendas} titulos={titulos} clientes={clientes} fmtBRL={fmtBRL} getClienteNome={getClienteNome} />;
+      return <RelatorioVendasClientesPage vendas={vendas} titulos={titulos} clientes={clientes} fmtBRL={fmtBRL} />;
     default:
       return null;
   }
