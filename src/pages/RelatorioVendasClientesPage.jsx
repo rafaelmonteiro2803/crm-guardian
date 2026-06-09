@@ -60,9 +60,11 @@ export function RelatorioVendasClientesPage({ vendas, titulos, clientes, fmtBRL,
     setTitulosModalAberto(false);
   };
 
-  const vendaParaExibir = clienteSelecionado
-    ? getVendasPorCliente[clienteSelecionado.id] || []
-    : [];
+  const vendaParaExibir = useMemo(() => {
+    if (!clienteSelecionado) return [];
+    const vendasCliente = getVendasPorCliente[clienteSelecionado.id];
+    return Array.isArray(vendasCliente) ? vendasCliente : [];
+  }, [clienteSelecionado, getVendasPorCliente]);
 
   return (
     <div className="space-y-4">
