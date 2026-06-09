@@ -54,7 +54,7 @@ export function RelatorioVendasClientesPage({ vendas, titulos, clientes, fmtBRL,
     if (!clienteSelecionado || !vendasPorCliente[clienteSelecionado.id]) {
       return [];
     }
-    return vendasPorCliente[clienteSelecionado.id];
+    return vendasPorCliente[clienteSelecionado.id] || [];
   }, [clienteSelecionado, vendasPorCliente]);
 
   // Títulos de uma venda
@@ -142,84 +142,54 @@ export function RelatorioVendasClientesPage({ vendas, titulos, clientes, fmtBRL,
               Nenhuma venda encontrada para este cliente.
             </div>
           ) : (
-            <DataGrid
-              columns={[
-                {
-                  key: "data_venda",
-                  label: "Data da Venda",
-                  render: (v) => {
-                    try {
-                      return new Date(v.data_venda).toLocaleDateString("pt-BR");
-                    } catch {
-                      return "N/A";
-                    }
-                  },
-                  sortValue: (v) => v.data_venda || "",
-                },
-                {
-                  key: "descricao",
-                  label: "Descrição",
-                  render: (v) => <span className="text-xs">{v.descricao || "-"}</span>,
-                  filterValue: (v) => v.descricao || "",
-                },
-                {
-                  key: "forma_pagamento",
-                  label: "Forma de Pgto",
-                  render: (v) => <span className="capitalize text-xs">{v.forma_pagamento || "-"}</span>,
-                  filterValue: (v) => v.forma_pagamento || "",
-                },
-                {
-                  key: "valor",
-                  label: "Valor",
-                  render: (v) => {
-                    try {
+            <div className="bg-white border border-gray-200 rounded overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b bg-gray-50">
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Data</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Descrição</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Pgto</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Valor</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Título?</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Ação</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {vendasSelecionadas.map((venda) => {
+                      const aberto = temTituloEmAberto(venda.id);
+                      const titulosDaVenda = getTitulosPorVenda(venda.id);
                       return (
-                        <span className="font-medium text-green-700">
-                          R$ {fmtBRL(v.valor)}
-                        </span>
+                        <tr key={venda.id} className="hover:bg-gray-50">
+                          <td className="px-3 py-2">{new Date(venda.data_venda).toLocaleDateString("pt-BR")}</td>
+                          <td className="px-3 py-2">{venda.descricao || "-"}</td>
+                          <td className="px-3 py-2">{(venda.forma_pagamento || "-").toLowerCase()}</td>
+                          <td className="px-3 py-2 text-green-700 font-medium">R$ {fmtBRL(venda.valor)}</td>
+                          <td className="px-3 py-2">
+                            {aberto ? (
+                              <span className="inline-flex items-center gap-1 text-xs font-medium text-orange-600 bg-orange-50 px-2 py-1 rounded">
+                                <Icons.AlertCircle className="w-3 h-3" /> Sim
+                              </span>
+                            ) : (
+                              <span className="text-gray-400">Não</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-2">
+                            <button
+                              onClick={() => abrirTitulosModal(venda.id)}
+                              className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded flex items-center gap-1 whitespace-nowrap"
+                            >
+                              <Icons.Eye className="w-3 h-3" />
+                              Ver ({titulosDaVenda.length})
+                            </button>
+                          </td>
+                        </tr>
                       );
-                    } catch {
-                      return <span className="text-xs text-gray-400">N/A</span>;
-                    }
-                  },
-                  sortValue: (v) => parseFloat(v.valor || 0),
-                },
-                {
-                  key: "titulo_status",
-                  label: "Título Aberto?",
-                  filterable: false,
-                  render: (v) => {
-                    const aberto = temTituloEmAberto(v.id);
-                    return aberto ? (
-                      <span className="inline-flex items-center gap-1 text-xs font-medium text-orange-600 bg-orange-50 px-2 py-1 rounded">
-                        <Icons.AlertCircle className="w-3 h-3" /> Sim
-                      </span>
-                    ) : (
-                      <span className="text-xs text-gray-400">Não</span>
-                    );
-                  },
-                },
-                {
-                  key: "titulos_action",
-                  label: "Títulos",
-                  filterable: false,
-                  render: (v) => {
-                    const titulosDaVenda = getTitulosPorVenda(v.id);
-                    return (
-                      <button
-                        onClick={() => abrirTitulosModal(v.id)}
-                        className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded flex items-center gap-1"
-                      >
-                        <Icons.Eye className="w-3 h-3" />
-                        Ver ({titulosDaVenda.length})
-                      </button>
-                    );
-                  },
-                },
-              ]}
-              data={vendasSelecionadas}
-              emptyMessage="Nenhuma venda encontrada."
-            />
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           )}
         </div>
       )}
