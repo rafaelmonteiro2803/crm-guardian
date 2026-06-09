@@ -2,7 +2,11 @@ import React, { useState, useMemo } from "react";
 import { Icons } from "../components/Icons";
 import { DataGrid } from "../components/DataGrid";
 
-export function RelatorioVendasClientesPage({ vendas, titulos, clientes, fmtBRL, getClienteNome }) {
+export function RelatorioVendasClientesPage({ vendas, titulos, clientes, fmtBRL: formatBRL }) {
+  // Garantir que fmtBRL é uma função válida
+  const fmtBRL = typeof formatBRL === 'function'
+    ? formatBRL
+    : (v) => parseFloat(v || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 });
   const [clienteFiltro, setClienteFiltro] = useState("");
   const [clienteSelecionado, setClienteSelecionado] = useState(null);
   const [titulosModal, setTitulosModal] = useState(null);
