@@ -203,6 +203,9 @@ export function RelatorioVendasClientesPage({ vendas = [], titulos = [], cliente
                           <p className="text-[11px] text-gray-500 mt-1">
                             Emissão: {new Date(t.data_emissao).toLocaleDateString("pt-BR")} • Vencimento: {new Date(t.data_vencimento).toLocaleDateString("pt-BR")}
                           </p>
+                          <p className="text-[11px] text-gray-400 mt-1">
+                            Criado: {new Date(t.created_at).toLocaleDateString("pt-BR")} às {new Date(t.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })} • Atualizado: {new Date(t.updated_at).toLocaleDateString("pt-BR")} às {new Date(t.updated_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                          </p>
                         </div>
                         <div className="text-right">
                           <p className="text-xs font-semibold text-gray-800">R$ {fmtBRL(t.valor)}</p>
