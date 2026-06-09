@@ -135,7 +135,7 @@ export function RelatorioVendasClientesPage({ vendas = [], titulos = [], cliente
                       <th className="px-3 py-2 text-left font-medium text-gray-600">Descrição</th>
                       <th className="px-3 py-2 text-left font-medium text-gray-600">Pgto</th>
                       <th className="px-3 py-2 text-left font-medium text-gray-600">Valor</th>
-                      <th className="px-3 py-2 text-left font-medium text-gray-600">Título?</th>
+                      <th className="px-3 py-2 text-left font-medium text-gray-600">Status</th>
                       <th className="px-3 py-2 text-left font-medium text-gray-600">Ação</th>
                     </tr>
                   </thead>
@@ -147,7 +147,7 @@ export function RelatorioVendasClientesPage({ vendas = [], titulos = [], cliente
                       const descricao = venda.descricao || "-";
                       const pgto = (venda.forma_pagamento || "-").toLowerCase();
                       const valorFormatado = fmtBRL(venda.valor);
-                      const statusTitulo = aberto ? "Sim" : "Não";
+                      const statusTitulo = aberto ? "Com títulos em aberto" : "Não tem títulos em aberto";
 
                       return (
                         <tr key={venda.id} className="hover:bg-gray-50">
