@@ -51,12 +51,29 @@ export function RelatorioVendasClientesPage({ vendas = [], titulos = [], cliente
         return venda && venda.cliente_id === cid && t.status !== "pago" && t.status !== "cancelado";
       });
 
+      // Calcular dias desde o último título pago
+      const titulosPagosCliente = titulos.filter((t) => {
+        const venda = vendas.find((v) => v.id === t.venda_id);
+        return venda && venda.cliente_id === cid && t.status === "pago" && t.data_pagamento;
+      });
+
+      let diasUltimoPagamento = null;
+      if (titulosPagosCliente.length > 0) {
+        const ultimoPago = titulosPagosCliente.reduce((maior, t) => {
+          return new Date(t.data_pagamento) > new Date(maior.data_pagamento) ? t : maior;
+        });
+        const dataUltimoPago = new Date(ultimoPago.data_pagamento);
+        const hoje = new Date();
+        diasUltimoPagamento = Math.floor((hoje - dataUltimoPago) / (1000 * 60 * 60 * 24));
+      }
+
       return {
         id: cid,
         nome: cliente?.nome || "N/A",
         quantidadeVendas: vendasCliente.length,
         quantidadeTitulosEmAberto: titulosEmAbertoCliente.length,
-        valorTitulosEmAberto: titulosEmAbertoCliente.reduce((sum, t) => sum + parseFloat(t.valor || 0), 0)
+        valorTitulosEmAberto: titulosEmAbertoCliente.reduce((sum, t) => sum + parseFloat(t.valor || 0), 0),
+        diasUltimoPagamento
       };
     }).sort((a, b) => b.quantidadeTitulosEmAberto - a.quantidadeTitulosEmAberto);
   }, [vendas, titulos, clientes, vendasPorCliente]);
@@ -164,24 +181,42 @@ export function RelatorioVendasClientesPage({ vendas = [], titulos = [], cliente
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {clientesComTitulosEmAberto.map((cliente) => (
-                  <button
-                    key={cliente.id}
-                    onClick={() => handleSelecionarCliente(cliente)}
-                    className="bg-white border border-gray-200 rounded p-4 text-left hover:border-blue-400 hover:bg-blue-50 transition-colors"
-                  >
-                    <p className="font-medium text-gray-800 text-sm mb-2">{cliente.nome}</p>
-                    <div className="space-y-1 text-[11px] text-gray-600">
-                      <p>📊 {cliente.quantidadeVendas} venda(s)</p>
-                      <p className="text-orange-600 font-medium">
-                        ⚠️ {cliente.quantidadeTitulosEmAberto} título(s) em aberto
-                      </p>
-                      <p className="text-green-700">
-                        💰 R$ {fmtBRL(cliente.valorTitulosEmAberto)}
-                      </p>
-                    </div>
-                  </button>
-                ))}
+                {clientesComTitulosEmAberto.map((cliente) => {
+                  const atencaoPagamento = cliente.diasUltimoPagamento !== null && cliente.diasUltimoPagamento > 30;
+
+                  return (
+                    <button
+                      key={cliente.id}
+                      onClick={() => handleSelecionarCliente(cliente)}
+                      className={`bg-white border rounded p-4 text-left transition-colors ${
+                        atencaoPagamento
+                          ? "border-red-300 hover:border-red-400 hover:bg-red-50"
+                          : "border-gray-200 hover:border-blue-400 hover:bg-blue-50"
+                      }`}
+                    >
+                      <p className="font-medium text-gray-800 text-sm mb-2">{cliente.nome}</p>
+                      <div className="space-y-1 text-[11px] text-gray-600">
+                        <p>📊 {cliente.quantidadeVendas} venda(s)</p>
+                        <p className="text-orange-600 font-medium">
+                          ⚠️ {cliente.quantidadeTitulosEmAberto} título(s) em aberto
+                        </p>
+                        <p className="text-green-700">
+                          💰 R$ {fmtBRL(cliente.valorTitulosEmAberto)}
+                        </p>
+                        {cliente.diasUltimoPagamento !== null && (
+                          <p className={atencaoPagamento ? "text-red-600 font-medium" : "text-gray-500"}>
+                            {atencaoPagamento ? "🔴" : "✓"} Último pagamento: {cliente.diasUltimoPagamento} dias
+                          </p>
+                        )}
+                        {cliente.diasUltimoPagamento === null && (
+                          <p className="text-gray-400">
+                            ⊘ Nenhum pagamento registrado
+                          </p>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
