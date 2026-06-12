@@ -30,6 +30,37 @@ export function RelatorioVendasClientesPage({ vendas = [], titulos = [], cliente
     return mapa;
   }, [vendas]);
 
+  // Obter clientes com títulos em aberto
+  const clientesComTitulosEmAberto = useMemo(() => {
+    const clientesSet = new Set();
+
+    titulos.forEach((t) => {
+      if (t.status !== "pago" && t.status !== "cancelado") {
+        const venda = vendas.find((v) => v.id === t.venda_id);
+        if (venda) {
+          clientesSet.add(venda.cliente_id);
+        }
+      }
+    });
+
+    return Array.from(clientesSet).map((cid) => {
+      const cliente = clientes.find((c) => c.id === cid);
+      const vendasCliente = vendasPorCliente[cid] || [];
+      const titulosEmAbertoCliente = titulos.filter((t) => {
+        const venda = vendas.find((v) => v.id === t.venda_id);
+        return venda && venda.cliente_id === cid && t.status !== "pago" && t.status !== "cancelado";
+      });
+
+      return {
+        id: cid,
+        nome: cliente?.nome || "N/A",
+        quantidadeVendas: vendasCliente.length,
+        quantidadeTitulosEmAberto: titulosEmAbertoCliente.length,
+        valorTitulosEmAberto: titulosEmAbertoCliente.reduce((sum, t) => sum + parseFloat(t.valor || 0), 0)
+      };
+    }).sort((a, b) => b.quantidadeTitulosEmAberto - a.quantidadeTitulosEmAberto);
+  }, [vendas, titulos, clientes, vendasPorCliente]);
+
   // Lista de clientes com vendas
   const clientesComVendas = useMemo(() => {
     return Object.keys(vendasPorCliente).map((cid) => {
@@ -70,13 +101,13 @@ export function RelatorioVendasClientesPage({ vendas = [], titulos = [], cliente
     return titulosDaVenda.some((t) => t.status !== "pago" && t.status !== "cancelado");
   };
 
-  const handleLimpar = () => {
-    setClienteSelecionado(null);
+  const handleSelecionarCliente = (cliente) => {
+    setClienteSelecionado(cliente);
     setClienteFiltro("");
   };
 
-  const handleSelecionarCliente = (cliente) => {
-    setClienteSelecionado(cliente);
+  const handleLimpar = () => {
+    setClienteSelecionado(null);
     setClienteFiltro("");
   };
 
@@ -85,47 +116,75 @@ export function RelatorioVendasClientesPage({ vendas = [], titulos = [], cliente
       <h2 className="text-sm font-semibold text-gray-700">Relatório de Vendas por Cliente</h2>
 
       {!clienteSelecionado ? (
-        <div className="bg-white border border-gray-200 rounded p-4 space-y-3">
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-2">Selecione um Cliente</label>
+        <div className="space-y-4">
+          {/* Barra de busca */}
+          <div className="bg-white border border-gray-200 rounded p-4">
+            <label className="block text-xs font-medium text-gray-600 mb-2">Buscar Cliente</label>
             <input
               type="text"
               value={clienteFiltro}
               onChange={(e) => setClienteFiltro(e.target.value)}
-              placeholder="Buscar cliente..."
+              placeholder="Digite o nome do cliente..."
               className="w-full border border-gray-200 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-gray-400 outline-none"
-              autoFocus
             />
+
+            {clienteFiltro.trim().length > 0 && (
+              <div className="mt-3 border border-gray-200 rounded overflow-hidden max-h-64 overflow-y-auto">
+                {clientesFiltrados.length === 0 ? (
+                  <div className="px-3 py-4 text-xs text-gray-400 text-center">
+                    Nenhum cliente encontrado com "{clienteFiltro}"
+                  </div>
+                ) : (
+                  clientesFiltrados.map((c) => (
+                    <button
+                      key={c.id}
+                      onClick={() => handleSelecionarCliente(c)}
+                      className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-left hover:bg-blue-50 border-b border-gray-100 last:border-b-0 transition-colors"
+                    >
+                      <span className="font-medium text-gray-800">{c.nome}</span>
+                      <span className="text-gray-400 text-[11px] ml-auto">
+                        {c.quantidadeVendas} venda(s)
+                      </span>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
           </div>
 
-          {clienteFiltro.trim().length > 0 && (
-            <div className="border border-gray-200 rounded overflow-hidden max-h-64 overflow-y-auto">
-              {clientesFiltrados.length === 0 ? (
-                <div className="px-3 py-4 text-xs text-gray-400 text-center">
-                  Nenhum cliente encontrado com "{clienteFiltro}"
-                </div>
-              ) : (
-                clientesFiltrados.map((c) => (
-                  <button
-                    key={c.id}
-                    onClick={() => handleSelecionarCliente(c)}
-                    className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-left hover:bg-blue-50 border-b border-gray-100 last:border-b-0 transition-colors"
-                  >
-                    <span className="font-medium text-gray-800">{c.nome}</span>
-                    <span className="text-gray-400 text-[11px] ml-auto">
-                      {c.quantidadeVendas} venda(s)
-                    </span>
-                  </button>
-                ))
-              )}
-            </div>
-          )}
+          {/* Grid de clientes com títulos em aberto */}
+          <div>
+            <h3 className="text-xs font-semibold text-gray-700 mb-3">
+              Clientes com Títulos em Aberto ({clientesComTitulosEmAberto.length})
+            </h3>
 
-          {clienteFiltro.trim().length === 0 && (
-            <div className="px-3 py-4 text-xs text-gray-400 text-center">
-              Digite o nome de um cliente para buscar
-            </div>
-          )}
+            {clientesComTitulosEmAberto.length === 0 ? (
+              <div className="bg-white border border-gray-200 rounded p-6 text-center text-xs text-gray-400">
+                Nenhum cliente com títulos em aberto.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {clientesComTitulosEmAberto.map((cliente) => (
+                  <button
+                    key={cliente.id}
+                    onClick={() => handleSelecionarCliente(cliente)}
+                    className="bg-white border border-gray-200 rounded p-4 text-left hover:border-blue-400 hover:bg-blue-50 transition-colors"
+                  >
+                    <p className="font-medium text-gray-800 text-sm mb-2">{cliente.nome}</p>
+                    <div className="space-y-1 text-[11px] text-gray-600">
+                      <p>📊 {cliente.quantidadeVendas} venda(s)</p>
+                      <p className="text-orange-600 font-medium">
+                        ⚠️ {cliente.quantidadeTitulosEmAberto} título(s) em aberto
+                      </p>
+                      <p className="text-green-700">
+                        💰 R$ {fmtBRL(cliente.valorTitulosEmAberto)}
+                      </p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       ) : (
         <div className="space-y-3">
@@ -140,7 +199,7 @@ export function RelatorioVendasClientesPage({ vendas = [], titulos = [], cliente
               onClick={handleLimpar}
               className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded"
             >
-              Mudar Cliente
+              Voltar
             </button>
           </div>
 
