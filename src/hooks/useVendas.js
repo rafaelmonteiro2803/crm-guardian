@@ -172,7 +172,7 @@ export function useVendas(tenantId, userId, onNovaOS, onAtualizarOS) {
     const saldoValor = pagarParcial ? parseFloat(form.valor) - valorParcialNum : 0;
 
     const dadosTitulo = {
-      venda_id: form.venda_id || null,
+      venda_id: form.venda_id || editando?.venda_id || null,
       descricao: form.descricao,
       valor: pagarParcial ? valorParcialNum.toFixed(2) : form.valor,
       data_emissao: form.data_emissao,
