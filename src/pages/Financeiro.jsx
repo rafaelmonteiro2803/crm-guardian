@@ -48,7 +48,7 @@ export function FinanceiroPage({ titulos, vendas, fmtBRL, onSalvar, onExcluir, o
 
   const getClienteDoTitulo = (t) => {
     const venda = vendas.find((v) => v.id === t.venda_id);
-    return venda && getClienteNome ? getClienteNome(venda.cliente_id) : (t.descricao || "-");
+    return venda && getClienteNome ? getClienteNome(venda.cliente_id) : "-";
   };
 
   const totalRecebido = pagos.reduce((s, t) => s + parseFloat(t.valor || 0), 0);
