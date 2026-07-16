@@ -56,6 +56,7 @@ export function TituloModal({ editando, vendas, titulos, fmtBRL, onSalvar, onFec
     const e = {};
     if (!form.descricao.trim()) e.descricao = true;
     if (!form.data_vencimento) e.data_vencimento = true;
+    if (!form.venda_id) e.venda_id = true;
     if (Object.keys(e).length) return setErros(e);
     if (pagarParcial && valorParcialNum > 0 && saldoParcial > 0.01) {
       setConfirmandoSaldo(true);
@@ -133,6 +134,25 @@ export function TituloModal({ editando, vendas, titulos, fmtBRL, onSalvar, onFec
               </div>
             </div>
           )}
+
+          <div>
+            <label className="block text-xs text-gray-600 mb-0.5">Venda Relacionada *</label>
+            <select
+              value={form.venda_id}
+              onChange={(e) => set({ venda_id: e.target.value })}
+              disabled={!!editando}
+              className={`w-full border rounded px-2.5 py-1.5 text-sm outline-none ${
+                erros.venda_id ? "border-red-500" : "border-gray-200"
+              } ${editando ? "bg-gray-50 text-gray-700 cursor-not-allowed" : "focus:ring-1 focus:ring-gray-400"}`}
+            >
+              <option value="">Selecione uma venda...</option>
+              {vendas.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.descricao} - R$ {Number(v.valor).toFixed(2)}
+                </option>
+              ))}
+            </select>
+          </div>
 
           <div>
             <label className="block text-xs text-gray-600 mb-0.5">Descrição *</label>
