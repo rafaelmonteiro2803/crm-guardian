@@ -166,13 +166,17 @@ export function useVendas(tenantId, userId, onNovaOS, onAtualizarOS) {
       alert("Descrição é obrigatória!");
       return;
     }
+    if (!form.venda_id) {
+      alert("É obrigatório selecionar uma venda para o título!");
+      return;
+    }
 
     const pagarParcial = form.pagarParcial && parseFloat(form.valor_parcial) > 0;
     const valorParcialNum = pagarParcial ? parseFloat(form.valor_parcial) : 0;
     const saldoValor = pagarParcial ? parseFloat(form.valor) - valorParcialNum : 0;
 
     const dadosTitulo = {
-      venda_id: form.venda_id || editando?.venda_id || null,
+      venda_id: form.venda_id || editando?.venda_id,
       descricao: form.descricao,
       valor: pagarParcial ? valorParcialNum.toFixed(2) : form.valor,
       data_emissao: form.data_emissao,
@@ -202,7 +206,7 @@ export function useVendas(tenantId, userId, onNovaOS, onAtualizarOS) {
 
     if (pagarParcial && saldoValor > 0.01) {
       const tituloSaldo = {
-        venda_id: form.venda_id || (editando?.venda_id) || null,
+        venda_id: form.venda_id || editando?.venda_id,
         descricao: `${form.descricao} (saldo)`,
         valor: saldoValor.toFixed(2),
         data_emissao: hoje(),
