@@ -409,7 +409,115 @@ export function DashboardPage({ clientes, oportunidades, vendas, titulos, fmtBRL
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        <div className="bg-white border border-gray-200 rounded p-4">
+          <h3 className="text-xs font-medium text-gray-500 mb-3 flex items-center gap-1">
+            <Icons.BarChart className="w-3.5 h-3.5" />Vendas por Mês
+          </h3>
+          {vendasPorMes.length === 0 ? (
+            <p className="text-gray-400 text-center py-6 text-xs">Nenhuma venda registrada.</p>
+          ) : (() => {
+            const mx = Math.max(...vendasPorMes.map((m) => m.total));
+            const BAR_MAX = 140;
+            const diaAtual = new Date().getDate();
+            return (
+              <>
+                <div className="flex items-end gap-1">
+                  {vendasPorMes.map((m, i) => {
+                    const barH = mx > 0 ? Math.max((m.total / mx) * BAR_MAX, 3) : 3;
+                    const parcialH = mx > 0 ? Math.max((m.parcial / mx) * BAR_MAX, 3) : 3;
+                    return (
+                      <div key={i} className="flex-1 flex flex-col items-center">
+                        <div className="flex items-end gap-0.5 w-full">
+                          <div className="flex-1 flex flex-col items-center">
+                            <span className="text-[9px] text-gray-500 mb-1 leading-tight">
+                              {m.total.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}
+                            </span>
+                            <div
+                              className="w-full bg-gray-700 rounded-t hover:bg-gray-600 transition-colors"
+                              style={{ height: `${barH}px` }}
+                              title={`Total ${m.label}: R$ ${fmtBRL(m.total)} (${m.count} vendas)`}
+                            />
+                          </div>
+                          <div className="flex-1 flex flex-col items-center">
+                            <span className="text-[9px] text-blue-500 mb-1 leading-tight">
+                              {m.parcial.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}
+                            </span>
+                            <div
+                              className="w-full bg-blue-400 rounded-t hover:bg-blue-300 transition-colors"
+                              style={{ height: `${parcialH}px` }}
+                              title={`Até dia ${diaAtual} em ${m.label}: R$ ${fmtBRL(m.parcial)} (${m.countParcial} vendas)`}
+                            />
+                          </div>
+                        </div>
+                        <span className="text-[9px] text-gray-400 mt-1">{m.label}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="flex items-center gap-3 mt-2 justify-end">
+                  <span className="flex items-center gap-1 text-[10px] text-gray-400">
+                    <span className="inline-block w-2.5 h-2.5 rounded-sm bg-gray-700" />Total do mês
+                  </span>
+                  <span className="flex items-center gap-1 text-[10px] text-gray-400">
+                    <span className="inline-block w-2.5 h-2.5 rounded-sm bg-blue-400" />Até dia {new Date().getDate()}
+                  </span>
+                </div>
+              </>
+            );
+          })()}
+        </div>
+
+        <div className="bg-white border border-gray-200 rounded p-4">
+          <h3 className="text-xs font-medium text-gray-500 mb-3 flex items-center gap-1">
+            <Icons.TrendingUp className="w-3.5 h-3.5" />Oportunidades - Pago x Pendente
+          </h3>
+          {faturamentoMensal.length === 0 ? (
+            <p className="text-gray-400 text-center py-6 text-xs">Nenhuma venda registrada.</p>
+          ) : (() => {
+            const mx = Math.max(...faturamentoMensal.map((m) => m.pago + m.pendente));
+            const BAR_MAX = 140;
+            return (
+              <div>
+                <div className="flex items-end gap-1">
+                  {faturamentoMensal.map((m, i) => {
+                    const total = m.pago + m.pendente;
+                    const barH = mx > 0 ? Math.max((total / mx) * BAR_MAX, 3) : 3;
+                    const pxPago = total > 0 ? Math.round((m.pago / total) * barH) : 0;
+                    const pxPendente = barH - pxPago;
+                    return (
+                      <div key={i} className="flex-1 flex flex-col items-center">
+                        <span className="text-[10px] text-gray-500 mb-1">
+                          R$ {total.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}
+                        </span>
+                        <div
+                          className="w-full rounded-t overflow-hidden"
+                          style={{ height: `${barH}px` }}
+                          title={`${m.label}: Pago R$ ${fmtBRL(m.pago)} · Pendente R$ ${fmtBRL(m.pendente)}`}
+                        >
+                          <div className="w-full" style={{ height: `${pxPendente}px`, background: "#e84672" }} />
+                          <div className="w-full" style={{ height: `${pxPago}px`, background: "#22c55e" }} />
+                        </div>
+                        <span className="text-[10px] text-gray-400 mt-1">{m.label}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="flex items-center justify-center gap-4 mt-2">
+                  <span className="flex items-center gap-1 text-[10px] text-gray-500">
+                    <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: "#22c55e" }} />Pago
+                  </span>
+                  <span className="flex items-center gap-1 text-[10px] text-gray-500">
+                    <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: "#e84672" }} />Pendente
+                  </span>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <div className="bg-white border border-gray-200 rounded p-4">
           <h3 className="text-xs font-medium text-gray-500 mb-3 flex items-center gap-1">
             <Icons.BarChart className="w-3.5 h-3.5" />Contas a Pagar por Mês
@@ -550,114 +658,6 @@ export function DashboardPage({ clientes, oportunidades, vendas, titulos, fmtBRL
                   </span>
                   <span className="flex items-center gap-1 text-[10px] text-gray-500">
                     <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: statusCores.aguardando_pagamento }} />Aguardando
-                  </span>
-                </div>
-              </div>
-            );
-          })()}
-        </div>
-
-        <div className="bg-white border border-gray-200 rounded p-4">
-          <h3 className="text-xs font-medium text-gray-500 mb-3 flex items-center gap-1">
-            <Icons.BarChart className="w-3.5 h-3.5" />Vendas por Mês
-          </h3>
-          {vendasPorMes.length === 0 ? (
-            <p className="text-gray-400 text-center py-6 text-xs">Nenhuma venda registrada.</p>
-          ) : (() => {
-            const mx = Math.max(...vendasPorMes.map((m) => m.total));
-            const BAR_MAX = 140;
-            const diaAtual = new Date().getDate();
-            return (
-              <>
-                <div className="flex items-end gap-1">
-                  {vendasPorMes.map((m, i) => {
-                    const barH = mx > 0 ? Math.max((m.total / mx) * BAR_MAX, 3) : 3;
-                    const parcialH = mx > 0 ? Math.max((m.parcial / mx) * BAR_MAX, 3) : 3;
-                    return (
-                      <div key={i} className="flex-1 flex flex-col items-center">
-                        <div className="flex items-end gap-0.5 w-full">
-                          <div className="flex-1 flex flex-col items-center">
-                            <span className="text-[9px] text-gray-500 mb-1 leading-tight">
-                              {m.total.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}
-                            </span>
-                            <div
-                              className="w-full bg-gray-700 rounded-t hover:bg-gray-600 transition-colors"
-                              style={{ height: `${barH}px` }}
-                              title={`Total ${m.label}: R$ ${fmtBRL(m.total)} (${m.count} vendas)`}
-                            />
-                          </div>
-                          <div className="flex-1 flex flex-col items-center">
-                            <span className="text-[9px] text-blue-500 mb-1 leading-tight">
-                              {m.parcial.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}
-                            </span>
-                            <div
-                              className="w-full bg-blue-400 rounded-t hover:bg-blue-300 transition-colors"
-                              style={{ height: `${parcialH}px` }}
-                              title={`Até dia ${diaAtual} em ${m.label}: R$ ${fmtBRL(m.parcial)} (${m.countParcial} vendas)`}
-                            />
-                          </div>
-                        </div>
-                        <span className="text-[9px] text-gray-400 mt-1">{m.label}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="flex items-center gap-3 mt-2 justify-end">
-                  <span className="flex items-center gap-1 text-[10px] text-gray-400">
-                    <span className="inline-block w-2.5 h-2.5 rounded-sm bg-gray-700" />Total do mês
-                  </span>
-                  <span className="flex items-center gap-1 text-[10px] text-gray-400">
-                    <span className="inline-block w-2.5 h-2.5 rounded-sm bg-blue-400" />Até dia {new Date().getDate()}
-                  </span>
-                </div>
-              </>
-            );
-          })()}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        <div className="bg-white border border-gray-200 rounded p-4">
-          <h3 className="text-xs font-medium text-gray-500 mb-3 flex items-center gap-1">
-            <Icons.TrendingUp className="w-3.5 h-3.5" />Oportunidades - Pago x Pendente
-          </h3>
-          {faturamentoMensal.length === 0 ? (
-            <p className="text-gray-400 text-center py-6 text-xs">Nenhuma venda registrada.</p>
-          ) : (() => {
-            const mx = Math.max(...faturamentoMensal.map((m) => m.pago + m.pendente));
-            const BAR_MAX = 140;
-            return (
-              <div>
-                <div className="flex items-end gap-1">
-                  {faturamentoMensal.map((m, i) => {
-                    const total = m.pago + m.pendente;
-                    const barH = mx > 0 ? Math.max((total / mx) * BAR_MAX, 3) : 3;
-                    const pxPago = total > 0 ? Math.round((m.pago / total) * barH) : 0;
-                    const pxPendente = barH - pxPago;
-                    return (
-                      <div key={i} className="flex-1 flex flex-col items-center">
-                        <span className="text-[10px] text-gray-500 mb-1">
-                          R$ {total.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}
-                        </span>
-                        <div
-                          className="w-full rounded-t overflow-hidden"
-                          style={{ height: `${barH}px` }}
-                          title={`${m.label}: Pago R$ ${fmtBRL(m.pago)} · Pendente R$ ${fmtBRL(m.pendente)}`}
-                        >
-                          <div className="w-full" style={{ height: `${pxPendente}px`, background: "#e84672" }} />
-                          <div className="w-full" style={{ height: `${pxPago}px`, background: "#22c55e" }} />
-                        </div>
-                        <span className="text-[10px] text-gray-400 mt-1">{m.label}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="flex items-center justify-center gap-4 mt-2">
-                  <span className="flex items-center gap-1 text-[10px] text-gray-500">
-                    <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: "#22c55e" }} />Pago
-                  </span>
-                  <span className="flex items-center gap-1 text-[10px] text-gray-500">
-                    <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: "#e84672" }} />Pendente
                   </span>
                 </div>
               </div>
