@@ -80,6 +80,53 @@ function calcularFaturamentoMensal(vendas, titulos) {
     .map(([, v]) => v);
 }
 
+function calcularContasPagarPorMes(parcelas, contasPagar) {
+  const meses = {};
+  const nm = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+  const categMap = new Map();
+  contasPagar.forEach((c) => categMap.set(c.id, c.categoria));
+
+  parcelas.forEach((p) => {
+    const d = new Date(p.data_vencimento + "T00:00:00");
+    const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const l = `${nm[d.getMonth()]}/${d.getFullYear()}`;
+    if (!meses[k]) {
+      meses[k] = { label: l };
+      contasPagar.forEach((c) => {
+        const categ = c.categoria || "outros";
+        if (!meses[k][categ]) meses[k][categ] = 0;
+      });
+    }
+    const categ = categMap.get(p.conta_pagar_id) || "outros";
+    if (!meses[k][categ]) meses[k][categ] = 0;
+    meses[k][categ] += parseFloat(p.valor || 0);
+  });
+
+  return Object.entries(meses)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .slice(-12)
+    .map(([, v]) => v);
+}
+
+function calcularStatusContasPorMes(parcelas) {
+  const meses = {};
+  const nm = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+
+  parcelas.forEach((p) => {
+    const d = new Date(p.data_vencimento + "T00:00:00");
+    const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const l = `${nm[d.getMonth()]}/${d.getFullYear()}`;
+    if (!meses[k]) meses[k] = { label: l, pago: 0, em_aberto: 0, vencido: 0, cancelado: 0, aguardando_pagamento: 0 };
+    const status = p.status || "em_aberto";
+    meses[k][status] += parseFloat(p.valor || 0);
+  });
+
+  return Object.entries(meses)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .slice(-12)
+    .map(([, v]) => v);
+}
+
 const PAGE_SIZE = 2;
 
 function Paginacao({ pagina, total, onChange }) {
@@ -108,10 +155,12 @@ function Paginacao({ pagina, total, onChange }) {
   );
 }
 
-export function DashboardPage({ clientes, oportunidades, vendas, titulos, fmtBRL, ordensServico = [], salvarEvolucao }) {
+export function DashboardPage({ clientes, oportunidades, vendas, titulos, fmtBRL, ordensServico = [], salvarEvolucao, contasPagar = [], parcelas = [] }) {
   const ind = calcularIndicadores(oportunidades, vendas, titulos);
   const vendasPorMes = calcularVendasPorMes(vendas);
   const faturamentoMensal = calcularFaturamentoMensal(vendas, titulos);
+  const contasPagarPorMes = calcularContasPagarPorMes(parcelas, contasPagar);
+  const statusContasPorMes = calcularStatusContasPorMes(parcelas);
 
   const [modalEvolucao, setModalEvolucao] = useState(false);
   const [osEvolucao, setOsEvolucao] = useState(null);
@@ -360,7 +409,154 @@ export function DashboardPage({ clientes, oportunidades, vendas, titulos, fmtBRL
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+        <div className="bg-white border border-gray-200 rounded p-4">
+          <h3 className="text-xs font-medium text-gray-500 mb-3 flex items-center gap-1">
+            <Icons.BarChart className="w-3.5 h-3.5" />Contas a Pagar por Mês
+          </h3>
+          {contasPagarPorMes.length === 0 ? (
+            <p className="text-gray-400 text-center py-6 text-xs">Nenhuma conta a pagar registrada.</p>
+          ) : (() => {
+            const categorias = new Set();
+            contasPagar.forEach((c) => categorias.add(c.categoria || "outros"));
+            const categArray = Array.from(categorias);
+            const cores = {
+              aluguel: "#ef4444",
+              fornecedores: "#f97316",
+              equipamentos: "#eab308",
+              marketing: "#22c55e",
+              funcionarios: "#3b82f6",
+              impostos: "#8b5cf6",
+              taxas_cartao: "#ec4899",
+              servicos_publicos: "#06b6d4",
+              seguros: "#6366f1",
+              manutencao: "#f43f5e",
+              contabilidade: "#14b8a6",
+              juridico: "#a855f7",
+              ti_software: "#0ea5e9",
+              transporte: "#64748b",
+              combustivel: "#ca8a04",
+              alimentacao: "#d97706",
+              treinamento: "#7c3aed",
+              outros: "#9ca3af",
+            };
+            const mx = Math.max(...contasPagarPorMes.map((m) => Object.values(m).filter((v) => typeof v === "number").reduce((a, b) => a + b, 0)));
+            const BAR_MAX = 140;
+            return (
+              <div>
+                <div className="flex items-end gap-1">
+                  {contasPagarPorMes.map((m, i) => {
+                    const total = Object.values(m).filter((v) => typeof v === "number").reduce((a, b) => a + b, 0);
+                    const barH = mx > 0 ? Math.max((total / mx) * BAR_MAX, 3) : 3;
+                    let pxOffset = 0;
+                    return (
+                      <div key={i} className="flex-1 flex flex-col items-center">
+                        <span className="text-[10px] text-gray-500 mb-1">
+                          R$ {total.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}
+                        </span>
+                        <div
+                          className="w-full rounded-t overflow-hidden"
+                          style={{ height: `${barH}px` }}
+                          title={`${m.label}: ${categArray.map((c) => `${c} R$ ${(m[c] || 0).toFixed(2)}`).join(" · ")}`}
+                        >
+                          {categArray.map((categ) => {
+                            const val = m[categ] || 0;
+                            const pxAltura = val > 0 ? Math.round((val / total) * barH) : 0;
+                            const result = pxAltura > 0 ? (
+                              <div key={categ} className="w-full" style={{ height: `${pxAltura}px`, background: cores[categ] }} />
+                            ) : null;
+                            pxOffset += pxAltura;
+                            return result;
+                          })}
+                        </div>
+                        <span className="text-[10px] text-gray-400 mt-1">{m.label}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="flex flex-wrap gap-2 mt-3 justify-center">
+                  {categArray.map((categ) => (
+                    <span key={categ} className="flex items-center gap-1 text-[10px] text-gray-500">
+                      <span className="inline-block w-2 h-2 rounded-sm" style={{ background: cores[categ] }} />
+                      {categ}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+
+        <div className="bg-white border border-gray-200 rounded p-4">
+          <h3 className="text-xs font-medium text-gray-500 mb-3 flex items-center gap-1">
+            <Icons.BarChart className="w-3.5 h-3.5" />Status de Contas por Mês
+          </h3>
+          {statusContasPorMes.length === 0 ? (
+            <p className="text-gray-400 text-center py-6 text-xs">Nenhuma conta a pagar registrada.</p>
+          ) : (() => {
+            const statusCores = {
+              pago: "#22c55e",
+              em_aberto: "#eab308",
+              vencido: "#ef4444",
+              cancelado: "#6b7280",
+              aguardando_pagamento: "#3b82f6",
+            };
+            const mx = Math.max(...statusContasPorMes.map((m) => m.pago + m.em_aberto + m.vencido + m.cancelado + m.aguardando_pagamento));
+            const BAR_MAX = 140;
+            return (
+              <div>
+                <div className="flex items-end gap-1">
+                  {statusContasPorMes.map((m, i) => {
+                    const total = m.pago + m.em_aberto + m.vencido + m.cancelado + m.aguardando_pagamento;
+                    const barH = mx > 0 ? Math.max((total / mx) * BAR_MAX, 3) : 3;
+                    const pxPago = total > 0 ? Math.round((m.pago / total) * barH) : 0;
+                    const pxEmAberto = total > 0 ? Math.round((m.em_aberto / total) * barH) : 0;
+                    const pxVencido = total > 0 ? Math.round((m.vencido / total) * barH) : 0;
+                    const pxCancelado = total > 0 ? Math.round((m.cancelado / total) * barH) : 0;
+                    const pxAguardando = barH - pxPago - pxEmAberto - pxVencido - pxCancelado;
+                    return (
+                      <div key={i} className="flex-1 flex flex-col items-center">
+                        <span className="text-[10px] text-gray-500 mb-1">
+                          R$ {total.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}
+                        </span>
+                        <div
+                          className="w-full rounded-t overflow-hidden"
+                          style={{ height: `${barH}px` }}
+                          title={`${m.label}: Pago R$ ${m.pago.toFixed(2)} · Em Aberto R$ ${m.em_aberto.toFixed(2)} · Vencido R$ ${m.vencido.toFixed(2)}`}
+                        >
+                          {pxAguardando > 0 && <div className="w-full" style={{ height: `${pxAguardando}px`, background: statusCores.aguardando_pagamento }} />}
+                          {pxVencido > 0 && <div className="w-full" style={{ height: `${pxVencido}px`, background: statusCores.vencido }} />}
+                          {pxEmAberto > 0 && <div className="w-full" style={{ height: `${pxEmAberto}px`, background: statusCores.em_aberto }} />}
+                          {pxCancelado > 0 && <div className="w-full" style={{ height: `${pxCancelado}px`, background: statusCores.cancelado }} />}
+                          {pxPago > 0 && <div className="w-full" style={{ height: `${pxPago}px`, background: statusCores.pago }} />}
+                        </div>
+                        <span className="text-[10px] text-gray-400 mt-1">{m.label}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="flex items-center justify-center gap-3 mt-3 flex-wrap">
+                  <span className="flex items-center gap-1 text-[10px] text-gray-500">
+                    <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: statusCores.pago }} />Pago
+                  </span>
+                  <span className="flex items-center gap-1 text-[10px] text-gray-500">
+                    <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: statusCores.em_aberto }} />Em Aberto
+                  </span>
+                  <span className="flex items-center gap-1 text-[10px] text-gray-500">
+                    <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: statusCores.vencido }} />Vencido
+                  </span>
+                  <span className="flex items-center gap-1 text-[10px] text-gray-500">
+                    <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: statusCores.cancelado }} />Cancelado
+                  </span>
+                  <span className="flex items-center gap-1 text-[10px] text-gray-500">
+                    <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: statusCores.aguardando_pagamento }} />Aguardando
+                  </span>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+
         <div className="bg-white border border-gray-200 rounded p-4">
           <h3 className="text-xs font-medium text-gray-500 mb-3 flex items-center gap-1">
             <Icons.BarChart className="w-3.5 h-3.5" />Vendas por Mês
@@ -418,7 +614,9 @@ export function DashboardPage({ clientes, oportunidades, vendas, titulos, fmtBRL
             );
           })()}
         </div>
+      </div>
 
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <div className="bg-white border border-gray-200 rounded p-4">
           <h3 className="text-xs font-medium text-gray-500 mb-3 flex items-center gap-1">
             <Icons.TrendingUp className="w-3.5 h-3.5" />Oportunidades - Pago x Pendente
