@@ -427,30 +427,23 @@ export function DashboardPage({ clientes, oportunidades, vendas, titulos, fmtBRL
                     const barH = mx > 0 ? Math.max((m.total / mx) * BAR_MAX, 3) : 3;
                     const parcialH = mx > 0 ? Math.max((m.parcial / mx) * BAR_MAX, 3) : 3;
                     return (
-                      <div key={i} className="flex-1 flex flex-col items-center">
-                        <div className="flex items-end gap-0.5 w-full">
-                          <div className="flex-1 flex flex-col items-center">
-                            <span className="text-[9px] text-gray-500 mb-1 leading-tight">
-                              {m.total.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}
-                            </span>
+                      <div key={i} className="flex-1 min-w-0 flex flex-col items-center">
+                        <span className="text-[10px] text-gray-500 mb-1 leading-tight whitespace-nowrap">
+                          {m.total.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}
+                        </span>
+                        <div
+                          className="relative w-full bg-gray-700 rounded-t hover:bg-gray-600 transition-colors"
+                          style={{ height: `${barH}px` }}
+                          title={`${m.label}\nTotal: R$ ${fmtBRL(m.total)} (${m.count} vendas)\nAté dia ${diaAtual}: R$ ${fmtBRL(m.parcial)} (${m.countParcial} vendas)`}
+                        >
+                          {m.parcial > 0 && (
                             <div
-                              className="w-full bg-gray-700 rounded-t hover:bg-gray-600 transition-colors"
-                              style={{ height: `${barH}px` }}
-                              title={`Total ${m.label}: R$ ${fmtBRL(m.total)} (${m.count} vendas)`}
+                              className="absolute left-0 right-0 h-0.5 bg-blue-400"
+                              style={{ bottom: `${Math.min(parcialH, barH) - 1}px` }}
                             />
-                          </div>
-                          <div className="flex-1 flex flex-col items-center">
-                            <span className="text-[9px] text-blue-500 mb-1 leading-tight">
-                              {m.parcial.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}
-                            </span>
-                            <div
-                              className="w-full bg-blue-400 rounded-t hover:bg-blue-300 transition-colors"
-                              style={{ height: `${parcialH}px` }}
-                              title={`Até dia ${diaAtual} em ${m.label}: R$ ${fmtBRL(m.parcial)} (${m.countParcial} vendas)`}
-                            />
-                          </div>
+                          )}
                         </div>
-                        <span className="text-[9px] text-gray-400 mt-1">{m.label}</span>
+                        <span className="text-[10px] text-gray-400 mt-1 truncate max-w-full">{m.label}</span>
                       </div>
                     );
                   })}
@@ -460,7 +453,7 @@ export function DashboardPage({ clientes, oportunidades, vendas, titulos, fmtBRL
                     <span className="inline-block w-2.5 h-2.5 rounded-sm bg-gray-700" />Total do mês
                   </span>
                   <span className="flex items-center gap-1 text-[10px] text-gray-400">
-                    <span className="inline-block w-2.5 h-2.5 rounded-sm bg-blue-400" />Até dia {new Date().getDate()}
+                    <span className="inline-block w-2.5 h-0.5 bg-blue-400" />Até dia {diaAtual}
                   </span>
                 </div>
               </>
