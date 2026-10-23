@@ -184,7 +184,7 @@ export function useVendas(tenantId, userId, onNovaOS, onAtualizarOS) {
       status: pagarParcial ? "pago" : form.status,
       user_id: userId,
       tenant_id: tenantId,
-      data_pagamento: (form.status === "pago" || pagarParcial) ? hoje() : null,
+      data_pagamento: (form.status === "pago" || pagarParcial) ? (form.data_pagamento || hoje()) : null,
     };
 
     let titulosAtualizados = [...titulos];
@@ -238,10 +238,10 @@ export function useVendas(tenantId, userId, onNovaOS, onAtualizarOS) {
     setTitulos((prev) => prev.filter((t) => t.id !== id));
   };
 
-  const marcarComoPago = async (id) => {
+  const marcarComoPago = async (id, dataPagamento) => {
     const updated = await updateTitulo(id, {
       status: "pago",
-      data_pagamento: hoje(),
+      data_pagamento: dataPagamento || hoje(),
     });
     if (updated) {
       let nt = titulos.map((t) => (t.id === id ? updated : t));

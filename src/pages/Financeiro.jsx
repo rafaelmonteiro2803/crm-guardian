@@ -2,11 +2,15 @@ import React, { useState } from "react";
 import { Icons } from "../components/Icons";
 import { DataGrid } from "../components/DataGrid";
 import { TituloModal } from "../components/modals/TituloModal";
+import { PagarTituloModal } from "../components/modals/PagarTituloModal";
+
+const fmtDataISO = (d) => (d ? d.slice(0, 10).split("-").reverse().join("/") : "-");
 
 export function FinanceiroPage({ titulos, vendas, fmtBRL, onSalvar, onExcluir, onMarcarPago, getClienteNome }) {
   const [editando, setEditando] = useState(null);
   const [modalAberto, setModalAberto] = useState(false);
   const [filtroStatus, setFiltroStatus] = useState("nao_pago");
+  const [pagando, setPagando] = useState(null);
 
   const abrirModal = (titulo = null) => {
     setEditando(titulo);
@@ -137,6 +141,13 @@ export function FinanceiroPage({ titulos, vendas, fmtBRL, onSalvar, onExcluir, o
             sortValue: (t) => t.data_vencimento,
           },
           {
+            key: "data_pagamento",
+            label: "Pagamento",
+            render: (t) => fmtDataISO(t.data_pagamento),
+            filterValue: (t) => fmtDataISO(t.data_pagamento),
+            sortValue: (t) => t.data_pagamento || "",
+          },
+          {
             key: "valor",
             label: "Valor",
             render: (t) => <span className="font-medium">R$ {fmtBRL(t.valor)}</span>,
@@ -167,7 +178,7 @@ export function FinanceiroPage({ titulos, vendas, fmtBRL, onSalvar, onExcluir, o
           <div className="flex items-center gap-1">
             {t.status === "pendente" && (
               <button
-                onClick={() => onMarcarPago(t.id)}
+                onClick={() => setPagando(t)}
                 className="text-green-600 hover:bg-green-50 px-1.5 py-0.5 rounded text-[11px] font-medium"
               >
                 Pagar
@@ -192,6 +203,18 @@ export function FinanceiroPage({ titulos, vendas, fmtBRL, onSalvar, onExcluir, o
         }
         emptyMessage="Nenhum título encontrado para o filtro selecionado."
       />
+
+      {pagando && (
+        <PagarTituloModal
+          titulo={pagando}
+          fmtBRL={fmtBRL}
+          onConfirmar={async (dataPagamento) => {
+            await onMarcarPago(pagando.id, dataPagamento);
+            setPagando(null);
+          }}
+          onFechar={() => setPagando(null)}
+        />
+      )}
 
       {modalAberto && (
         <TituloModal

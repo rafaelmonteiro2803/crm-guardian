@@ -1,5 +1,11 @@
 import React, { useState } from "react";
 
+// Data local (yyyy-mm-dd), sem o deslocamento de fuso do toISOString
+const hojeLocal = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+
 const formInicial = () => ({
   venda_id: "",
   descricao: "",
@@ -7,6 +13,7 @@ const formInicial = () => ({
   data_emissao: new Date().toISOString().split("T")[0],
   data_vencimento: "",
   status: "pendente",
+  data_pagamento: hojeLocal(),
 });
 
 export function TituloModal({ editando, vendas, titulos, fmtBRL, onSalvar, onFechar }) {
@@ -19,6 +26,7 @@ export function TituloModal({ editando, vendas, titulos, fmtBRL, onSalvar, onFec
         data_emissao: editando.data_emissao,
         data_vencimento: editando.data_vencimento,
         status: editando.status,
+        data_pagamento: editando.data_pagamento || hojeLocal(),
       };
     }
     return formInicial();
@@ -57,6 +65,7 @@ export function TituloModal({ editando, vendas, titulos, fmtBRL, onSalvar, onFec
     if (!form.descricao.trim()) e.descricao = true;
     if (!form.data_vencimento) e.data_vencimento = true;
     if (!form.venda_id) e.venda_id = true;
+    if ((form.status === "pago" || pagarParcial) && !form.data_pagamento) e.data_pagamento = true;
     if (Object.keys(e).length) return setErros(e);
     if (pagarParcial && valorParcialNum > 0 && saldoParcial > 0.01) {
       setConfirmandoSaldo(true);
@@ -250,6 +259,18 @@ export function TituloModal({ editando, vendas, titulos, fmtBRL, onSalvar, onFec
                 <option value="pendente">Pendente</option>
                 <option value="pago">Pago</option>
               </select>
+            </div>
+          )}
+
+          {(form.status === "pago" || pagarParcial) && (
+            <div>
+              <label className="block text-xs text-gray-600 mb-0.5">Data do Pagamento *</label>
+              <input
+                type="date"
+                value={form.data_pagamento}
+                onChange={(e) => set({ data_pagamento: e.target.value })}
+                className={ic("data_pagamento")}
+              />
             </div>
           )}
         </div>

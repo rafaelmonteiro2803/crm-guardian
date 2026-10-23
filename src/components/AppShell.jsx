@@ -251,8 +251,8 @@ export function AppShell() {
   };
 
   // Quando um título de venda é marcado como pago, gera movimento bancário e conciliação automática (recebido)
-  const marcarComoPagoComConciliacao = async (id) => {
-    const titulo = await marcarComoPago(id);
+  const marcarComoPagoComConciliacao = async (id, dataPagamento) => {
+    const titulo = await marcarComoPago(id, dataPagamento);
     if (titulo) {
       try {
         const hoje = new Date().toISOString().split("T")[0];
