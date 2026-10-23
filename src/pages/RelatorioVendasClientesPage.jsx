@@ -118,6 +118,15 @@ export function RelatorioVendasClientesPage({ vendas = [], titulos = [], cliente
     return titulosDaVenda.some((t) => t.status !== "pago" && t.status !== "cancelado");
   };
 
+  // Saldo devedor de uma venda: soma dos títulos ainda não pagos nem cancelados
+  const getSaldoDevedor = (vendaId) => {
+    return getTitulosPorVenda(vendaId)
+      .filter((t) => t.status !== "pago" && t.status !== "cancelado")
+      .reduce((sum, t) => sum + parseFloat(t.valor || 0), 0);
+  };
+
+  const totalSaldoDevedor = vendasSelecionadas.reduce((sum, v) => sum + getSaldoDevedor(v.id), 0);
+
   const handleSelecionarCliente = (cliente) => {
     setClienteSelecionado(cliente);
     setClienteFiltro("");
@@ -252,6 +261,7 @@ export function RelatorioVendasClientesPage({ vendas = [], titulos = [], cliente
                       <th className="px-3 py-2 text-left font-medium text-gray-600">Descrição</th>
                       <th className="px-3 py-2 text-left font-medium text-gray-600">Pgto</th>
                       <th className="px-3 py-2 text-left font-medium text-gray-600">Valor</th>
+                      <th className="px-3 py-2 text-left font-medium text-gray-600">Saldo Devedor</th>
                       <th className="px-3 py-2 text-left font-medium text-gray-600">Status</th>
                       <th className="px-3 py-2 text-left font-medium text-gray-600">Ação</th>
                     </tr>
@@ -265,6 +275,7 @@ export function RelatorioVendasClientesPage({ vendas = [], titulos = [], cliente
                       const pgto = (venda.forma_pagamento || "-").toLowerCase();
                       const valorFormatado = fmtBRL(venda.valor);
                       const statusTitulo = aberto ? "EM ABERTO" : "PAGO";
+                      const saldoDevedor = getSaldoDevedor(venda.id);
 
                       return (
                         <tr key={venda.id} className="hover:bg-gray-50">
@@ -272,6 +283,9 @@ export function RelatorioVendasClientesPage({ vendas = [], titulos = [], cliente
                           <td className="px-3 py-2">{descricao}</td>
                           <td className="px-3 py-2">{pgto}</td>
                           <td className="px-3 py-2 text-green-700 font-medium">R$ {valorFormatado}</td>
+                          <td className={`px-3 py-2 font-medium ${saldoDevedor > 0 ? "text-red-600" : "text-gray-400"}`}>
+                            R$ {fmtBRL(saldoDevedor)}
+                          </td>
                           <td className="px-3 py-2">{statusTitulo}</td>
                           <td className="px-3 py-2">
                             <button
@@ -285,6 +299,15 @@ export function RelatorioVendasClientesPage({ vendas = [], titulos = [], cliente
                       );
                     })}
                   </tbody>
+                  <tfoot>
+                    <tr className="border-t bg-gray-50">
+                      <td colSpan={4} className="px-3 py-2 text-right font-medium text-gray-600">Total devedor</td>
+                      <td className={`px-3 py-2 font-semibold ${totalSaldoDevedor > 0 ? "text-red-600" : "text-gray-400"}`}>
+                        R$ {fmtBRL(totalSaldoDevedor)}
+                      </td>
+                      <td colSpan={2} />
+                    </tr>
+                  </tfoot>
                 </table>
               </div>
             </div>
